@@ -33,10 +33,24 @@ import java.lang.ref.WeakReference;
  * (misma curva y misma geometría, ver {@link Squeeze.Curve} y {@link Squeeze.Geo}) y la
  * recortamos al hueco del marco: la vista previa queda dentro de la pantalla, sin tapar el marco.
  *
- * <p>Las dos mitades arrancan con la misma difusión de MIUI ("miui.intent.TAKE_SCREENSHOT",
- * IsFinished=false), así que van a la par sin hablarse.
+ * <p>Cuándo arrancan las dos mitades: cuando la imagen YA está hecha. MIUI manda su difusión
+ * "miui.intent.TAKE_SCREENSHOT" (IsFinished=false) justo ANTES de hacer la foto (lo hace
+ * TakeScreenshotService, y con la bola flotante la foto llega 150 ms después). Si la pantalla se
+ * encogía con esa difusión, a veces la foto salía encogida y con el marco marrón. Por eso aquí se
+ * engancha el momento en que el sistema entrega la imagen ({@link #watchCapture}) y desde aquí se
+ * avisa a SystemUI con {@link #ACTION_CAPTURED}.
  */
 public final class SqueezeShot {
+
+    /** Aviso a SystemUI: la captura ya está hecha, ya se puede encoger la pantalla. */
+    public static final String ACTION_CAPTURED = "com.icehome.up.SQUEEZE_CAPTURED";
+    /** Si no llega la imagen en este tiempo (ganchos rotos en otra versión), se arranca igual. */
+    static final long FALLBACK_MS = 600;
+
+    /** Cuándo anunció MIUI una captura (antes de hacerla); 0 = no hay ninguna pendiente. */
+    private static volatile long armedAt;
+    /** Cuándo llegó la última imagen de una captura anunciada. */
+    private static volatile long capturedAt = -100000;
 
     private static Context ctx;
     private static Handler main;
@@ -65,6 +79,117 @@ public final class SqueezeShot {
                 }
             }
         });
+        watchCapture();
+    }
+
+    /**
+     * Engancha el anuncio de MIUI (para saber que viene una captura normal) y la entrega de la
+     * imagen por parte del sistema. Cada gancho va por separado: si uno no existe en esta versión
+     * de Android, los demás siguen (y si fallan todos, queda el plan B de {@link #FALLBACK_MS}).
+     */
+    private static void watchCapture() {
+        // 1) El anuncio, en el momento en que MIUI lo envía (síncrono, antes de la foto). Escuchar
+        //    la difusión no vale: llega por el hilo principal, a veces después de la imagen.
+        try {
+            XposedBridge.hookAllMethods(Class.forName("android.app.ContextImpl"), "sendBroadcast", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam p) {
+                    try {
+                        if (p.args.length == 0 || !(p.args[0] instanceof Intent)) return;
+                        Intent i = (Intent) p.args[0];
+                        if ("miui.intent.TAKE_SCREENSHOT".equals(i.getAction()) && !i.getBooleanExtra("IsFinished", true)) {
+                            armedAt = android.os.SystemClock.uptimeMillis();
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            Log.e("captura: no se pudo enganchar el anuncio de MIUI", t);
+        }
+        // 2) La imagen. En Android 14-16 MIUI pide la captura con un "oyente síncrono" y luego le
+        //    pide la imagen con getBuffer(), que espera hasta tenerla. El oyente es una clase
+        //    anónima que crea createSyncCaptureListener: se engancha su getBuffer al verla.
+        for (String owner : new String[]{"android.window.ScreenCaptureInternal", "android.window.ScreenCapture"}) {
+            try {
+                XposedBridge.hookAllMethods(Class.forName(owner), "createSyncCaptureListener", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam p) {
+                        Object l = p.getResult();
+                        if (l != null) hookBuffer(l.getClass());
+                    }
+                });
+            } catch (Throwable ignored) {
+                // no existe en esta versión
+            }
+        }
+        // Caminos antiguos (Android 12-13 o capas sueltas): devuelven la imagen directamente.
+        String[][] direct = {{"android.window.ScreenCapture", "captureLayers"},
+                {"android.view.SurfaceControl", "captureDisplay"}, {"android.view.SurfaceControl", "captureLayers"}};
+        for (String[] d : direct) {
+            try {
+                XposedBridge.hookAllMethods(Class.forName(d[0]), d[1], CAPTURED_HOOK);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static final java.util.Set<Class<?>> HOOKED = java.util.Collections.synchronizedSet(new java.util.HashSet<Class<?>>());
+
+    private static void hookBuffer(Class<?> c) {
+        if (!HOOKED.add(c)) return;
+        try {
+            XposedBridge.hookAllMethods(c, "getBuffer", CAPTURED_HOOK);
+        } catch (Throwable t) {
+            Log.e("captura: no se pudo enganchar getBuffer", t);
+        }
+    }
+
+    /** Tras devolver una imagen: si había una captura anunciada, ya está hecha. */
+    private static final XC_MethodHook CAPTURED_HOOK = new XC_MethodHook() {
+        @Override
+        protected void afterHookedMethod(MethodHookParam p) {
+            if (p.getResult() != null) captured();
+        }
+    };
+
+    private static void captured() {
+        long now = android.os.SystemClock.uptimeMillis();
+        long armed = armedAt;
+        // Solo la primera imagen tras el anuncio: la captura larga hace muchas más después.
+        if (armed == 0 || now - armed > 3000) return;
+        armedAt = 0;
+        capturedAt = now;
+        Context c = ctx;
+        Handler h = main;
+        if (c == null || h == null) return;
+        try {
+            Intent i = new Intent(ACTION_CAPTURED);
+            i.setPackage("com.android.systemui");
+            c.sendBroadcast(i);
+        } catch (Throwable t) {
+            Log.e("captura: no se pudo avisar a SystemUI", t);
+        }
+        h.post(new Runnable() {
+            @Override
+            public void run() {
+                startWhenReady(0);
+            }
+        });
+    }
+
+    /** La ventana de vista previa puede llegar unos fotogramas después de la imagen: se espera. */
+    private static void startWhenReady(final int tries) {
+        if (window.get() != null || tries >= 25) {
+            start();
+            return;
+        }
+        main.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                startWhenReady(tries + 1);
+            }
+        }, 16);
     }
 
     /** Con el contexto de la app de capturas: lee los ajustes y escucha las capturas. */
@@ -76,8 +201,19 @@ public final class SqueezeShot {
         BroadcastReceiver r = new BroadcastReceiver() {
             @Override
             public void onReceive(Context c, Intent i) {
-                if (!i.getBooleanExtra("IsFinished", true)) start();
-                else reloadLater();       // al terminar: ajustes frescos para la siguiente
+                if (!i.getBooleanExtra("IsFinished", true)) {
+                    // Normalmente arranca captured(). Plan B: si la imagen no se ha visto (ganchos
+                    // que no existen en esta versión), arranca igual un poco después, cuando la
+                    // foto seguro que ya está hecha.
+                    main.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (android.os.SystemClock.uptimeMillis() - capturedAt > FALLBACK_MS + 900) startWhenReady(0);
+                        }
+                    }, FALLBACK_MS);
+                } else {
+                    reloadLater();       // al terminar: ajustes frescos para la siguiente
+                }
             }
         };
         if (Build.VERSION.SDK_INT >= 33) c.registerReceiver(r, f, null, main, Context.RECEIVER_EXPORTED);

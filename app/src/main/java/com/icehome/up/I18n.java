@@ -152,6 +152,8 @@ final class I18n {
                 "Inside an app, the window coming in or going out tilts with its speed and the one below blurs. Applies after restarting System UI.");
         i("telon_squeeze_on", "Screen that squeezes on screenshot",
                 "When you take a screenshot, the screen sinks inwards and a little to the left, as if you pushed it, and springs back. Like calling Gemini on Pixel phones.");
+        i("telon_squeeze_assist", "Also when calling Gemini",
+                "The screen squeezes the same way when you open the assistant (Gemini), with the power button or the corner gesture, like on Pixel phones.");
         i("telon_squeeze_size", "Size",
                 "Size of the screen, in %, at the deepest point. Pixel phones stay at about 97 %, a soft push.");
         i("telon_squeeze_left", "To the left",

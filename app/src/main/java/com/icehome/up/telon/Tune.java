@@ -27,6 +27,7 @@ public final class Tune {
             {"telon_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas del telón. Ponlo igual al refresco de tu pantalla."},
             {"telon_quality", "Resolución", 30f, 100f, 50f, 0, "Nitidez de la ventana durante el telón. Más alta se ve más nítida pero gasta más."},
             {"#", "Captura que encoge"},
+            {"telon_squeeze_assist", "También al llamar a Gemini", 0f, 1f, 1f, -1, "La pantalla se encoge igual cuando abres el asistente (Gemini), con el botón de encendido o el gesto de la esquina, como en los Pixel."},
             {"telon_squeeze_size", "Tamaño", 50f, 98f, 75f, 0, "Tamaño de la pantalla, en %, en el punto más hundido. Los Pixel se quedan en un 97 %, un empujón suave."},
             {"telon_squeeze_left", "Hacia la izquierda", 0f, 1f, 0.5f, 2, "Cuánto se va la pantalla a la izquierda mientras se encoge. 0 = se encoge recta hacia el centro, como en los Pixel."},
             {"telon_squeeze_speed", "Velocidad", 0.5f, 2f, 1f, 1, "1 = como en los Pixel. Más alto, el empujón es más rápido."},
@@ -72,6 +73,7 @@ public final class Tune {
         boolean paused = m != null && "1".equals(m.get(PAUSE_KEY));
         // En pausa la captura tampoco encoge la pantalla. Se lee al empezar cada captura.
         Squeeze.enabled = !paused && f(c, "telon_squeeze_on") >= 0.5f;
+        Squeeze.assist = !paused && f(c, "telon_squeeze_assist") >= 0.5f;
         Squeeze.size = f(c, "telon_squeeze_size") / 100f;
         Squeeze.left = f(c, "telon_squeeze_left");
         Squeeze.speed = f(c, "telon_squeeze_speed");

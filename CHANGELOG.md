@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.0
+
+**New**
+- **Squeeze for Gemini, with light.** Calling the assistant (power button, assistant key or corner swipe) shrinks the screen like on Pixel phones, and a blue, violet and pink light comes out of the phone's edges and fills the frame around it, its colors turning slowly. It fades as the screen comes back. It runs a bit slower than the screenshot squeeze. It is on by default: **Squeezing screenshot → Also when calling Gemini**. Needs a System UI restart.
+
+**Fixed**
+- **Screenshots no longer come out shrunk with the brown frame.** MIUI announces the screenshot *before* taking it, and the screen started shrinking at that moment. Now the screenshot app tells System UI once it has the image, and only then the screen shrinks. If the screenshot app is not in HyperSpring's LSPosed scope, it falls back to a short delay.
+
 ## 2.7.1
 
 **Fixed**
