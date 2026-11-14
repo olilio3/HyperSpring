@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v2.5.0</b> · <a href="README.es.md">Español</a>
+  <b>v2.7.1</b> · <a href="README.es.md">Español</a>
 </p>
 
 ---
@@ -91,6 +91,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 - **Sinking icons** when pressed, and **wallpaper zoom** when opening apps.
 - **Folders** with blurred glass and a springy resize.
 - **Widget stack** you can shuffle and drag freely.
+- **Springy shortcut menu:** long-press an icon and its menu pops out with a bounce and a liquid-glass edge.
 
 ### System UI (`com.android.systemui`)
 - **Curtain:** when you switch screens inside an app, the window tilts with its speed and the one below blurs.
@@ -105,6 +106,9 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 - **Every setting explains itself:** tap a row to expand its description, and long-press it to reset it to its default.
 - **Compatibility card** in **About**: your Android and HyperOS versions, the launcher and control center versions, and whether HyperSpring is active in each part.
 - **Log** of the launcher and System UI, to copy when reporting a problem.
+- **Quick settings tile** to pause HyperSpring with one tap (HyperOS animations come back right away, no restart).
+- **Android animation speed** (the three developer-options scales) from **System**, with root.
+- **Share your settings** as a short `HS1:` code and paste someone else's from **About**.
 
 ## Installation
 

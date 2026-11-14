@@ -292,13 +292,8 @@ final class GlRenderer {
         float fade = 1f;
         /** Profundidad: inclinación (1/px), curvatura (1/px²) y empuje hacia el fondo de la lámina (ver PERSP). 0 = plana. */
         float tilt, curl, push;
-        /**
-         * Profundidad, antes del muelle (Genie): inclinación pedida por la velocidad, con la que
-         * sale al abrir, y cuánto se deja (0 = plana: junto al icono o a pantalla completa).
-         */
-        float tiltTarget, tiltStart, tiltEnv = 1f;
-        /** Profundidad: inclinación máxima que cabe sin que el borde cercano se salga de la pantalla. */
-        float tiltRoom = 1f;
+        /** Profundidad: cuánto más lejos está arriba que abajo (ver Genie.applyTilt). */
+        float tiltTarget;
         /** Profundidad: lo que se mueve cada borde (izq., arriba, der., abajo) con el obturador abierto, en px. */
         final float[] vel = new float[4];
     }

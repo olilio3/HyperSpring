@@ -54,9 +54,20 @@ final class Exclude {
         return true;
     }
 
+    /**
+     * Pausa (el tile de los ajustes rápidos): mientras está puesta, todas las apps van sin genio.
+     * Es como excluirlas todas a la vez, así que se aplica al momento sin reiniciar el launcher.
+     */
+    static volatile boolean paused;
+
     /** ¿Esta app va sin genio? */
     static boolean genie(String pkg) {
-        return pkg != null && genie.contains(pkg);
+        return paused || (pkg != null && genie.contains(pkg));
+    }
+
+    /** ¿Hay algo que mirar? (para no buscar el paquete de la ventana si no hace falta) */
+    static boolean any() {
+        return paused || !genie.isEmpty();
     }
 
     private Exclude() {

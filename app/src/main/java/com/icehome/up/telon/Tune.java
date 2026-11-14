@@ -18,6 +18,7 @@ public final class Tune {
     public static final Object[][] ITEMS = {
             {"#", "Función"},
             {"telon_on", "Telón al cambiar de pantalla", 0f, 1f, 1f, -1, "Dentro de una app, la ventana que entra o sale se inclina según su velocidad y la de debajo se desenfoca. Se aplica al reiniciar la interfaz del sistema."},
+            {"telon_squeeze_on", "Pantalla que se encoge al hacer una captura", 0f, 1f, 1f, -1, "Al hacer una captura, la pantalla se hunde hacia dentro y un poco a la izquierda, como si la empujaras, y vuelve con un muelle. Como al llamar a Gemini en los Pixel."},
             {"#", "Telón"},
             {"telon_strength", "Inclinación", 0f, 3f, 1f, 1, "Cuánto se inclina la ventana según lo rápido que se mueve. 0 la deja recta."},
             {"telon_curve", "Forma", 0f, 1f, 0f, 2, "0 = se inclina recta, como un paralelogramo. 1 = se curva como un telón, con la parte de abajo más doblada."},
@@ -25,19 +26,57 @@ public final class Tune {
             {"telon_bg_blur", "Desenfoque de la pantalla de debajo", 0f, 1.5f, 1f, 2, "La pantalla que queda detrás se desenfoca mientras entra la nueva y se enfoca al volver. 0 lo quita."},
             {"telon_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas del telón. Ponlo igual al refresco de tu pantalla."},
             {"telon_quality", "Resolución", 30f, 100f, 50f, 0, "Nitidez de la ventana durante el telón. Más alta se ve más nítida pero gasta más."},
+            {"#", "Captura que encoge"},
+            {"telon_squeeze_size", "Tamaño", 50f, 98f, 75f, 0, "Tamaño de la pantalla, en %, en el punto más hundido. Los Pixel se quedan en un 97 %, un empujón suave."},
+            {"telon_squeeze_left", "Hacia la izquierda", 0f, 1f, 0.5f, 2, "Cuánto se va la pantalla a la izquierda mientras se encoge. 0 = se encoge recta hacia el centro, como en los Pixel."},
+            {"telon_squeeze_speed", "Velocidad", 0.5f, 2f, 1f, 1, "1 = como en los Pixel. Más alto, el empujón es más rápido."},
+            {"telon_squeeze_frame", "Marco", 0f, 1f, 1f, -1, "Un marco de esquinas redondeadas rodea la pantalla mientras se encoge. Sin él se ve lo que haya detrás, como el fondo de pantalla."},
+            {"telon_squeeze_color", "Color del marco", 0f, 2f, 2f, 0, "0 = negro, como en los Pixel. 1 = Monet: el tono oscuro que sale de tu fondo de pantalla. 2 = marrón al estilo Monet."},
     };
+
+    /**
+     * Pausa de HyperSpring (tile de los ajustes rápidos). "1" = pausado. No está en ITEMS: no es un
+     * ajuste que se exporte ni que vuelva a su valor por defecto, es un estado de un momento.
+     */
+    public static final String PAUSE_KEY = "icehome_paused";
 
     private static volatile Map<String, String> cache;
 
     /** Relee todo y lo aplica a las animaciones (en SystemUI). */
     public static void reload(Context c) {
         cache = read(c);
-        Telon.strength = f(c, "telon_strength");
+        Map<String, String> m = cache;
+        boolean paused = m != null && "1".equals(m.get(PAUSE_KEY));
+        // En pausa el telón no se dibuja (fuerza 0 = no empieza), sin reiniciar la interfaz.
+        Telon.strength = paused ? 0f : f(c, "telon_strength");
         Telon.maxFps = f(c, "telon_fps");
         Telon.captureScale = f(c, "telon_quality") / 100f;
         Telon.motionBlur = f(c, "telon_blur");
         Telon.belowBlur = f(c, "telon_bg_blur");
         TelonRenderer.power = 1f + 1.4f * Math.max(0f, Math.min(1f, f(c, "telon_curve")));
+        squeeze(c);
+        Squeeze.retune();
+    }
+
+    /**
+     * Solo los ajustes de la captura que encoge la pantalla. Lo usa también la app de capturas
+     * de MIUI (SqueezeShot), que no debe tocar nada del telón.
+     */
+    static void reloadSqueeze(Context c) {
+        cache = read(c);
+        squeeze(c);
+    }
+
+    private static void squeeze(Context c) {
+        Map<String, String> m = cache;
+        boolean paused = m != null && "1".equals(m.get(PAUSE_KEY));
+        // En pausa la captura tampoco encoge la pantalla. Se lee al empezar cada captura.
+        Squeeze.enabled = !paused && f(c, "telon_squeeze_on") >= 0.5f;
+        Squeeze.size = f(c, "telon_squeeze_size") / 100f;
+        Squeeze.left = f(c, "telon_squeeze_left");
+        Squeeze.speed = f(c, "telon_squeeze_speed");
+        Squeeze.frame = f(c, "telon_squeeze_frame") >= 0.5f;
+        Squeeze.color = Math.round(f(c, "telon_squeeze_color"));
     }
 
     /** Valor de un ajuste (de la memoria si ya se leyó; si no, del proveedor). */

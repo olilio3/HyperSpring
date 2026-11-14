@@ -74,10 +74,12 @@ final class I18n {
     static {
         s("Funciones", "Features");
         s("Abrir y cerrar apps", "Opening and closing apps");
-        s("Recientes", "Recents");
+        s("Recientes que se doblan", "Bending recents");
         s("Carpetas", "Folders");
+        s("Menú de atajos", "Shortcut menu");
         s("Función", "Feature");
         s("Telón", "Curtain");
+        s("Captura que encoge", "Squeezing screenshot");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
         s("Refracción del borde", "Edge refraction");
@@ -96,9 +98,13 @@ final class I18n {
         i("icehome_curtain_on", "Bending recents",
                 "In recents, cards bend the other way depending on how hard you swipe them. Applies after restarting the launcher.");
         i("icehome_genie_style", "Style",
-                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 2 = Ice: a softer cup with a bounce on open, the icon catching the cup and the home screen dimming behind. 3 = Depth: no genie; the normal HyperOS animation, but the window is a rigid sheet that tilts (top away), more the harder you close it, and leaves a motion blur trail. Strength sets the tilt and the blur.");
+                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 2 = Ice: a softer cup with a bounce on open, the icon catching the cup and the home screen dimming behind. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur.");
         i("icehome_genie_strength", "Strength",
                 "How much the window bends. 0 is a plain rectangle; 1.8–2.2 looks like Samsung.");
+        i("icehome_depth_taper", "Top narrowing",
+                "Depth only: how much narrower the window looks at the top than at the bottom while it leaves the icon or goes back to it, in %. 0 keeps it straight.");
+        i("icehome_depth_blur", "Motion blur",
+                "Depth only: the trail the window leaves as it moves. 0 turns it off.");
         i("icehome_genie_quality", "Resolution",
                 "Sharpness of the animation. Higher looks sharper but uses more GPU; on modest phones, 50–60 %.");
         i("icehome_genie_physics", "Drag physics",
@@ -121,6 +127,12 @@ final class I18n {
                 "How much recents cards bend depending on your finger's speed.");
         i("icehome_curtain_style", "Curtain style",
                 "On: the top stays fixed and the bottom bends, like a stage curtain. Off: the middle bends, like a drape.");
+        i("icehome_menu_on", "Springy shortcut menu",
+                "When you long-press an icon, its menu pops out with a bounce and a liquid-glass edge. Applies after restarting the launcher.");
+        i("icehome_menu_bounce", "Bounce",
+                "How far the menu overshoots its size as it leaves the icon before settling. 0 keeps the HyperOS behaviour.");
+        i("icehome_menu_glass", "Liquid glass",
+                "A glass edge that bends the wallpaper, with a highlight on top. Uses the folders' quality, thickness and refraction. Needs a static wallpaper.");
         i("icehome_folder_blur", "Blur",
                 "How much the content behind an open folder is blurred, in dp.");
         i("icehome_folder_quality", "Glass quality",
@@ -138,6 +150,18 @@ final class I18n {
 
         i("telon_on", "Curtain when switching screens",
                 "Inside an app, the window coming in or going out tilts with its speed and the one below blurs. Applies after restarting System UI.");
+        i("telon_squeeze_on", "Screen that squeezes on screenshot",
+                "When you take a screenshot, the screen sinks inwards and a little to the left, as if you pushed it, and springs back. Like calling Gemini on Pixel phones.");
+        i("telon_squeeze_size", "Size",
+                "Size of the screen, in %, at the deepest point. Pixel phones stay at about 97 %, a soft push.");
+        i("telon_squeeze_left", "To the left",
+                "How far the screen moves to the left while it shrinks. 0 = it shrinks straight to the centre, like on Pixel phones.");
+        i("telon_squeeze_speed", "Speed",
+                "1 = like on Pixel phones. Higher makes the push faster.");
+        i("telon_squeeze_frame", "Frame",
+                "A frame with rounded corners surrounds the screen while it shrinks. Without it you see whatever is behind, like the wallpaper.");
+        i("telon_squeeze_color", "Frame colour",
+                "0 = black, like on Pixel phones. 1 = Monet: the dark tone taken from your wallpaper. 2 = Monet-style brown.");
         i("telon_strength", "Tilt",
                 "How much the window tilts depending on how fast it moves. 0 keeps it straight.");
         i("telon_curve", "Shape",

@@ -4,11 +4,9 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.DashPathEffect;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.SystemClock;
 import android.view.View;
@@ -95,10 +93,11 @@ final class SpringGraph extends View {
 
     @Override
     protected void onSizeChanged(int w, int h, int ow, int oh) {
-        // Relleno bajo la curva: coral arriba que se desvanece hacia abajo.
-        fill.setShader(new LinearGradient(0, 0, 0, h, (accent & 0x00FFFFFF) | 0x55000000, accent & 0x00FFFFFF,
-                Shader.TileMode.CLAMP));
-        win.setShader(new LinearGradient(0, 0, 0, h, Motion.BRAND, null, Shader.TileMode.CLAMP));
+        // Relleno bajo la curva y ventana: lisos, del color de acento (sin degradados).
+        fill.setShader(null);
+        fill.setColor((accent & 0x00FFFFFF) | 0x26000000);
+        win.setShader(null);
+        win.setColor(Motion.ACCENT);
     }
 
     @Override

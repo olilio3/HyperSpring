@@ -21,7 +21,8 @@ import android.view.animation.PathInterpolator;
  * Abrir una subpágina como en el asistente de configuración de HyperOS:
  * <ol>
  * <li>Lo que había se disuelve en su sitio: se desenfoca, se encoge un poco y se apaga.</li>
- * <li>Donde tocaste nace un círculo de luz que se abre y se desvanece.</li>
+ * <li>La fila que tocaste crece hasta ocupar la pantalla, como si se convirtiera en la página
+ *     nueva (el «Flip» de GSAP); si no se sabe qué se tocó, nace un círculo de luz.</li>
  * <li>Los elementos de la página nueva salen de ese círculo, juntos, pequeños y borrosos, y se
  *     separan deslizándose hasta su sitio mientras se enfocan, uno detrás de otro.</li>
  * </ol>
@@ -39,11 +40,13 @@ final class PushMorph {
 
     /**
      * @param ox, oy  de dónde sale todo (el centro de lo que tocaste), en coordenadas de la página
-     * @param tint    color del círculo de luz
+     * @param from    rectángulo de la fila tocada, en coordenadas de la página (o null)
+     * @param tint    color del círculo de luz y del borde de la fila que crece
+     * @param surface color de la tarjeta (el de la fila que crece)
      * @param onFrame se llama en cada fotograma (la barra de cristal ve lo de debajo y se repinta)
      */
-    static void play(final View under, final ViewGroup page, final float ox, final float oy, int tint,
-                     final Runnable onFrame) {
+    static void play(final View under, final ViewGroup page, final android.graphics.RectF from, final float ox,
+                     final float oy, int tint, int surface, final Runnable onFrame) {
         final float dp = page.getResources().getDisplayMetrics().density;
         final ViewGroup list = (ViewGroup) page.getChildAt(0);
         for (int i = 0; i < list.getChildCount(); i++) list.getChildAt(i).setAlpha(0f);
@@ -78,17 +81,19 @@ final class PushMorph {
         running = out;
         out.start();
 
-        // 2) El círculo de luz, encima de la página nueva.
-        final Bloom bloom = new Bloom(ox, oy, tint, dp);
+        // 2) La fila que crece (o el círculo de luz), encima de la página nueva.
+        final Drawable bloom = from != null ? new Grow(from, surface, tint, dp) : new Bloom(ox, oy, tint, dp);
         bloom.setBounds(0, 0, 1, 1);
         page.getOverlay().add(bloom);
         ValueAnimator b = ValueAnimator.ofFloat(0f, 1f);
-        b.setDuration(700);
-        b.setInterpolator(SETTLE);
+        b.setDuration(from != null ? 640 : 700);
+        b.setInterpolator(from != null ? Motion.EXPO_OUT : SETTLE);
         b.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator a) {
-                bloom.t = (Float) a.getAnimatedValue();
+                float t = (Float) a.getAnimatedValue();
+                if (bloom instanceof Grow) ((Grow) bloom).t = t;
+                else ((Bloom) bloom).t = t;
                 bloom.invalidateSelf();
             }
         });
@@ -115,6 +120,8 @@ final class PushMorph {
                     float cy = list.getTop() + c.getTop() + c.getHeight() / 2f - page.getScrollY();
                     boolean card = Motion.CASCADE.equals(c.getTag()) && c instanceof ViewGroup;
                     emerge(c, d, (ox - cx) * 0.25f, clamp((oy - cy) * 0.45f, 180f * dp), dp, !card);
+                    // El título grande, además, entra letra a letra.
+                    if (c instanceof SplitTitle) ((SplitTitle) c).play(d);
                     if (card) {
                         // Las filas de una tarjeta aparecen una a una dentro de ella mientras viaja.
                         ViewGroup g = (ViewGroup) c;
@@ -231,6 +238,56 @@ final class PushMorph {
             c.drawCircle(x, y, r, fill);
             edge.setColor((Math.round(90 * fade * fade) << 24) | 0xFFFFFF);
             c.drawCircle(x, y, r * 0.82f, edge);
+        }
+
+        @Override
+        public void setAlpha(int a) {
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter cf) {
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    /**
+     * La fila tocada que se hace página: una tarjeta que va de su rectángulo a toda la pantalla
+     * mientras las esquinas se cierran, y que se desvanece en la segunda mitad para dejar ver lo
+     * que sale de ella.
+     */
+    private static final class Grow extends Drawable {
+        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.RectF from, r = new android.graphics.RectF();
+        private final int surface, tint;
+        private final float dp;
+        float t;
+
+        Grow(android.graphics.RectF from, int surface, int tint, float dp) {
+            this.from = from;
+            this.surface = surface;
+            this.tint = tint;
+            this.dp = dp;
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1f, dp));
+        }
+
+        @Override
+        public void draw(Canvas c) {
+            if (t >= 1f) return;
+            android.graphics.Rect b = getBounds();
+            r.set(Motion.lerp(from.left, b.left, t), Motion.lerp(from.top, b.top, t),
+                    Motion.lerp(from.right, b.right, t), Motion.lerp(from.bottom, b.bottom, t));
+            float rad = Motion.lerp(18f, 34f, t) * dp;           // como las esquinas de la pantalla
+            float a = 1f - Motion.seg(t, 0.3f, 0.85f);
+            if (a <= 0f) return;
+            fill.setColor((surface & 0x00FFFFFF) | (Math.round(235 * a) << 24));
+            c.drawRoundRect(r, rad, rad, fill);
+            edge.setColor((tint & 0x00FFFFFF) | (Math.round(140 * a) << 24));
+            c.drawRoundRect(r, rad, rad, edge);
         }
 
         @Override

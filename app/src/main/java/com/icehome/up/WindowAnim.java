@@ -578,7 +578,7 @@ final class WindowAnim {
             }
             Object target = firstTarget.invoke(set);
             // Apps excluidas: solo se mira al empezar (no se corta un genio ya en marcha).
-            if (starting && !Exclude.genie.isEmpty() && Exclude.genie(packageOfTarget(target))) {
+            if (starting && Exclude.any() && Exclude.genie(packageOfTarget(target))) {
                 excluded(impl, type);
                 return;
             }
@@ -667,8 +667,11 @@ final class WindowAnim {
     private static volatile String touchedPkg;
 
     private static void excluded(Object impl, String type) {
-        Genie.stopFor(impl, "app excluida");
-        reject(type, "app excluida por el usuario");
+        // En el registro se distingue la pausa (tile) de una app de la lista: si no, un usuario
+        // con la pausa puesta parecería tener todas sus apps excluidas.
+        String why = Exclude.paused ? "HyperSpring en pausa" : "app excluida por el usuario";
+        Genie.stopFor(impl, why);
+        reject(type, why);
     }
 
     /** Paquete de una ventana del conjunto de MIUI (su campo, o la tarea del sistema). */

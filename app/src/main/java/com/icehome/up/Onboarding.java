@@ -42,7 +42,8 @@ import java.util.Random;
  * Va encima de toda la interfaz (una capa más en la raíz de {@link SettingsActivity}), en
  * oscuro. Cinco pasos:
  * <ol>
- *   <li>Bienvenida, sobre manchas suaves de coral, rosa y malva que recorren la pantalla: la gota
+ *   <li>Bienvenida, sobre manchas suaves de coral, rosa y malva que recorren la pantalla: primero
+ *   el barrido de «i» y después la gota
  *   cae y se convierte en el logo ({@link IntroLogo}), que sube a su sitio; el nombre llega con
  *   las letras separadas y desenfocado y «se cierra»; luego, tres funciones una a una.</li>
  *   <li>Comprobación: módulo cargado en el launcher y en la interfaz, y root.</li>
@@ -67,6 +68,8 @@ final class Onboarding extends FrameLayout {
     private final SettingsActivity act;
     private final float dp;
     private final IntroLogo logo;
+    /** Raya de luz que cruza la pantalla al cambiar de paso. */
+    private final Streak streak;
     private final FrameLayout pages;
     private final LinearLayout bottom, buttons;
     private final Dots dots;
@@ -88,14 +91,16 @@ final class Onboarding extends FrameLayout {
         act = a;
         dp = a.getResources().getDisplayMetrics().density;
         setClickable(true);                                   // no deja pasar toques a la app de debajo
-        // Los pasos van sobre el mismo fondo que las páginas de la app (curvas de nivel tranquilas);
-        // la bienvenida lleva el suyo, de manchas de color.
-        LiveBackground.lines(a.bg, a.vivid[0], a.vivid[1], 0.22f, dp).attachTo(this);
+        // Los pasos van sobre el mismo fondo que las páginas de la app (negro con rejilla de puntos);
+        // la bienvenida lleva el suyo, con los puntos algo más marcados.
+        LiveBackground.dots(a.bg, dp).attachTo(this);
 
         pages = new FrameLayout(a);
         addView(pages, new LayoutParams(-1, -1));
         logo = new IntroLogo(a);
         addView(logo, new LayoutParams(-1, -1));
+        streak = new Streak(a, dp);
+        addView(streak, new LayoutParams(-1, -1));
         // Velo de arriba: lo que se desplaza no se mezcla con la barra de estado ni con «Saltar».
         topScrim = new View(a);
         topScrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -127,7 +132,7 @@ final class Onboarding extends FrameLayout {
                 else back();
             }
         });
-        a.sink(back);
+        rubberTouch(back);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, px(56));
         blp.rightMargin = px(12);
         buttons.addView(back, blp);
@@ -145,7 +150,7 @@ final class Onboarding extends FrameLayout {
                 forward();
             }
         });
-        a.sink(next);
+        rubberTouch(next);
         buttons.addView(next, new LinearLayout.LayoutParams(0, px(56), 1f));
         LinearLayout.LayoutParams bb = new LinearLayout.LayoutParams(-1, -2);
         bb.topMargin = px(22);
@@ -154,6 +159,10 @@ final class Onboarding extends FrameLayout {
         bottom.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{a.bg & 0x00FFFFFF, (a.bg & 0x00FFFFFF) | 0xE0000000, (a.bg & 0x00FFFFFF) | 0xF5000000,
                         (a.bg & 0x00FFFFFF) | 0xF5000000}));
+        // Los botones crecen al respirar y se ensanchan al aplastarse: que no los recorte el borde.
+        buttons.setClipChildren(false);
+        bottom.setClipChildren(false);
+        bottom.setClipToPadding(false);
         addView(bottom, new LayoutParams(-1, -2, Gravity.BOTTOM));
 
         skip = new TextView(a);
@@ -167,6 +176,7 @@ final class Onboarding extends FrameLayout {
                 finish(false);
             }
         });
+        rubberTouch(skip);
         addView(skip, new LayoutParams(-2, -2, Gravity.TOP | Gravity.END));
         applyInsets();
     }
@@ -181,8 +191,10 @@ final class Onboarding extends FrameLayout {
         for (View v : introParts) v.setAlpha(0f);
         bottom.setAlpha(0f);
         skip.setAlpha(0f);
-        logo.play(px(96));
-        postDelayed(new Runnable() {
+        // El reloj de la intro avisa él mismo cuando está a punto de acabar: con un retraso fijo,
+        // si la velocidad de animaciones de Android no es 1x (p. ej. 1,5x), la bienvenida salía
+        // encima de la intro antes de tiempo.
+        logo.play(px(96), new Runnable() {
             @Override
             public void run() {
                 landLogo(true);
@@ -199,7 +211,7 @@ final class Onboarding extends FrameLayout {
                 skip.animate().alpha(1f).setStartDelay(d + 200).setDuration(500).start();
                 intro = false;
             }
-        }, ValueAnimator.areAnimatorsEnabled() ? IntroLogo.BUILD_MS - 260 : 0);
+        });
     }
 
     @Override
@@ -312,8 +324,17 @@ final class Onboarding extends FrameLayout {
                         }).start();
             }
         } else if (old != null) {
+            // Barrido de cámara como en un tráiler: las dos páginas se desenfocan en horizontal
+            // mientras corren (más cuanto más deprisa van) y una raya de luz cruza la pantalla.
             old.animate().translationX(fwd ? -w * 0.28f : w * 0.28f).alpha(0f).scaleX(0.96f).scaleY(0.96f)
-                    .setDuration(340).setInterpolator(Motion.EASE).withEndAction(new Runnable() {
+                    .setDuration(340).setInterpolator(Motion.EASE)
+                    .setUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                        @Override
+                        public void onAnimationUpdate(ValueAnimator a) {
+                            whipBlur(old, a.getAnimatedFraction());
+                        }
+                    })
+                    .withEndAction(new Runnable() {
                         @Override
                         public void run() {
                             pages.removeView(old);
@@ -327,22 +348,134 @@ final class Onboarding extends FrameLayout {
             in.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator a) {
-                    p.setTranslationX(x0 * (1f - (Float) a.getAnimatedValue()));
+                    float f = (Float) a.getAnimatedValue();
+                    p.setTranslationX(x0 * (1f - f));
+                    whipBlur(p, 1f - Math.min(1f, f * 1.15f));
                 }
             });
             in.start();
+            streak.play(fwd);
             ViewGroup col = (ViewGroup) ((ScrollView) page).getChildAt(0);
             Motion.cascade(col, 90, px(26));
         }
 
         dots.go(to, from >= 0);
-        back.setVisibility(to == 0 ? GONE : VISIBLE);
+        boolean showBack = to != 0;
+        if (showBack && back.getVisibility() != VISIBLE && from >= 0 && ValueAnimator.areAnimatorsEnabled()) {
+            // «Atrás» aparece saltando desde pequeño mientras el botón grande se encoge para dejarle sitio.
+            back.setScaleX(0.4f);
+            back.setScaleY(0.4f);
+            back.setAlpha(0f);
+            back.animate().scaleX(1f).scaleY(1f).alpha(1f).setStartDelay(120).setDuration(520)
+                    .setInterpolator(new android.view.animation.OvershootInterpolator(2.4f)).start();
+        }
+        back.setVisibility(showBack ? VISIBLE : GONE);
+        breathe(to == STEPS - 1);
         back.setText(to == STEPS - 1 ? I18n.t("Más tarde", "Later") : I18n.t("Atrás", "Back"));
         String label = to == 0 ? I18n.t("Empezar", "Get started")
                 : to == STEPS - 1 ? I18n.t("Reiniciar", "Restart") : I18n.t("Continuar", "Continue");
         swapText(next, label, from >= 0);
         if (!intro) skip.animate().alpha(to == STEPS - 1 ? 0f : 1f).setStartDelay(0).setDuration(240).start();
         skip.setClickable(to != STEPS - 1);
+    }
+
+    /**
+     * Botones de goma: al tocar se aplastan (más anchos y más bajos) y al soltar rebotan unas
+     * veces hasta quedarse quietos, como la palabra de la intro. No se come el toque: el clic y
+     * la onda siguen funcionando.
+     */
+    private void rubberTouch(final View v) {
+        v.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, android.view.MotionEvent e) {
+                if (!ValueAnimator.areAnimatorsEnabled()) return false;
+                switch (e.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        stopWobble(v);
+                        if (v == next) breathe(false);
+                        v.animate().scaleX(1.05f).scaleY(0.88f).setStartDelay(0).setDuration(110)
+                                .setInterpolator(Motion.EASE).start();
+                        break;
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        v.animate().cancel();
+                        final float sx0 = v.getScaleX() - 1f, sy0 = v.getScaleY() - 1f;
+                        ValueAnimator w = ValueAnimator.ofFloat(0f, 700f);
+                        w.setDuration(700);
+                        w.setInterpolator(new android.view.animation.LinearInterpolator());
+                        w.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                            @Override
+                            public void onAnimationUpdate(ValueAnimator a) {
+                                float ms = (Float) a.getAnimatedValue();
+                                // Muelle amortiguado que parte de lo aplastado y cruza al otro lado.
+                                float f = (float) (Math.exp(-ms / 150f) * Math.cos(2 * Math.PI * ms / 280f));
+                                v.setScaleX(1f + sx0 * f);
+                                v.setScaleY(1f + sy0 * f);
+                            }
+                        });
+                        v.setTag(R_WOBBLE, w);
+                        w.start();
+                        break;
+                    default:
+                        break;
+                }
+                return false;
+            }
+        });
+    }
+
+    private static final int R_WOBBLE = 0x7f0f0011;
+
+    private void stopWobble(View v) {
+        Object o = v.getTag(R_WOBBLE);
+        if (o instanceof ValueAnimator) ((ValueAnimator) o).cancel();
+    }
+
+    private ValueAnimator breath;
+
+    @Override
+    protected void onDetachedFromWindow() {
+        breathe(false);                                       // el bucle no debe seguir al cerrar
+        super.onDetachedFromWindow();
+    }
+
+    /**
+     * En el último paso, «Reiniciar» respira (crece y vuelve muy poco, en bucle) para invitar a
+     * tocarlo. Se para al tocarlo o al cambiar de paso.
+     */
+    private void breathe(boolean on) {
+        if (breath != null) {
+            breath.cancel();
+            breath = null;
+            next.setScaleX(1f);
+            next.setScaleY(1f);
+        }
+        if (!on || !ValueAnimator.areAnimatorsEnabled()) return;
+        breath = ValueAnimator.ofFloat(0f, 1f);
+        breath.setDuration(1300);
+        breath.setStartDelay(900);
+        breath.setRepeatCount(ValueAnimator.INFINITE);
+        breath.setRepeatMode(ValueAnimator.REVERSE);
+        breath.setInterpolator(Motion.EASE);
+        breath.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator a) {
+                float s = 1f + 0.035f * (Float) a.getAnimatedValue();
+                next.setScaleX(s);
+                next.setScaleY(s);
+            }
+        });
+        breath.start();
+    }
+
+    /**
+     * Desenfoque horizontal de una página durante el cambio de paso (0 = nítida, 1 = máximo). Es
+     * la estela de un barrido de cámara. Solo en Android 12+, donde existe RenderEffect.
+     */
+    private void whipBlur(View v, float amount) {
+        if (Build.VERSION.SDK_INT < 31) return;
+        float rx = 26 * dp * Motion.clamp01(amount);
+        v.setRenderEffect(rx > 0.6f ? RenderEffect.createBlurEffect(rx, 0.01f, Shader.TileMode.DECAL) : null);
     }
 
     /** Encoge (y apaga) o devuelve a su tamaño una vista; al encogerse, quita {@code removeAfter}. */
@@ -440,9 +573,9 @@ final class Onboarding extends FrameLayout {
                 logo.setTranslationY(-y);
             }
         });
-        // Fondo propio de manchas suaves (coral, rosa, malva) que recorren la pantalla: al pasar al
-        // primer paso, la bienvenida se encoge como una tarjeta con este fondo dentro.
-        new LiveBackground(act.bg, act.vivid, 0.36f, true).attachTo(sv);
+        // Fondo propio (rejilla más marcada): al pasar al primer paso, la bienvenida se encoge como
+        // una tarjeta con este fondo dentro.
+        LiveBackground.hero(act.bg, dp).attachTo(sv);
         return sv;
     }
 
@@ -454,10 +587,11 @@ final class Onboarding extends FrameLayout {
         ImageView iv = new ImageView(act);
         iv.setImageDrawable(new Icons(icon, Color.WHITE));
         iv.setPadding(px(11), px(11), px(11), px(11));
-        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0x66FF8A76, 0x66B97FE6});
-        g.setCornerRadius(px(16));
-        g.setStroke(Math.max(1, px(0.8f)), 0x33FFFFFF);
+        // Gota lisa, sin degradado: gris muy oscuro con un filo de luz.
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(0x14FFFFFF);
+        g.setCornerRadius(px(14));
+        g.setStroke(Math.max(1, px(0.8f)), 0x1FFFFFFF);
         iv.setBackground(g);
         LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(px(48), px(48));
         il.rightMargin = px(16);
@@ -601,11 +735,40 @@ final class Onboarding extends FrameLayout {
             public void onClick(View v) {
                 v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                 selectPreset(preset, true);
+                pop(v);
             }
         });
         act.sink(k);
         presetCards.add(k);
         return k;
+    }
+
+    /**
+     * La tarjeta elegida salta: se hunde un poco y vuelve con un muelle que se pasa, y un brillo
+     * la cruza en diagonal (el mismo destello del botón principal, una sola vez).
+     */
+    private void pop(final View v) {
+        if (!ValueAnimator.areAnimatorsEnabled()) return;
+        ValueAnimator a = ValueAnimator.ofFloat(0f, 1f);
+        Spring.apply(a, 0f, 1f, 0f, 0.42f, 0.5f);
+        a.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                float s = Motion.lerp(0.93f, 1f, (Float) va.getAnimatedValue());
+                v.setScaleX(s);
+                v.setScaleY(s);
+            }
+        });
+        a.start();
+        final OnceShine sh = new OnceShine(dp);
+        sh.setBounds(0, 0, v.getWidth(), v.getHeight());
+        v.getOverlay().add(sh);
+        v.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                v.getOverlay().remove(sh);
+            }
+        }, OnceShine.MS + 50);
     }
 
     /** Marca un perfil: el elegido se ilumina con un borde claro y los demás se apagan un poco. */
@@ -641,10 +804,8 @@ final class Onboarding extends FrameLayout {
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(px(200), px(200));
         bl.topMargin = px(10);
         c.addView(b, bl);
-        TextView t = new TextView(act);
-        styleText(t, I18n.t("¡Todo listo!", "All set!"), 36, Color.WHITE);
-        t.setTypeface(Typeface.create(Typeface.create("sans-serif", Typeface.BOLD), 800, false));
-        t.setGravity(Gravity.CENTER);
+        SplitTitle t = new SplitTitle(act, I18n.t("¡Todo listo!", "All set!"), 36, Color.WHITE, 800);
+        t.setCentered(true);
         c.addView(t, new LinearLayout.LayoutParams(-1, -2));
         TextView s = new TextView(act);
         styleText(s, I18n.t("Para cargar las funciones hay que reiniciar el launcher y la interfaz del sistema. "
@@ -678,6 +839,7 @@ final class Onboarding extends FrameLayout {
         ch.row.setGravity(Gravity.CENTER_VERTICAL);
         ch.row.setPadding(px(16), px(14), px(16), px(14));
         ch.row.setMinimumHeight(px(68));
+        ch.row.setClipChildren(false);                        // deja salir la onda de la marca
         ch.mark = new StatusMark(act, dp);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(px(30), px(30));
         ml.rightMargin = px(14);
@@ -724,7 +886,7 @@ final class Onboarding extends FrameLayout {
     // ------------------------------------------------------------------ piezas
 
     private ScrollView scroll(LinearLayout col) {
-        ScrollView sv = new ScrollView(act);
+        ScrollView sv = LiveBackground.scrollView(act);
         sv.setVerticalScrollBarEnabled(false);
         sv.setClipToPadding(false);
         sv.setOverScrollMode(OVER_SCROLL_IF_CONTENT_SCROLLS);
@@ -770,12 +932,8 @@ final class Onboarding extends FrameLayout {
         LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(px(52), px(52));
         il.bottomMargin = px(18);
         h.addView(iv, il);
-        TextView t = new TextView(act);
-        styleText(t, title, 32, Color.WHITE);
-        t.setTypeface(Typeface.create(Typeface.create("sans-serif", Typeface.BOLD), 750, false));
-        t.setLetterSpacing(-0.015f);
-        t.setLineSpacing(0, 1.05f);
-        h.addView(t);
+        // Título que entra letra a letra (como los grandes de la app): la cascada lo pone en marcha.
+        h.addView(new SplitTitle(act, title, 32, Color.WHITE, 750));
         TextView s = new TextView(act);
         styleText(s, sub, 15.5f, act.text2);
         s.setLineSpacing(0, 1.18f);
@@ -964,6 +1122,15 @@ final class Onboarding extends FrameLayout {
             }
             float pop = anim ? Motion.spring(el, 0.38f, 0.5f) : 1f;
             fill.setColor(state == OK ? Onboarding.OK : Onboarding.WARN);
+            // Onda de color que sale de la marca al resolverse (el aro sale de la vista: el padre no recorta).
+            float wave = anim ? Motion.seg(el, 0f, 0.7f) : 1f;
+            if (wave < 1f) {
+                p.setColor(state == OK ? Onboarding.OK : Onboarding.WARN);
+                p.setStrokeWidth(2f * dp * (1f - wave));
+                p.setAlpha(Math.round(200 * (1f - wave) * (1f - wave)));
+                c.drawCircle(cx, cy, rad * (1f + Motion.EXPO_OUT.getInterpolation(wave) * 0.9f), p);
+                p.setAlpha(255);
+            }
             c.save();
             c.scale(pop, pop, cx, cy);
             c.drawCircle(cx, cy, rad, fill);
@@ -1034,14 +1201,24 @@ final class Onboarding extends FrameLayout {
         }
     }
 
-    /** Final: círculo con el degradado que salta, ✓ que se dibuja y una explosión de chispas. */
+    /**
+     * Final: círculo con el degradado que salta, ✓ que se dibuja, una explosión de chispas y, como
+     * cierre de tráiler, confeti que cae girando y un destello horizontal detrás del círculo.
+     */
     static final class Burst extends View {
+        private static final int CONFETTI = 46;
         private final float dp;
         private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), stroke = new Paint(Paint.ANTI_ALIAS_FLAG),
-                dot = new Paint(Paint.ANTI_ALIAS_FLAG), ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+                dot = new Paint(Paint.ANTI_ALIAS_FLAG), ring = new Paint(Paint.ANTI_ALIAS_FLAG),
+                flare = new Paint();
         private final Path check = new Path(), part = new Path();
         private final float[] ang = new float[18], dist = new float[18], size = new float[18];
         private final int[] col = new int[18];
+        // Confeti: dirección de salida, velocidad (dp/s), giro, tamaño y color de cada papelito.
+        private final float[] cAng = new float[CONFETTI], cVx = new float[CONFETTI], cVy = new float[CONFETTI],
+                cSpin = new float[CONFETTI], cW = new float[CONFETTI];
+        private final int[] cCol = new int[CONFETTI];
+        private final RectF piece = new RectF();
         private long start = -1;
 
         Burst(Context c, float dp) {
@@ -1053,7 +1230,7 @@ final class Onboarding extends FrameLayout {
             stroke.setColor(Color.WHITE);
             ring.setStyle(Paint.Style.STROKE);
             ring.setColor(Color.WHITE);
-            fill.setShadowLayer(22 * dp, 0, 8 * dp, 0x66E8578F);
+            fill.setShadowLayer(22 * dp, 0, 8 * dp, (Motion.ACCENT & 0x00FFFFFF) | 0x66000000);
             Random rnd = new Random();
             for (int i = 0; i < ang.length; i++) {
                 ang[i] = (float) (i * Math.PI * 2 / ang.length + rnd.nextFloat() * 0.3f);
@@ -1061,6 +1238,28 @@ final class Onboarding extends FrameLayout {
                 size[i] = 2.2f + rnd.nextFloat() * 2.8f;
                 col[i] = Motion.BRAND[i % 3];
             }
+            for (int i = 0; i < CONFETTI; i++) {
+                // Repartidos por toda la vuelta (con un poco de azar) para que salgan hacia todos los
+                // lados, con un empujón extra hacia arriba para que suban antes de caer.
+                cAng[i] = (float) (i * Math.PI * 2 / CONFETTI + (rnd.nextFloat() - 0.5f) * 0.35f);
+                // Velocidad pensada para que lleguen hasta casi los bordes de la pantalla sin escaparse
+                // (con el rozamiento, recorren como mucho velocidad / 2,2 dp).
+                float v = 200f + rnd.nextFloat() * 340f;
+                cVx[i] = (float) Math.cos(cAng[i]) * v;
+                cVy[i] = (float) Math.sin(cAng[i]) * v - 220f - rnd.nextFloat() * 160f;
+                cSpin[i] = (rnd.nextFloat() - 0.5f) * 1400f;
+                cW[i] = 3f + rnd.nextFloat() * 4f;
+                cCol[i] = i % 4 == 0 ? Color.WHITE : Motion.BRAND[i % 3];
+            }
+            flare.setBlendMode(android.graphics.BlendMode.PLUS);
+            // El confeti cae por fuera del cuadro del círculo.
+            setLayerType(LAYER_TYPE_NONE, null);
+        }
+
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            if (getParent() instanceof ViewGroup) ((ViewGroup) getParent()).setClipChildren(false);
         }
 
         /** Arranca a los {@code delay} ms (con la página ya entrando). */
@@ -1086,6 +1285,48 @@ final class Onboarding extends FrameLayout {
             boolean anim = ValueAnimator.areAnimatorsEnabled();
             float el = anim ? (SystemClock.uptimeMillis() - start) / 1000f : 5f;
             float w = getWidth(), h = getHeight(), cx = w / 2f, cy = h / 2f, R = Math.min(w, h) * 0.26f;
+
+            // Destello anamórfico detrás del círculo: se abre de lado a lado y se apaga.
+            float fq = Motion.seg(el, 0.04f, 0.9f);
+            if (fq > 0f && fq < 1f) {
+                float half = w * (0.4f + 1.2f * Motion.EXPO_OUT.getInterpolation(fq));
+                flare.setShader(new LinearGradient(cx - half, 0, cx + half, 0,
+                        new int[]{0x00FF5F45, 0xFFFF5F45, 0xFFFFFFFF, 0xFFFF5F45, 0x00FF5F45},
+                        new float[]{0f, 0.3f, 0.5f, 0.7f, 1f}, Shader.TileMode.CLAMP));
+                float al = 255 * (1f - fq) * (1f - fq);
+                float[] thick = {1.4f, 4f, 10f}, fade = {1f, 0.3f, 0.1f};
+                for (int i = 0; i < 3; i++) {
+                    flare.setAlpha(Math.round(al * fade[i]));
+                    c.drawRect(cx - half, cy - thick[i] * dp, cx + half, cy + thick[i] * dp, flare);
+                }
+            }
+
+            // Confeti: sale del borde del círculo hacia todos los lados, frena con el aire, cae con
+            // gravedad girando y se apaga. Física de verdad: con rozamiento k, la velocidad se apaga
+            // como e^(-k·t) y la gravedad tiende a una velocidad máxima de caída (g/k).
+            float ct = el - 0.1f;
+            if (ct > 0f && ct < 2.8f) {
+                float fade = 1f - Motion.seg(ct, 1.9f, 2.8f);
+                float k = 2.2f, g = 900f;                                           // dp/s²
+                float drag = (1f - (float) Math.exp(-k * ct)) / k;
+                float fallDp = g / k * (ct - drag);
+                for (int i = 0; i < CONFETTI; i++) {
+                    float x = cx + (float) Math.cos(cAng[i]) * R + cVx[i] * drag * dp;
+                    float y = cy + (float) Math.sin(cAng[i]) * R + (cVy[i] * drag + fallDp) * dp;
+                    float spin = cSpin[i] * ct;
+                    // Girando sobre sí mismo: el ancho se estrecha y vuelve, como un papel que da vueltas.
+                    float flip = (float) Math.abs(Math.cos(Math.toRadians(spin * 0.7f)));
+                    dot.setColor(cCol[i]);
+                    dot.setAlpha(Math.round(255 * fade));
+                    c.save();
+                    c.translate(x, y);
+                    c.rotate(spin);
+                    float pw = cW[i] * dp * Math.max(0.15f, flip), ph = cW[i] * dp * 0.45f;
+                    piece.set(-pw, -ph, pw, ph);
+                    c.drawRoundRect(piece, ph * 0.5f, ph * 0.5f, dot);
+                    c.restore();
+                }
+            }
 
             // Chispas: salen disparadas con frenada exponencial y se apagan.
             float q = Motion.seg(el, 0.08f, 1.1f);
@@ -1119,7 +1360,107 @@ final class Onboarding extends FrameLayout {
             pm.getSegment(0, pm.getLength() * draw, part, true);
             c.drawPath(part, stroke);
             c.restore();
-            if (anim && el < 1.6f) postInvalidateOnAnimation();
+            if (anim && el < 3f) postInvalidateOnAnimation();
+        }
+    }
+
+    /**
+     * Raya de luz que cruza la pantalla al cambiar de paso, en el sentido del movimiento: un haz
+     * suave y ancho con un núcleo fino, como el reflejo de un barrido de cámara. Solo se dibuja
+     * mientras pasa (medio segundo); no recibe toques.
+     */
+    static final class Streak extends View {
+        private static final float MS = 520f;
+        private final float dp;
+        private final Paint p = new Paint();
+        private long start = -1;
+        private boolean fwd;
+
+        Streak(Context c, float dp) {
+            super(c);
+            this.dp = dp;
+            p.setBlendMode(android.graphics.BlendMode.PLUS);
+        }
+
+        void play(boolean forward) {
+            if (!ValueAnimator.areAnimatorsEnabled()) return;
+            fwd = forward;
+            start = SystemClock.uptimeMillis();
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            if (start < 0) return;
+            float q = (SystemClock.uptimeMillis() - start) / MS;
+            if (q >= 1f) {
+                start = -1;
+                return;
+            }
+            float w = getWidth(), h = getHeight();
+            float e = Motion.EASE.getInterpolation(q);
+            float x = fwd ? Motion.lerp(w * 1.2f, -w * 0.2f, e) : Motion.lerp(-w * 0.2f, w * 1.2f, e);
+            float al = (float) Math.sin(Math.PI * q);           // entra y sale suave
+            float band = w * 0.35f;
+            // Haz ancho y vertical, muy tenue.
+            p.setShader(new LinearGradient(x - band, 0, x + band, 0,
+                    new int[]{0x00FFFFFF, 0x1AFFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
+            p.setAlpha(Math.round(255 * al));
+            c.drawRect(x - band, 0, x + band, h, p);
+            // Núcleo: una raya horizontal coral y blanca a media altura, que se estira con la velocidad.
+            float y = h * 0.42f, half = w * (0.25f + 0.35f * al);
+            p.setShader(new LinearGradient(x - half, 0, x + half, 0,
+                    new int[]{0x00FF5F45, 0xFFFF5F45, 0xFFFFFFFF, 0xFFFF5F45, 0x00FF5F45},
+                    new float[]{0f, 0.3f, 0.5f, 0.7f, 1f}, Shader.TileMode.CLAMP));
+            float[] thick = {1f, 3f, 8f}, fade = {0.7f, 0.22f, 0.07f};
+            for (int i = 0; i < 3; i++) {
+                p.setAlpha(Math.round(255 * al * fade[i]));
+                c.drawRect(x - half, y - thick[i] * dp, x + half, y + thick[i] * dp, p);
+            }
+            postInvalidateOnAnimation();
+        }
+    }
+
+    /** Un solo brillo diagonal que cruza una tarjeta (al elegir un perfil). */
+    static final class OnceShine extends android.graphics.drawable.Drawable {
+        static final long MS = 620;
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final long t0 = SystemClock.uptimeMillis();
+        private final float dp;
+
+        OnceShine(float dp) {
+            this.dp = dp;
+        }
+
+        @Override
+        public void draw(Canvas c) {
+            float q = (SystemClock.uptimeMillis() - t0) / (float) MS;
+            if (q >= 1f) return;
+            android.graphics.Rect b = getBounds();
+            float w = b.width() + b.height();
+            float x = Motion.lerp(-w * 0.3f, w * 1.1f, Motion.EASE.getInterpolation(q));
+            p.setShader(new LinearGradient(x - 50 * dp, x - 50 * dp - b.height(), x + 50 * dp, x + 50 * dp - b.height(),
+                    new int[]{0x00FFFFFF, 0x40FFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
+            android.graphics.Path clip = new android.graphics.Path();
+            clip.addRoundRect(new RectF(b), 24 * dp, 24 * dp, android.graphics.Path.Direction.CW);
+            c.save();
+            c.clipPath(clip);
+            c.drawRect(b, p);
+            c.restore();
+            invalidateSelf();
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+        }
+
+        @Override
+        public void setColorFilter(android.graphics.ColorFilter cf) {
+        }
+
+        @Override
+        public int getOpacity() {
+            return android.graphics.PixelFormat.TRANSLUCENT;
         }
     }
 

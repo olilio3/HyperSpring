@@ -314,7 +314,11 @@ final class Controls {
             rect.set(cx - tw / 2f, cy - th / 2f, cx + tw / 2f, cy + th / 2f);
             float p = Math.max(0f, press);
             float r = th / 2f - 2.5f * dp;
-            float kw = 2 * r * (1f + 0.55f * p), kh = 2 * r * (1f + 0.3f * p);
+            // Estirarse al viajar («squash & stretch»): a mitad de camino la bola es más ancha y algo
+            // más baja, y al llegar recupera su forma con el rebote del muelle.
+            float mid = Math.max(0f, Math.min(1f, pos));
+            float stretch = 4f * mid * (1f - mid);
+            float kw = 2 * r * (1f + 0.55f * p + 0.5f * stretch), kh = 2 * r * (1f + 0.3f * p - 0.1f * stretch);
             float x = Motion.lerp(rect.left + th / 2f, rect.right - th / 2f, pos);
             k.set(x - kw / 2f, cy - kh / 2f, x + kw / 2f, cy + kh / 2f);
             drawUnder(c, glass, k, p, this);

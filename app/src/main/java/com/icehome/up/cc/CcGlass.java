@@ -1367,6 +1367,13 @@ public final class CcGlass {
             final ViewTreeObserver.OnPreDrawListener pre = new ViewTreeObserver.OnPreDrawListener() {
                 @Override
                 public boolean onPreDraw() {
+                    // El mod de Kashi cambia el radio de esquina de sus piezas sin volver a
+                    // colocarlas: primero las coloca y luego les pone el radio nuevo (en las
+                    // conexiones ampliadas, en cada fotograma de la animación). Si solo se mira al
+                    // colocarlas, el cristal se queda con el radio de un fotograma antes (el del
+                    // círculo que crecía) y sale un «círculo» dentro de la baldosa. Aquí se vuelve a
+                    // mirar antes de cada fotograma; layout() no hace nada si no ha cambiado.
+                    if (host.isAttachedToWindow() && radius >= 0 && radiusOf(host) != radius) layout();
                     if (backdrop == null || !on || !eligible || !host.isAttachedToWindow()) return true;
                     host.getLocationOnScreen(loc);
                     float[] sc = chainScale(host);
@@ -1429,6 +1436,15 @@ public final class CcGlass {
             under = null;
             buildLens(r);
             invalidateSelf();
+            // Ha cambiado de tamaño: puede que ahora tape (o deje de tapar) a su madre o a una
+            // hija. Se vuelve a recorrer la ventana para decidir cuál de las dos lleva el cristal;
+            // si no, en las animaciones de ampliar se veían las dos a la vez.
+            View root = host.getRootView();
+            Runnable walk = WALKS.get(root);
+            if (walk != null) {
+                root.removeCallbacks(walk);
+                root.postDelayed(walk, 120);
+            }
         }
 
         private void buildLens(float r) {

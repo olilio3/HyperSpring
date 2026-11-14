@@ -189,7 +189,19 @@ final class GlassFolder {
         } catch (Throwable t) {
             XposedBridge.log("IceHome: sin brillo al tocar las carpetas");
         }
-        // Desplazamiento del fondo entre páginas (lo fija el launcher): para saber qué hay debajo.
+        trackOffsets();
+        XposedBridge.log("IceHome: cristal suave en carpetas activo");
+    }
+
+    private static boolean offsetsHooked;
+
+    /**
+     * Desplazamiento del fondo entre páginas (lo fija el launcher): para saber qué parte del fondo
+     * hay debajo del cristal. Lo usan las carpetas y el menú de atajos; se engancha una sola vez.
+     */
+    static synchronized void trackOffsets() {
+        if (offsetsHooked) return;
+        offsetsHooked = true;
         try {
             XposedHelpers.findAndHookMethod(android.app.WallpaperManager.class, "setWallpaperOffsets",
                     android.os.IBinder.class, float.class, float.class, new XC_MethodHook() {
@@ -202,7 +214,6 @@ final class GlassFolder {
                     });
         } catch (Throwable ignored) {
         }
-        XposedBridge.log("IceHome: cristal suave en carpetas activo");
     }
 
     /** Pone (o actualiza) el cristal sobre el fondo real de la carpeta. */
@@ -287,7 +298,7 @@ final class GlassFolder {
     }
 
     /** Fondo de pantalla actual (reducido al tamaño de la pantalla). Null si es animado o no se puede leer. */
-    private static void loadWallpaper(android.content.Context ctx) {
+    static void loadWallpaper(android.content.Context ctx) {
         if (android.os.Build.VERSION.SDK_INT < 33) return;
         try {
             android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(ctx);
@@ -354,6 +365,11 @@ final class GlassFolder {
         private boolean blur;
         private float radius;
         private int alpha = 255;
+        /**
+         * Cuánto velo blanco se pone encima (1 = el de las carpetas). El menú de atajos ya trae su
+         * propio fondo (claro u oscuro según el tema) y con el velo entero se vería lechoso.
+         */
+        float veilScale = 1f;
         // Brillo al tocar: posición del dedo, intensidad actual (0..1) y a la que va.
         private final Paint glowFill = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glowRim = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -489,11 +505,12 @@ final class GlassFolder {
             boolean lens = REFRACTION && drawRefraction(canvas, w, h, r);
             int save = canvas.save();
             if (!lens) canvas.clipPath(clip);       // con lente, sin recorte: el clipPath no tiene antialias
+            int veilAlpha = Math.round(alpha * veilScale);
             if (lens && blur) {
-                glassVeil.setAlpha(alpha);
+                glassVeil.setAlpha(veilAlpha);
                 canvas.drawRoundRect(box, r, r, glassVeil);
             } else {
-                veil.setAlpha(alpha);
+                veil.setAlpha(veilAlpha);
                 canvas.drawRoundRect(box, r, r, veil);
             }
             sheen.setAlpha(alpha);

@@ -22,9 +22,12 @@ final class Tune {
             {"icehome_folder_morph_on", "Carpetas con muelle", 0f, 1f, 1f, -1, "Al abrir o cerrar una carpeta, cambia de tamaño con un rebote suave. Se aplica al reiniciar el launcher."},
             {"icehome_folder_glass_on", "Cristal en las carpetas", 0f, 1f, 1f, -1, "El fondo de las carpetas abiertas es cristal desenfocado en vez de un color plano. Se aplica al reiniciar el launcher."},
             {"icehome_curtain_on", "Recientes que se doblan", 0f, 1f, 1f, -1, "En la vista de recientes, las tarjetas se doblan hacia el lado contrario según la fuerza con la que las deslizas. Se aplica al reiniciar el launcher."},
+            {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
-            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 2 = Ice: copa más suave, con rebote al abrir, el icono que recibe la copa y el escritorio que se oscurece detrás. 3 = Profundidad: sin genio; la animación normal de HyperOS, pero la ventana es una hoja rígida que se inclina (arriba al fondo), más cuanto más fuerte cierras, y deja estela de movimiento. Intensidad regula la inclinación y la estela."},
+            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 2 = Ice: copa más suave, con rebote al abrir, el icono que recibe la copa y el escritorio que se oscurece detrás. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
+            {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
+            {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas de la animación. Ponlo igual al refresco de tu pantalla (60 si no pasa de 60 Hz) para no gastar de más."},
@@ -34,9 +37,12 @@ final class Tune {
             {"icehome_haptic", "Vibración al llegar", 0f, 1f, 0.3f, 2, "Un toque de vibración muy suave cuando la ventana entra en su icono. 0 la quita. Respeta el ajuste de vibración del sistema."},
             {"icehome_anim_speed", "Velocidad", 0.5f, 2f, 1f, 2, "Velocidad de las animaciones de abrir y cerrar. Más de 1 es más rápida."},
             {"icehome_anim_bounce", "Rebote", 0f, 0.4f, 0f, 2, "Cuánto se pasa la ventana de su sitio al llegar antes de asentarse. 0 llega sin rebote."},
-            {"#", "Recientes"},
+            {"#", "Recientes que se doblan"},
             {"icehome_curtain_strength", "Doblez", 0f, 3f, 1f, 1, "Cuánto se doblan las tarjetas de recientes según la velocidad del dedo."},
             {"icehome_curtain_style", "Estilo telón", 0f, 1f, 0f, -1, "Activado: la parte de arriba queda fija y se dobla la de abajo, como un telón. Desactivado: se dobla el centro, como una cortina."},
+            {"#", "Menú de atajos"},
+            {"icehome_menu_bounce", "Rebote", 0f, 1f, 0.5f, 2, "Cuánto se pasa el menú de su tamaño al salir del icono antes de asentarse. 0 lo deja como en HyperOS."},
+            {"icehome_menu_glass", "Cristal líquido", 0f, 1f, 1f, -1, "Borde de cristal que dobla el fondo de pantalla, con brillo arriba. Usa la calidad, el grosor y la refracción de las carpetas. Necesita un fondo de pantalla estático."},
             {"#", "Carpetas"},
             {"icehome_folder_blur", "Desenfoque", 0f, 30f, 6f, 0, "Cuánto se desenfoca lo que hay detrás de una carpeta abierta, en dp."},
             {"icehome_folder_quality", "Calidad del cristal", 25f, 100f, 67f, 0, "Nitidez del fondo que ve el cristal, en %. Más alta se ve más fina pero usa más memoria; en móviles modestos, 50–67 %."},
@@ -54,6 +60,8 @@ final class Tune {
         cache = read(c);
         Genie.strength = f(c, "icehome_genie_strength");
         Genie.style = Math.round(f(c, "icehome_genie_style"));
+        Genie.depthTaper = f(c, "icehome_depth_taper") / 100f;
+        Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;
         Genie.physics = f(c, "icehome_genie_physics");
         Genie.maxFps = f(c, "icehome_genie_fps");
@@ -73,6 +81,17 @@ final class Tune {
         GlassFolder.touchGlow = f(c, "icehome_folder_glow");
         Map<String, String> m = cache;
         Exclude.genie = Exclude.parse(m == null ? null : m.get(Exclude.KEY));
+        // Pausa (tile de ajustes rápidos): sin genio y sin recientes que se doblan, al momento.
+        boolean paused = paused(m);
+        Exclude.paused = paused;
+        if (paused) RecentsCurtain.strength = 0f;
+        ShortcutMenuFx.bounce = f(c, "icehome_menu_bounce");
+        ShortcutMenuFx.glass = f(c, "icehome_menu_glass") >= 0.5f;
+    }
+
+    /** ¿Está puesta la pausa? Es texto ("1") fuera de ITEMS, como la lista de apps sin genio. */
+    static boolean paused(Map<String, String> m) {
+        return m != null && "1".equals(m.get(com.icehome.up.telon.Tune.PAUSE_KEY));
     }
 
     /** Valor de un ajuste (de la memoria si ya se leyó; si no, del proveedor). */

@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.5.0</b> · <a href="README.md">English</a>
+  <b>v2.7.1</b> · <a href="README.md">English</a>
 </p>
 
 ---
@@ -79,6 +79,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 - **Iconos que se hunden** al pulsarlos y **zoom del fondo** al abrir apps.
 - **Carpetas** con cristal desenfocado y un muelle al cambiar de tamaño.
 - **Pila de widgets** con baraja y arrastre libre.
+- **Menú de atajos con muelle:** al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido.
 
 ### Interfaz del sistema (`com.android.systemui`)
 - **Telón:** al cambiar de pantalla dentro de una app, la ventana se inclina según su velocidad y la de debajo se desenfoca.
@@ -93,6 +94,9 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 - **Cada ajuste explica para qué sirve:** toca la fila para desplegar la explicación y mantenla pulsada para volver a su valor por defecto.
 - En **Acerca de**, una tarjeta de compatibilidad muestra tu versión de Android y HyperOS, la del launcher y la del centro de control, y si HyperSpring está activo en cada parte.
 - **Registro** del launcher y de la interfaz, para copiarlo al informar de un fallo.
+- **Tile en los ajustes rápidos** para pausar HyperSpring con un toque (vuelven las animaciones de HyperOS al momento, sin reiniciar).
+- **Velocidad de las animaciones de Android** (las tres escalas de las opciones de desarrollador) desde **Sistema**, con root.
+- **Compartir tus ajustes** con un código corto `HS1:` y pegar los de otra persona desde **Acerca de**.
 
 ## Instalación
 

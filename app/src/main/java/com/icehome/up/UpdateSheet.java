@@ -95,7 +95,7 @@ final class UpdateSheet extends FrameLayout {
         };
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setClickable(true);                            // los toques en la hoja no la cierran
-        new LiveBackground(a.bg, a.vivid, 0.45f, true).attachTo(sheet);
+        LiveBackground.hero(a.bg, dp).attachTo(sheet);
         final float rad = 30 * dp;
         sheet.setOutlineProvider(new ViewOutlineProvider() {
             @Override

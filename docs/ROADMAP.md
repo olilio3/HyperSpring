@@ -30,6 +30,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 - [ ] **Refraction on folders:** add the edge lens to the blur they already have.
 - [ ] **Magnifier on control center sliders:** while dragging brightness or volume, the control turns into a glass drop that magnifies what is behind it. Note: it depends on System UI plugin classes that change between versions.
 - [ ] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap.
+- [ ] **System modes** (idea from 2026-11-14): "HyperOS 4", "iOS 26" and "iOS 27", picked with one tap. Each mode sets its own kind of liquid glass (control center, folders and shortcut menu), its app open/close style, its bounces and its visual settings. It would be a bigger preset than the current ones (`Presets`) that also covers the glass keys. It fits with the Glass styles above: they can be built together.
 - [ ] **Highlight that follows your finger:** the glow on the glass edge moves towards where you touch. No gyroscope, so no battery cost.
 
 ### Animations
@@ -50,12 +51,18 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 - [ ] **Automatic pause:** heavy effects switch off by themselves with battery saver, in games (Game Turbo) or when the phone is hot.
 - [ ] **Subtle vibration** in sync with the animations: when the genie lands in the icon, when a folder bounces, when the widget stack changes.
 - [x] **Visual spring editor:** an animated graph of the curve while you move Speed and Bounce, with a tiny phone opening a window with that spring. *Released in 2.1.0.*
-- [ ] **Quick settings tile** to turn HyperSpring on or off and restart the launcher.
+- [x] **Quick settings tile** that pauses HyperSpring (genie, curtain and bending recents) with one tap, without restarting anything. *Released in 2.7.0.* The pause is the base for the automatic pause above.
+- [x] **Springy shortcut menu with a liquid-glass edge** when long-pressing an icon. *Released in 2.7.0.*
+- [x] **Android animation speed** (the three developer-options scales) from the app, with root. *Released in 2.7.0.*
+- [x] **Share settings** as a short `HS1:` code and paste someone else's. *Released in 2.7.0.* A QR code is left for later: it needs a library or our own encoder.
+- [ ] **Icons that move aside with a spring** when you drag one on the home screen, instead of sliding in a straight line.
+- [ ] **"How is my phone doing?"**: from the frames and stutters in the log, suggest the Performance preset when the genie struggles.
 - [x] **New version notice:** checks GitHub releases (can be turned off), and downloads and installs from the app. *Released in 2.1.0.*
 - [x] **What's new after updating:** an animated screen with the changes the first time the app opens after an update. *Released in 2.1.0.*
 
 ### The app
 - [ ] **Redesigned, heavily animated interface**, like modern websites: staggered entrances, scroll-driven animations, shared transitions between screens and micro-interactions on every control. Always 60 fps on mid-range phones and respecting the system setting that removes animations.
+- [ ] **Apple-style intro** (idea from 2026-11-14): "HyperSpring" appears, one letter (the "i") repeats at least 20 times, the camera races along them and then the icon drops in. Show the user a preview before building it.
 
 ## Later, if there is demand
 - [ ] **Automatic quality:** lower the genie resolution on its own when the log shows many stutters in a row. For now the "Performance" preset covers it.
@@ -71,6 +78,7 @@ Ideas that were on the list and have been removed, with the reason:
 - **More recents styles (fan, 3D stack).** What people asked for was a way to turn the bending off, and that already exists (**Home → Recents that bend**).
 
 ## Done
+- [x] 2.7.0: springy shortcut menu with a liquid-glass edge, quick settings tile to pause HyperSpring, Android animation speed and shareable settings codes. Details in the CHANGELOG.
 - [x] 2.1.0: Depth style (the window as a rigid sheet that tilts, with motion blur), style picker as a pull-down menu, visual spring editor, apps without genie, in-app updates and a redesigned app. Details in the CHANGELOG.
 - [x] 2.0.0: libxposed API 102 through our own hook facade with two engines (the legacy one, API 93, stays as a separate APK). One-tap presets (Smooth, iOS-like, Fast, Performance). Export and import settings. The compatibility card shows which API the module loaded with. Sliders reach the launcher without restarting it.
 - [x] 1.0.3: smoother genie that looks closer to stock HyperOS (threads on every core, drawing on every refresh with prediction, the app's own colour when opening, landing in the icon like MIUI). Details in the CHANGELOG.

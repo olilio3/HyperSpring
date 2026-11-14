@@ -30,6 +30,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 - [ ] **Refracción en las carpetas:** añadir la lente del borde al desenfoque que ya tienen.
 - [ ] **Lupa en los sliders del CC:** al arrastrar el brillo o el volumen, el control se convierte en una gota de cristal que aumenta lo que tiene debajo. Ojo: depende de clases del plugin de SystemUI que cambian entre versiones.
 - [ ] **Estilos de cristal:** Transparente, Ahumado, Esmerilado, Tinte Monet y Prisma (con más dispersión), elegibles con un toque.
+- [ ] **Modos de sistema** (idea del 14-11-2026): «HyperOS 4», «iOS 26» e «iOS 27», elegibles con un toque. Cada modo pone su tipo de cristal líquido (centro de control, carpetas y menú de atajos), su estilo de abrir y cerrar apps, sus rebotes y sus ajustes visuales. Sería un perfil más grande que los de ahora (`Presets`), que también toca las claves del cristal. Encaja con los Estilos de cristal de arriba: se pueden hacer juntos.
 - [ ] **Brillo que sigue al dedo:** el reflejo del borde del cristal se mueve hacia donde tocas. Sin giroscopio, así que no gasta batería.
 
 ### Animaciones
@@ -50,12 +51,18 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 - [ ] **Pausa automática:** los efectos pesados se apagan solos con el ahorro de batería, en juegos (Game Turbo) o con el móvil caliente.
 - [ ] **Vibración sutil** sincronizada con las animaciones: cuando el genio aterriza en el icono, cuando rebota una carpeta, cuando cambia la pila de widgets.
 - [x] **Editor visual del muelle:** una gráfica animada de la curva mientras mueves Velocidad y Rebote, con un móvil en miniatura que abre una ventana con ese muelle. *Publicado en la 2.1.0.*
-- [ ] **Tile en los ajustes rápidos** para activar o desactivar HyperSpring y reiniciar el launcher.
+- [x] **Tile en los ajustes rápidos** que pausa HyperSpring (genio, telón y recientes que se doblan) con un toque, sin reiniciar nada. *Publicado en la 2.7.0.* La pausa es la base de la pausa automática de arriba.
+- [x] **Menú de atajos con muelle y borde de cristal líquido** al mantener pulsado un icono. *Publicado en la 2.7.0.*
+- [x] **Velocidad de las animaciones de Android** (las tres escalas de las opciones de desarrollador) desde la app, con root. *Publicado en la 2.7.0.*
+- [x] **Compartir ajustes** con un código corto `HS1:` y pegar los de otra persona. *Publicado en la 2.7.0.* El código QR queda para más adelante: hace falta una librería o un codificador propio.
+- [ ] **Iconos que se apartan con muelle** al arrastrar uno por el escritorio, en vez de deslizarse en línea recta.
+- [ ] **«¿Cómo va mi móvil?»**: con los fotogramas y tirones del registro, sugerir el perfil Rendimiento cuando el genio va justo.
 - [x] **Aviso de versión nueva:** consulta las releases de GitHub (se puede desactivar), y descarga e instala desde la app. *Publicado en la 2.1.0.*
 - [x] **Novedades al actualizar:** al abrir la app tras actualizarla, una pantalla animada con lo nuevo. *Publicado en la 2.1.0.*
 
 ### La app
 - [ ] **Interfaz renovada, muy animada**, como las webs modernas: entradas escalonadas, animaciones al desplazarse, transiciones compartidas entre pantallas y microinteracciones en cada control. Siempre a 60 fps en gama media y respetando el ajuste del sistema que quita las animaciones.
+- [ ] **Intro al estilo Apple** (idea del 14-11-2026): aparece «HyperSpring», una letra (la «i») se repite al menos 20 veces, la cámara las recorre muy deprisa y al final cae el icono. Antes de hacerla, enseñar una vista previa al usuario.
 
 ## Más adelante, si hay demanda
 - [ ] **Calidad automática:** bajar sola la resolución del genio cuando el registro detecte muchos tirones seguidos. Por ahora lo cubre el perfil «Rendimiento».
@@ -71,6 +78,7 @@ Ideas que estaban en la lista y se han quitado, con el motivo:
 - **Más estilos de recientes (abanico, pila 3D).** Lo que pedía la gente era poder apagar el doblado, y eso ya está (**Inicio → Recientes que se doblan**).
 
 ## Hecho
+- [x] 2.7.0: menú de atajos con muelle y borde de cristal líquido, tile de ajustes rápidos para pausar HyperSpring, velocidad de las animaciones de Android y códigos para compartir los ajustes. Detalles en el CHANGELOG.
 - [x] 2.1.0: estilo Profundidad (la ventana como una hoja rígida que se inclina, con estela de movimiento), selector de estilo en menú desplegable, editor visual del muelle, apps sin genio, actualizaciones desde la app y app rediseñada. Detalles en el CHANGELOG.
 - [x] 2.0.0: libxposed API 102 con una fachada propia de hooks y dos motores (el antiguo, API 93, sigue como APK aparte). Perfiles de un toque (Suave, Estilo iOS, Rápido, Rendimiento). Exportar e importar ajustes. La tarjeta de compatibilidad dice con qué API se ha cargado el módulo. Los deslizadores llegan al launcher sin reiniciarlo.
 - [x] 1.0.3: genio más fluido y más parecido a la animación de serie de HyperOS (hilos en todos los núcleos, dibujo en cada refresco con predicción, color de la app al abrir, aterrizaje en el icono como MIUI). Detalles en el CHANGELOG.

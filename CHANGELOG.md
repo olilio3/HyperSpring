@@ -1,5 +1,63 @@
 # Changelog
 
+## 2.7.1
+
+**Fixed**
+- **Control center: no more "circle inside the tile"** in the expanded connectivity panel of Kashi's iOS Control Center. The mod changes each tile's corner radius right after laying it out, on every frame of the expand animation, and the glass kept the radius from one frame earlier (the growing circle). The glass now re-reads the radius before every frame.
+- **Text no longer runs sharp over the clock** on the Launcher, System and About tabs and on subpages: the blur under the status bar only refreshed on Home.
+- **Setting descriptions show two lines** instead of one cut-off line (tap the row to read it all, as before). Much easier to read with large system text.
+
+**Changed**
+- **Same names everywhere:** the Recents and Screenshot pages are now called **Bending recents** and **Squeezing screenshot**, like their Home tiles.
+- **Widget stack in the Launcher tab**, as a switch (it has no settings of its own, so it had no page there).
+- **Presets show which one is in use.**
+- **About:** the Active / Not loaded states are a dot and a word, like the pill on Home, instead of coral buttons that looked tappable. The scrolling band no longer repeats "HyperSpring" right under the title, and keeps its size with large system text.
+- Shorter intros on the Launcher and System tabs; the "tested with" details stay in About.
+- New icons for **Language** (a globe) and **Replay the tour** (play), so no icon means two things. TalkBack now reads the Home tiles as on/off switches, and long-press as "see what it does".
+
+**New**
+- **Living background on the four main tabs:** two very soft coral lights drift across the dot grid, lighting the dots they pass. It costs two small circles per frame, stops when the page is off screen, and stays still when animations are off. Subpages keep the plain grid.
+- **Better icon gestures:** squash and stretch now bend only the shape, so the stroke keeps the same thickness; the gestures run long enough to settle without a final jump; the tile no longer bounces hard on top of the icon's own gesture; the shield draws a check mark.
+
+## 2.7.0
+
+**New**
+- **Springy shortcut menu.** Long-press an icon and its menu pops out of it with a bounce instead of the stiff HyperOS spring, and gets a liquid-glass edge that bends the wallpaper, with a highlight on top. The inside keeps the HyperOS blur, so you still see what is behind it. It is a new feature (Home → Shortcut menu, needs a launcher restart) with its own page in Launcher → Shortcut menu:
+  - **Bounce** (0–1): how far the menu overshoots before settling. 0 is the HyperOS behaviour.
+  - **Liquid glass** on or off. It uses the folders' glass sliders and needs a static wallpaper.
+- **Quick settings tile.** Pause HyperSpring with one tap from the panel: apps open and close with the HyperOS animation, the curtain and bending recents stop, right away and without restarting anything. The glass stays. Tap again to resume; long-press opens the app. Home shows a notice with a **Resume** button while paused, and **Home → Quick settings tile** adds the tile for you (Android 13+).
+- **Android animation speed** in **System → Android**: the three animation scales from developer options (0.5× to 1.5×) in one menu, without enabling developer options. Needs root. Long-press resets it to 1×.
+- **New liquid-glass tab bar**, in the style of the IG Glass module by maciasdxv (rewritten here, not copied):
+  - The capsule reads what is under it at a third of the resolution, blurs and saturates it a little and bends it along the whole edge (Kyant0's lens, with some depth and a rainbow in the corners), under a dark tint, a hairline edge and a diagonal light on the rim.
+  - Touching it, the bar swells a little, follows your finger a few dp with rubber resistance and stretches towards it, with a soft light under your finger.
+  - The selection pill moves on real springs: it lifts (grows a bit) while it travels and stretches with speed. Drag it from tab to tab, with a tick on each one; past 30 % of the way it changes tab.
+  - Scrolling down a page shrinks the bar (86 %) and lowers it a bit; scrolling up, reaching the top or touching it brings it back.
+- **Animated feature icons.** Turning a feature on, its icon plays its own little gesture: the genie star spins and sparkles, the recents card bends, the widget stack shuffles, the folder bounces like jelly, the drop falls and splashes, the shortcut menu pops out of its corner, the curtain closes and opens, the control-center sliders slide. The tab icons use the same gestures.
+- **Share my settings** in **About**: a short `HS1:` code you can paste into Telegram or Reddit. It carries only the settings: no phone data and no list of apps without genie (that would reveal which apps you have). **Paste shared settings** reads the code from the clipboard and asks before applying it; your own list of apps without genie is kept.
+
+**Changed**
+- The log says "HyperSpring paused" instead of "app excluded by the user" when the genie is skipped because of the pause.
+
+## 2.6.0
+
+**New: redesigned app**
+- **Black with a single accent.** Pure black background with a faint dot grid, cards that stand out by a thin light rim, and coral as the only color, used just for what is on and for the main action. No more gradients anywhere in the app.
+- **Compact home.** The features are now low two-column tiles (icon, name) instead of big cards. Tap to switch one on or off: the color opens as a circle from your finger and a small wave runs through the other tiles. Long-press to read what it does, in a box under the grid.
+- **Tighter rows and cards** everywhere: smaller paddings, corners and text.
+- **Big titles that come in letter by letter**, rising from below with a slight twist.
+- **Pinned top bar.** When you scroll, the big title fades away and the page name stays at the top in small type, over a black bar (with the back button on subpages).
+- **Cards react to scrolling.** They come up tilted back and straighten as they enter the screen, and sink slightly as they leave at the top.
+- **Opening a section:** the row you tap grows into the new page while its content comes out of it.
+- **Sliders fill up** when a page opens, and their numbers roll like an odometer while you drag.
+- **Elastic tab pill:** in the bottom bar, the selection stretches towards the new tab and then catches up with a bounce.
+- **Switches stretch** as the knob travels.
+- **Status texts decode** (Check for updates) instead of just changing.
+- **About:** big scrolling band with the app's words that speeds up with your scroll, and the dot grid lights up in coral under your finger (also on the welcome screen).
+- Section headers draw a short coral line as they appear.
+
+**Changed**
+- Lighter on the GPU: the animated background that redrew the whole screen every frame is gone; the new effects only move what is on screen and only while needed.
+
 ## 2.5.0
 
 **New**

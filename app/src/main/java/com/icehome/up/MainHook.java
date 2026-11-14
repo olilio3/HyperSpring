@@ -46,6 +46,10 @@ public class MainHook {
             systemUi(processName, cl);
             return;
         }
+        if ("com.miui.screenshot".equals(pkg)) {
+            screenshotApp(processName);
+            return;
+        }
         if ("miui.systemui.plugin".equals(pkg)) {
             // El plugin también se carga en procesos auxiliares (p. ej. :flashlight) sin SystemUI.
             if (processName == null || processName.equals("com.android.systemui")) {
@@ -82,7 +86,8 @@ public class MainHook {
                 + ", recientes " + onOff(Tune.on(c, "icehome_curtain_on"))
                 + ", pila " + onOff(Tune.on(c, "icehome_stack_on"))
                 + ", carpetas " + onOff(Tune.on(c, "icehome_folder_morph_on"))
-                + ", cristal carpetas " + onOff(Tune.on(c, "icehome_folder_glass_on")));
+                + ", cristal carpetas " + onOff(Tune.on(c, "icehome_folder_glass_on"))
+                + ", menú de atajos " + onOff(Tune.on(c, "icehome_menu_on")));
         if (Tune.on(c, "icehome_genie_on")) {
             try {
                 WindowAnim.install(cl);
@@ -133,6 +138,13 @@ public class MainHook {
                 XposedBridge.log(t);
             }
         }
+        if (Tune.on(c, "icehome_menu_on")) {
+            try {
+                ShortcutMenuFx.install(cl);
+            } catch (Throwable t) {
+                Log.e("no se pudo instalar el menú de atajos (¿otra versión del launcher?)", t);
+            }
+        }
         }
 
     /** Para el registro: con qué API se ha cargado el módulo aquí. */
@@ -171,9 +183,39 @@ public class MainHook {
                 });
     }
 
+    // ------------------------------------------------------------------ app de capturas de MIUI
+
+    private static volatile boolean screenshotDone;
+
+    /**
+     * App de capturas (com.miui.screenshot): su vista previa se encoge a la par que la pantalla
+     * (la otra mitad de la captura que encoge, en SystemUI). Sin este ámbito marcado en LSPosed,
+     * la pantalla se encoge igual pero la vista previa sale a pantalla completa por encima.
+     */
+    private static void screenshotApp(String processName) {
+        if (processName != null && !processName.equals("com.miui.screenshot")) return;
+        if (screenshotDone) return;
+        screenshotDone = true;
+        try {
+            com.icehome.up.telon.SqueezeShot.watch();
+        } catch (Throwable t) {
+            XposedBridge.log(t);
+        }
+        onAttach(new WithContext() {
+            @Override
+            public void run(android.content.Context c) {
+                try {
+                    com.icehome.up.telon.SqueezeShot.install(c);
+                } catch (Throwable t) {
+                    XposedBridge.log(t);
+                }
+            }
+        });
+    }
+
     // ------------------------------------------------------------------ interfaz del sistema
 
-    private static boolean telonOn;
+    private static boolean telonOn, sysuiSafe;
 
     /** Una vez por proceso de SystemUI: módulos viejos y modo seguro. */
     private static synchronized void checkSystemUi() {
@@ -185,6 +227,7 @@ public class MainHook {
         boolean oldTelon = installed(c, OLD_TELON), oldKashi = installed(c, OLD_KASHIPLUS);
         if (oldTelon) com.icehome.up.telon.Log.w("sigue instalado el módulo Telón: desinstálalo; el telón de HyperSpring no se carga");
         if (oldKashi) com.icehome.up.telon.Log.w("sigue instalado KashiPlus: desinstálalo; el centro de control de HyperSpring no se carga");
+        sysuiSafe = safe;
         telonOn = safe && !oldTelon;
         ccInstalled = safe && !oldKashi;
     }
@@ -222,6 +265,25 @@ public class MainHook {
             XposedBridge.log(t);
         }
         checkSystemUi();
+        if (sysuiSafe) {
+            // Pantalla que se encoge al hacer una captura. Va aparte del telón: tiene su propio
+            // interruptor (se lee en cada captura, sin reiniciar) y no depende del módulo viejo.
+            try {
+                com.icehome.up.telon.Squeeze.watch(cl);
+            } catch (Throwable t) {
+                XposedBridge.log(t);
+            }
+            onAttach(new WithContext() {
+                @Override
+                public void run(android.content.Context c) {
+                    try {
+                        com.icehome.up.telon.Squeeze.install(c);
+                    } catch (Throwable t) {
+                        com.icehome.up.telon.Log.e("no se pudo instalar la captura que encoge la pantalla", t);
+                    }
+                }
+            });
+        }
         if (telonOn) {
             final ClassLoader fcl = cl;
             onAttach(new WithContext() {

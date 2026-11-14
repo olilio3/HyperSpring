@@ -65,6 +65,36 @@ final class Presets {
         e.commit();
     }
 
+    /**
+     * ¿Está puesto este perfil? Sí, si cada ajuste que nombra tiene su valor y los demás de
+     * {@link #KEYS} siguen sin tocar (como los deja {@link #apply}). En cuanto mueves un
+     * deslizador de esos, ya no cuenta como el perfil.
+     */
+    static boolean active(Context c, Object[] preset) {
+        SharedPreferences p = c.getSharedPreferences(PrefsProvider.PREFS, 0);
+        String[] kv = (String[]) preset[4];
+        for (String k : KEYS) {
+            String want = null;
+            for (int i = 0; i + 1 < kv.length; i += 2) if (kv[i].equals(k)) want = kv[i + 1];
+            String have;
+            try {
+                have = p.getString(k, null);
+            } catch (ClassCastException e) {
+                return false;
+            }
+            if (want == null) {
+                if (have != null) return false;
+            } else {
+                try {
+                    if (have == null || Math.abs(Float.parseFloat(have) - Float.parseFloat(want)) > 1e-4f) return false;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private Presets() {
     }
 }

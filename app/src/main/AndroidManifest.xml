@@ -47,7 +47,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
             </intent-filter>
+            <!-- Mantener pulsado el tile de los ajustes rápidos abre la app. -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
         </activity>
+
+        <!-- Tile de los ajustes rápidos: pausar y reanudar HyperSpring (PauseTile.java). -->
+        <service
+            android:name="com.icehome.up.PauseTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile"
+            android:label="HyperSpring"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
 
         <meta-data android:name="xposedmodule" android:value="true" />
         <meta-data android:name="xposeddescription" android:value="@string/xposed_description" />
