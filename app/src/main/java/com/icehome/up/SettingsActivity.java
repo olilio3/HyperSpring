@@ -1788,6 +1788,7 @@ public class SettingsActivity extends Activity {
         if (n.contains("menú")) return Icons.LIST;
         if (n.contains("telón")) return Icons.CURTAIN;
         if (n.contains("captura")) return Icons.PHONE;
+        if (n.contains("gemini")) return Icons.LIGHT;
         if (n.contains("interior")) return Icons.DROP;
         if (n.contains("refracción")) return Icons.PALETTE;
         if (n.contains("canto") || n.contains("luz")) return Icons.LIGHT;

@@ -27,12 +27,18 @@ public final class Tune {
             {"telon_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas del telón. Ponlo igual al refresco de tu pantalla."},
             {"telon_quality", "Resolución", 30f, 100f, 50f, 0, "Nitidez de la ventana durante el telón. Más alta se ve más nítida pero gasta más."},
             {"#", "Captura que encoge"},
-            {"telon_squeeze_assist", "También al llamar a Gemini", 0f, 1f, 1f, -1, "La pantalla se encoge igual cuando abres el asistente (Gemini), con el botón de encendido o el gesto de la esquina, como en los Pixel."},
             {"telon_squeeze_size", "Tamaño", 50f, 98f, 75f, 0, "Tamaño de la pantalla, en %, en el punto más hundido. Los Pixel se quedan en un 97 %, un empujón suave."},
             {"telon_squeeze_left", "Hacia la izquierda", 0f, 1f, 0.5f, 2, "Cuánto se va la pantalla a la izquierda mientras se encoge. 0 = se encoge recta hacia el centro, como en los Pixel."},
             {"telon_squeeze_speed", "Velocidad", 0.5f, 2f, 1f, 1, "1 = como en los Pixel. Más alto, el empujón es más rápido."},
             {"telon_squeeze_frame", "Marco", 0f, 1f, 1f, -1, "Un marco de esquinas redondeadas rodea la pantalla mientras se encoge. Sin él se ve lo que haya detrás, como el fondo de pantalla."},
             {"telon_squeeze_color", "Color del marco", 0f, 2f, 2f, 0, "0 = negro, como en los Pixel. 1 = Monet: el tono oscuro que sale de tu fondo de pantalla. 2 = marrón al estilo Monet."},
+            {"#", "Gemini"},
+            {"telon_squeeze_assist", "Encoger al llamar a Gemini", 0f, 1f, 1f, -1, "La pantalla se encoge cuando abres el asistente (Gemini), con el botón de encendido o el gesto de la esquina, y una luz de colores rellena el marco. Como en los Pixel."},
+            {"telon_gemini_size", "Tamaño", 50f, 98f, 75f, 0, "Tamaño de la pantalla, en %, en el punto más hundido. Los Pixel se quedan en un 97 %."},
+            {"telon_gemini_speed", "Velocidad", 0.3f, 1.5f, 0.55f, 2, "Más bajo, más pausado. 1 = tan rápido como la captura."},
+            {"telon_gemini_glow", "Intensidad de la luz", 0f, 1.5f, 1f, 2, "Brillo de la luz del marco. 0 la quita y deja solo el marco."},
+            {"telon_gemini_spin", "Giro de los colores", 0f, 8f, 3.5f, 1, "Segundos que tardan los colores en dar una vuelta al marco. Más alto, más lento. 0 = quietos."},
+            {"telon_gemini_colors", "Colores", 0f, 2f, 1f, 0, "0 = los de Gemini: azul, violeta y rosa. 1 = Monet: los acentos de tu fondo de pantalla. 2 = arcoíris."},
     };
 
     /**
@@ -79,6 +85,11 @@ public final class Tune {
         Squeeze.speed = f(c, "telon_squeeze_speed");
         Squeeze.frame = f(c, "telon_squeeze_frame") >= 0.5f;
         Squeeze.color = Math.round(f(c, "telon_squeeze_color"));
+        Squeeze.geminiSize = f(c, "telon_gemini_size") / 100f;
+        Squeeze.geminiSpeed = f(c, "telon_gemini_speed");
+        Squeeze.geminiGlow = f(c, "telon_gemini_glow");
+        Squeeze.geminiSpin = f(c, "telon_gemini_spin");
+        Squeeze.geminiColors = Math.round(f(c, "telon_gemini_colors"));
     }
 
     /** Valor de un ajuste (de la memoria si ya se leyó; si no, del proveedor). */

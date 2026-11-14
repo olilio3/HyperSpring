@@ -64,8 +64,17 @@ public final class Squeeze {
     static volatile float left = 0.5f;
     static volatile float speed = 1f;
     static volatile boolean frame = true;
-    /** Con Gemini la animación va a esta fracción de la velocidad (más lenta que la captura). */
-    private static final float GEMINI_SLOW = 0.55f;
+    // Gemini (página propia en Sistema). Usa la misma forma de encoger que la captura.
+    /** Tamaño de la pantalla en el punto más hundido al llamar a Gemini. */
+    static volatile float geminiSize = 0.75f;
+    /** Velocidad al llamar a Gemini (más lenta que la captura: hay luz que ver). */
+    static volatile float geminiSpeed = 0.55f;
+    /** Segundos por vuelta de los colores; 0 = quietos. */
+    static volatile float geminiSpin = 3.5f;
+    /** Intensidad de la luz: 0 = sin luz, 1 = normal. */
+    static volatile float geminiGlow = 1f;
+    /** Colores de la luz: 0 = Gemini, 1 = Monet, 2 = arcoíris. */
+    static volatile int geminiColors = 1;
     /** Color del marco: 0 = negro, 1 = Monet (el tono oscuro del fondo de pantalla), 2 = marrón. */
     static volatile int color = 2;
 
@@ -265,16 +274,18 @@ public final class Squeeze {
         lastStart = now;
         if (anim != null) anim.cancel();
         // Si ya estaba encogida (otra captura enseguida), sigue desde donde estaba.
-        // Con Gemini va más despacio: hay luz que ver, y en los Pixel también es más pausado.
-        final Curve curve = new Curve(gemini ? speed * GEMINI_SLOW : speed, lastP);
+        // Gemini tiene su propia velocidad y tamaño (en su página).
+        final Curve curve = new Curve(gemini ? geminiSpeed : speed, lastP);
+        geo.size = gemini ? geminiSize : -1f;
         final Rect screen = screenBounds(ctx);
         cornerRadius = windowCornerRadius(ctx);
         if (view != null) {
             // El color se mira en cada captura: el de Monet cambia con el fondo de pantalla.
             view.paint.setColor(frameColor());
             view.frame = frame;
-            view.glow = gemini;
-            view.setVisibility(frame || gemini ? View.VISIBLE : View.INVISIBLE);
+            view.glow = gemini && geminiGlow > 0.01f;
+            if (view.glow) view.setColors(glowColors());
+            view.setVisibility(frame || view.glow ? View.VISIBLE : View.INVISIBLE);
         }
         anim = ValueAnimator.ofFloat(0f, 1f);
         anim.setInterpolator(new LinearInterpolator());
@@ -337,9 +348,11 @@ public final class Squeeze {
     static final class Geo {
         float scale, x, y;           // escala y posición de la pantalla encogida
         float l, t, r, b, radius;    // hueco del marco
+        /** Tamaño en el punto más hundido; menor que 0 = el de la captura ({@link Squeeze#size}). */
+        float size = -1f;
 
         void set(float p, float w, float h, float corner) {
-            float s = (1f - size) * p;                    // fracción que encoge
+            float s = (1f - (size >= 0f ? size : Squeeze.size)) * p;   // fracción que encoge
             float dx = MAX_LEFT * left * w * p;           // hacia la izquierda
             scale = 1f - s;
             x = s * w / 2f - dx;
@@ -500,18 +513,17 @@ public final class Squeeze {
         /** Qué se dibuja en esta animación: el marco (ajuste) y el halo (solo con Gemini). */
         boolean frame = true, glow;
 
-        // Halo de Gemini: azul, violeta y rosa, y otra vez azul para que la vuelta no tenga corte.
-        private static final int[] GEMINI = {0xFF4C8DF6, 0xFF9B72CB, 0xFFE0607E, 0xFFF29B5C, 0xFF4C8DF6};
-        /** Capas del halo: varias líneas anchas y suaves, una encima de otra, en vez de un
-         *  desenfoque (que en la Mali-G52 cuesta mucho más en cada fotograma). */
-        private static final int GLOW_LAYERS = 5;
-        /** Una vuelta de los colores alrededor del marco, en ms. */
-        private static final float TURN_MS = 3500f;
+        // Colores del halo; el primero se repite al final para que la vuelta no tenga corte.
+        private int[] colors = GEMINI;
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path hole = new Path();
         private final android.graphics.Matrix spin = new android.graphics.Matrix();
+        /** Degradado de colores alrededor del centro de la pantalla. Se crea una vez por paleta
+         *  (crear uno en cada fotograma obliga a subir una textura nueva a la GPU). */
         private android.graphics.SweepGradient sweep;
-        private float sweepX = -1, sweepY = -1;
+        /** Shader de la luz (Android 13+). Null hasta el primer uso; si no compila, se usa
+         *  el dibujo sencillo y no se vuelve a intentar. */
+        private android.graphics.RuntimeShader glowShader;
+        private boolean glowFailed;
 
         FrameView(Context c) {
             super(c);
@@ -550,56 +562,118 @@ public final class Squeeze {
          * que llega con el hundimiento y desaparece cuando la pantalla vuelve.
          */
         private void drawGlow(Canvas c) {
-            float cx = (l + r) / 2f, cy = (t + b) / 2f;
-            if (sweep == null || cx != sweepX || cy != sweepY) {
-                // El degradado gira alrededor del centro del hueco; se rehace solo si se mueve.
-                sweep = new android.graphics.SweepGradient(cx, cy, GEMINI, null);
-                sweepX = cx;
-                sweepY = cy;
-            }
+            float w = getWidth(), h = getHeight();
+            float cx = w / 2f, cy = h / 2f;
+            if (sweep == null) sweep = new android.graphics.SweepGradient(cx, cy, colors, null);
             // Los colores giran con el reloj, no con p: así siguen dando vueltas aunque la
             // pantalla esté quieta en el punto más hundido.
-            float angle = (android.os.SystemClock.uptimeMillis() % (long) TURN_MS) / TURN_MS * 360f;
+            long turn = (long) (geminiSpin * 1000f);
+            float angle = turn <= 0 ? 0f : (android.os.SystemClock.uptimeMillis() % turn) / (float) turn * 360f;
             spin.setRotate(angle, cx, cy);
             sweep.setLocalMatrix(spin);
-            glowPaint.setShader(sweep);
 
-            float w = getWidth(), h = getHeight();
-            float light = Math.min(1f, p * 1.4f);
+            float light = Math.min(1f, p * 1.4f) * geminiGlow;
             // Grosor del marco: la distancia más grande del borde del móvil al hueco.
             float thick = Math.max(Math.max(l, t), Math.max(w - r, h - b));
-            // El marco, sin el hueco: la luz solo rellena esa zona.
+            glowPaint.setStyle(Paint.Style.FILL);
+            if (Build.VERSION.SDK_INT >= 33 && !glowFailed) {
+                try {
+                    // Todo en la GPU, con un solo rectángulo: el shader calcula para cada píxel
+                    // si está en el marco y a qué distancia del borde. Antes eran un recorte y
+                    // seis contornos grandes que la CPU tenía que rehacer en cada fotograma
+                    // (cambiaban de tamaño), y eso daba tirones.
+                    if (glowShader == null) glowShader = new android.graphics.RuntimeShader(GLOW_AGSL);
+                    glowShader.setInputShader("sweep", sweep);
+                    glowShader.setFloatUniform("size", w, h);
+                    glowShader.setFloatUniform("hole", l, t, r, b);
+                    glowShader.setFloatUniform("holeR", radius);
+                    glowShader.setFloatUniform("outerR", cornerRadius);
+                    glowShader.setFloatUniform("thick", thick);
+                    glowShader.setFloatUniform("light", light);
+                    glowPaint.setShader(glowShader);
+                    glowPaint.setAlpha(255);
+                    c.drawRect(0, 0, w, h, glowPaint);
+                    postInvalidateOnAnimation();
+                    return;
+                } catch (Throwable e) {
+                    glowFailed = true;
+                    Log.e("captura: el shader de la luz de Gemini no compila, uso el sencillo", e);
+                }
+            }
+            // Sin shader (Android 12 o si falla): el marco relleno de color, sin degradado.
             path.reset();
             path.addRect(0, 0, w, h, Path.Direction.CW);
             path.addRoundRect(l, t, r, b, radius, radius, Path.Direction.CW);
-            c.save();
-            c.clipPath(path);
-            // 1) Un fondo de color suave en todo el marco.
-            glowPaint.setStyle(Paint.Style.FILL);
-            glowPaint.setAlpha((int) (255f * light * 0.4f));
+            glowPaint.setShader(sweep);
+            glowPaint.setAlpha(alpha(light * 0.6f));
             c.drawPath(path, glowPaint);
-            // 2) Luz que sale de los bordes del móvil hacia dentro: líneas sobre el borde de la
-            //    pantalla, de la más ancha y tenue a la más fina. Sumadas, brillan más en el borde
-            //    y se van apagando hacia la pantalla encogida.
-            glowPaint.setStyle(Paint.Style.STROKE);
-            hole.reset();
-            hole.addRoundRect(0, 0, w, h, cornerRadius, cornerRadius, Path.Direction.CW);
-            for (int i = 0; i < GLOW_LAYERS; i++) {
-                float k = 1f - i / (float) GLOW_LAYERS;
-                glowPaint.setStrokeWidth(Math.max(1f, thick * 2f * k));
-                glowPaint.setAlpha((int) (255f * light * 0.22f));
-                c.drawPath(hole, glowPaint);
-            }
-            // 3) Un filo nítido alrededor de la pantalla encogida, para separarla de la luz.
-            hole.reset();
-            hole.addRoundRect(l, t, r, b, radius, radius, Path.Direction.CW);
-            glowPaint.setStrokeWidth(Math.max(3f, thick * 0.12f));
-            glowPaint.setAlpha((int) (255f * light));
-            c.drawPath(hole, glowPaint);
-            c.restore();
             // Mientras haya halo, se sigue dibujando para que los colores no se paren.
             postInvalidateOnAnimation();
         }
+
+        /** Cambia la paleta; el degradado se rehace en el siguiente fotograma. */
+        void setColors(int[] c) {
+            if (java.util.Arrays.equals(c, colors)) return;
+            colors = c;
+            sweep = null;
+        }
+
+        /** De 0..1 (o algo más, con la intensidad subida) a la opacidad de Paint, sin pasarse. */
+        private static int alpha(float a) {
+            return Math.max(0, Math.min(255, (int) (255f * a)));
+        }
+    }
+
+    /**
+     * Luz del marco de Gemini (AGSL). Para cada píxel: fuera del hueco (box &gt; 0) se pinta; la luz
+     * es más fuerte junto al borde del móvil (e) y hay un filo nítido pegado a la pantalla
+     * encogida (rim). El color viene del degradado que gira (sweep). Sale premultiplicado.
+     */
+    static final String GLOW_AGSL = ""
+            + "uniform shader sweep;\n"
+            + "uniform float2 size;\n"
+            + "uniform float4 hole;\n"
+            + "uniform float holeR;\n"
+            + "uniform float outerR;\n"
+            + "uniform float thick;\n"
+            + "uniform float light;\n"
+            // Distancia con signo a un rectángulo redondeado (negativa dentro).
+            + "float box(float2 p, float2 c, float2 h, float r) {\n"
+            + "  float2 q = abs(p - c) - h + r;\n"
+            + "  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;\n"
+            + "}\n"
+            + "half4 main(float2 p) {\n"
+            + "  float dHole = box(p, (hole.xy + hole.zw) * 0.5, (hole.zw - hole.xy) * 0.5, holeR);\n"
+            + "  float inFrame = clamp(dHole + 0.5, 0.0, 1.0);\n"
+            + "  if (inFrame <= 0.0) { return half4(0.0); }\n"
+            + "  float dEdge = -box(p, size * 0.5, size * 0.5, outerR);\n"
+            + "  float e = 1.0 - clamp(dEdge / max(thick, 1.0), 0.0, 1.0);\n"
+            + "  float rim = exp(-max(dHole, 0.0) / max(thick * 0.06, 1.5));\n"
+            + "  float a = clamp(light * (0.4 + 0.6 * e + 0.3 * e * e + 0.9 * rim), 0.0, 1.0) * inFrame;\n"
+            + "  half4 col = sweep.eval(p);\n"
+            + "  return half4(col.rgb * half(a), half(a));\n"
+            + "}\n";
+
+    /** Azul, violeta, rosa y naranja de Gemini; el azul se repite para cerrar la vuelta. */
+    private static final int[] GEMINI = {0xFF4C8DF6, 0xFF9B72CB, 0xFFE0607E, 0xFFF29B5C, 0xFF4C8DF6};
+    private static final int[] RAINBOW = {0xFFFF5A5F, 0xFFFFB443, 0xFFFFE25A, 0xFF4CD486, 0xFF4C8DF6,
+            0xFF9B72CB, 0xFFFF5A5F};
+
+    /** Colores de la luz según el ajuste. Monet se mira en cada llamada: cambia con el fondo. */
+    private static int[] glowColors() {
+        if (geminiColors == 1) {
+            try {
+                // Los tres acentos de Monet en un tono claro, para que brillen sobre el marco.
+                int a = ctx.getColor(android.R.color.system_accent1_300);
+                int b = ctx.getColor(android.R.color.system_accent2_300);
+                int c = ctx.getColor(android.R.color.system_accent3_300);
+                return new int[]{a, b, c, a};
+            } catch (Throwable ignored) {
+            }
+        } else if (geminiColors == 2) {
+            return RAINBOW;
+        }
+        return GEMINI;
     }
 
     private Squeeze() {

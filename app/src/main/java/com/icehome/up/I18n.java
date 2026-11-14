@@ -80,6 +80,7 @@ final class I18n {
         s("Función", "Feature");
         s("Telón", "Curtain");
         s("Captura que encoge", "Squeezing screenshot");
+        s("Gemini", "Gemini");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
         s("Refracción del borde", "Edge refraction");
@@ -152,8 +153,18 @@ final class I18n {
                 "Inside an app, the window coming in or going out tilts with its speed and the one below blurs. Applies after restarting System UI.");
         i("telon_squeeze_on", "Screen that squeezes on screenshot",
                 "When you take a screenshot, the screen sinks inwards and a little to the left, as if you pushed it, and springs back. Like calling Gemini on Pixel phones.");
-        i("telon_squeeze_assist", "Also when calling Gemini",
-                "The screen squeezes the same way when you open the assistant (Gemini), with the power button or the corner gesture, like on Pixel phones.");
+        i("telon_squeeze_assist", "Squeeze when calling Gemini",
+                "The screen squeezes when you open the assistant (Gemini), with the power button or the corner gesture, and a coloured light fills the frame. Like on Pixel phones.");
+        i("telon_gemini_size", "Size",
+                "Size of the screen, in %, at the deepest point. Pixel phones stay at about 97 %.");
+        i("telon_gemini_speed", "Speed",
+                "Lower is calmer. 1 = as fast as the screenshot.");
+        i("telon_gemini_glow", "Light intensity",
+                "Brightness of the light in the frame. 0 removes it and leaves only the frame.");
+        i("telon_gemini_spin", "Colour spin",
+                "Seconds for the colours to go once around the frame. Higher is slower. 0 = still.");
+        i("telon_gemini_colors", "Colours",
+                "0 = Gemini's: blue, violet and pink. 1 = Monet: the accents of your wallpaper. 2 = rainbow.");
         i("telon_squeeze_size", "Size",
                 "Size of the screen, in %, at the deepest point. Pixel phones stay at about 97 %, a soft push.");
         i("telon_squeeze_left", "To the left",

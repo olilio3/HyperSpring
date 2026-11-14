@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.0
+
+**New**
+- **Gemini has its own page** in **System → Gemini**, so the assistant squeeze no longer shares everything with the screenshot:
+  - **Squeeze when calling Gemini** (the switch, moved here from the screenshot page).
+  - **Size** and **Speed** of its own (by default 75 % and a calmer 0.55).
+  - **Light intensity** (0 leaves only the frame), **Colour spin** (seconds per turn, 0 = still) and **Colours**: Gemini's blue, violet and pink, **Monet** (your wallpaper's accents, now the default) or rainbow.
+  - The **Frame** and its colour stay on the screenshot page and apply to both.
+
+**Fixed**
+- **Smoother Gemini light.** It was drawn with a clip and six big outlines that the CPU had to rebuild on every frame, which stuttered on slower phones. It is now one GPU shader pass per frame (Android 13+); older Android versions get a simpler fill.
+
 ## 2.8.0
 
 **New**

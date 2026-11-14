@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.8.0</b> · <a href="README.md">English</a>
+  <b>v2.9.0</b> · <a href="README.md">English</a>
 </p>
 
 ---
