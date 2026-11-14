@@ -230,6 +230,9 @@ public final class SqueezeShot {
             public void run() {
                 try {
                     Tune.reloadSqueeze(ctx);
+                    // Para Acerca de y el aviso de la página de la captura: HyperSpring sí se
+                    // carga aquí. En este hilo: es una llamada a otra app.
+                    com.icehome.up.Remote.seen(ctx, "shot_seen");
                 } catch (Throwable ignored) {
                 }
                 Looper l = Looper.myLooper();

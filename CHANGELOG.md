@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.1
+
+**Important: tick the Screenshot scope.** The squeezing screenshot needs HyperSpring in a third LSPosed scope, **Screenshot** (`com.miui.screenshot`), since 2.7.1. LSPosed does not tick new scopes when you update, so it is probably missing: open LSPosed → HyperSpring and tick it. No reboot needed.
+
+**New**
+- **A notice when the Screenshot scope is missing.** Without it, MIUI's frozen preview covers the frame and the screen shrinks 0.6 s late, so you only saw the last frames of the squeeze. Home and the screenshot page now say so, and it goes away after the first screenshot with the scope ticked. It doesn't show after a reboot if the scope is fine.
+- **About → Compatibility** lists the screenshot app with its Active / Not loaded state.
+
+
 ## 2.9.0
 
 **New**

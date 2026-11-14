@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v2.9.0</b> · <a href="README.es.md">Español</a>
+  <b>v2.9.1</b> · <a href="README.es.md">Español</a>
 </p>
 
 ---
@@ -69,7 +69,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 | **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. |
 | **Root** | Magisk, KernelSU or APatch. Grant root to the HyperSpring app so the restart buttons work instantly. |
 | **LSPosed** | A framework with libxposed API 101+ such as JingMatrix/Vector 2.x (`HyperSpring.apk`), or an older LSPosed with Xposed API 93 (`HyperSpring-legacy.apk`). |
-| **Scopes** | `com.miui.home` (System launcher) and `com.android.systemui` (System UI). If LSPosed lists it, also tick `miui.systemui.plugin`. |
+| **Scopes** | `com.miui.home` (System launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
 
 ### Tested with
 
@@ -113,13 +113,13 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 ## Installation
 
 1. Install the APK from [Releases](../../releases): `HyperSpring.apk` on Vector and other current frameworks (libxposed API 102), `HyperSpring-legacy.apk` on older LSPosed builds.
-2. In LSPosed, enable **HyperSpring** and tick the **System launcher** and **System UI** scopes.
+2. In LSPosed, enable **HyperSpring** and tick the **System launcher**, **System UI** and **Screenshot** scopes.
 3. Reboot.
 4. Open HyperSpring and grant root when asked (it's only used to restart the launcher and System UI).
 5. In **About → Compatibility**, every part should show **Active**.
 
 ### Coming from Ice Home
-HyperSpring installs over it and keeps your settings, because it uses the same package (`com.icehome.up`). LSPosed does **not** tick the new scope by itself: check that both are ticked.
+HyperSpring installs over it and keeps your settings, because it uses the same package (`com.icehome.up`). LSPosed does **not** tick the new scope by itself: check that all of them are ticked (Screenshot is new since 2.7.1).
 
 ### Updating
 1. Install the new version over the old one.

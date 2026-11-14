@@ -157,7 +157,12 @@ public final class Squeeze {
                     main.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            if (android.os.SystemClock.uptimeMillis() - capturedAt > SqueezeShot.FALLBACK_MS + 900) start(enabled, false);
+                            if (android.os.SystemClock.uptimeMillis() - capturedAt > SqueezeShot.FALLBACK_MS + 900) {
+                                // La app de capturas no avisó: casi siempre es que falta su ámbito en
+                                // LSPosed. Se apunta para que la app de HyperSpring lo avise en Inicio.
+                                if (enabled) Log.state("shot_missing", String.valueOf(System.currentTimeMillis()));
+                                start(enabled, false);
+                            }
                         }
                     }, SqueezeShot.FALLBACK_MS);
                 }

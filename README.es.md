@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.9.0</b> · <a href="README.md">English</a>
+  <b>v2.9.1</b> · <a href="README.md">English</a>
 </p>
 
 ---
@@ -101,13 +101,13 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 ## Instalación
 
 1. Instala el APK de [Releases](../../releases): `HyperSpring.apk` en Vector y otros frameworks actuales (libxposed API 102), `HyperSpring-legacy.apk` en LSPosed antiguos.
-2. En LSPosed, activa **HyperSpring** y marca los ámbitos **Launcher del sistema** e **Interfaz del sistema**.
+2. En LSPosed, activa **HyperSpring** y marca los ámbitos **Launcher del sistema**, **Interfaz del sistema** y **Captura de pantalla**.
 3. Reinicia el móvil.
 4. Abre HyperSpring y concede root cuando lo pida (solo se usa para reiniciar el launcher y la interfaz).
 5. En **Acerca de → Compatibilidad**, cada parte debería aparecer como **Activo**.
 
 ### Si vienes de Ice Home
-HyperSpring se instala encima y conserva sus ajustes, porque usa el mismo paquete (`com.icehome.up`). Al actualizar, LSPosed **no** marca solo el ámbito nuevo: revisa que estén los dos.
+HyperSpring se instala encima y conserva sus ajustes, porque usa el mismo paquete (`com.icehome.up`). Al actualizar, LSPosed **no** marca solo el ámbito nuevo: revisa que estén todos (Captura de pantalla es nuevo desde la 2.7.1).
 
 ### Actualizar
 Instala la versión nueva encima y reinicia el launcher y la interfaz desde la pestaña **Inicio**, o reinicia el móvil. Si alguna parte sigue con la versión anterior, la app te avisa.

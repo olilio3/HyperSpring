@@ -857,6 +857,15 @@ public class SettingsActivity extends Activity {
                             + "launcher and System UI (below) or reboot. If nothing changes, check in LSPosed that the module "
                             + "and its scopes (System launcher and System UI) are enabled."),
                     null, null));
+        } else if (shotMissing()) {
+            // Al actualizar, LSPosed no añade solo los ámbitos nuevos: es fácil que falte este.
+            c.addView(notice(I18n.t("Falta un ámbito: en LSPosed, abre HyperSpring y marca «Captura de pantalla» "
+                            + "(com.miui.screenshot). Sin él, la vista previa de la captura tapa el marco y la pantalla "
+                            + "se encoge tarde. Después haz una captura y este aviso desaparece.",
+                    "A scope is missing: in LSPosed, open HyperSpring and tick “Screenshot” "
+                            + "(com.miui.screenshot). Without it, the screenshot preview covers the frame and the screen "
+                            + "shrinks late. Then take a screenshot and this notice goes away."),
+                    null, null));
         }
 
         c.addView(label(I18n.t("Funciones", "Features")));
@@ -1337,6 +1346,7 @@ public class SettingsActivity extends Activity {
         k.addView(infoRow(Icons.PHONE, I18n.t("Este móvil", "This phone"), Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion()));
         k.addView(statusRow(Icons.HOME, I18n.t("Escritorio", "Launcher"), appVersion("com.miui.home"), "launcher_seen"));
         k.addView(statusRow(Icons.CURTAIN, I18n.t("Interfaz del sistema", "System UI"), appVersion("com.android.systemui"), "systemui_seen"));
+        k.addView(statusRow(Icons.PHONE, I18n.t("App de capturas", "Screenshot app"), appVersion("com.miui.screenshot"), "shot_seen"));
         String cc = state("cc_seen");
         String ccKind = cc == null ? null : cc.endsWith("|ios") ? I18n.t("mod iOS Control Center", "iOS Control Center mod")
                 : I18n.t("centro de control de serie", "stock control center");
@@ -1660,6 +1670,19 @@ public class SettingsActivity extends Activity {
             sub[0] = (TextView) ((ViewGroup) ((ViewGroup) exRow).getChildAt(1)).getChildAt(1);
             ex.addView(exRow);
             c.addView(ex);
+            c.addView(space(14));
+        }
+        // Captura: sin HyperSpring en la app de capturas, la vista previa de MIUI tapa el marco y
+        // la pantalla se encoge tarde (plan B). Se avisa si no se ha cargado ahí desde el reinicio.
+        if (s.items.contains(item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_size")) && shotMissing()) {
+            c.addView(warning(I18n.t("HyperSpring no se ha cargado en la app de capturas desde el último reinicio. Sin ella, "
+                            + "la vista previa de MIUI tapa el marco y la pantalla se encoge tarde. En LSPosed, marca "
+                            + "«Captura de pantalla» (com.miui.screenshot) en el ámbito de HyperSpring y haz una captura. "
+                            + "Si ya está marcado, este aviso se va tras la primera captura.",
+                    "HyperSpring hasn't loaded in the screenshot app since the last reboot. Without it, MIUI's preview "
+                            + "covers the frame and the screen shrinks late. In LSPosed, tick “Screenshot” "
+                            + "(com.miui.screenshot) in HyperSpring's scope and take a screenshot. If it is already "
+                            + "ticked, this notice goes away after the first screenshot.")));
             c.addView(space(14));
         }
         LinearLayout k = card();
@@ -3364,6 +3387,35 @@ public class SettingsActivity extends Activity {
             return getSharedPreferences("state", 0).getString(key, null);
         } catch (Throwable t) {
             return null;
+        }
+    }
+
+    /**
+     * ¿Hay que avisar de que falta la app de capturas en el ámbito? Con la captura encendida, si
+     * HyperSpring nunca se ha cargado ahí, o si desde el reinicio hubo una captura (SystemUI lo
+     * apunta en shot_missing) y la app de capturas no se cargó. Así no salta tras reiniciar
+     * a quien sí lo tiene marcado.
+     */
+    boolean shotMissing() {
+        if (stored(item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on")) < 0.5f) return false;
+        if (shotLoaded()) return false;
+        if (state("shot_seen") == null) return true;
+        try {
+            String m = state("shot_missing");
+            return m != null && Long.parseLong(m) >= bootTime();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** ¿Se ha cargado HyperSpring en la app de capturas desde el último reinicio? */
+    private boolean shotLoaded() {
+        String st = state("shot_seen");
+        if (st == null) return false;
+        try {
+            return Long.parseLong(st.split("\\|")[0]) >= bootTime();
+        } catch (Throwable t) {
+            return false;
         }
     }
 

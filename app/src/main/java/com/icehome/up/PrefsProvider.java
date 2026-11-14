@@ -67,14 +67,17 @@ public class PrefsProvider extends ContentProvider {
         // Solo el launcher y la interfaz del sistema escriben en el registro.
         String from = getCallingPackage();
         boolean launcher = "com.miui.home".equals(from), sysui = "com.android.systemui".equals(from);
-        if (v == null || !(launcher || sysui)) return null;
+        // La app de capturas solo puede decir que HyperSpring se ha cargado en ella (shot_seen).
+        boolean shot = "com.miui.screenshot".equals(from);
+        if (v == null || !(launcher || sysui || shot)) return null;
         if ("state".equals(uri.getLastPathSegment())) {
             String k = v.getAsString("key"), val = v.getAsString("value");
             if (k == null || k.length() > 64) return null;
+            if (shot && !"shot_seen".equals(k)) return null;
             getContext().getSharedPreferences(STATE_PREFS, 0).edit().putString(k, val).apply();
             return uri;
         }
-        if (!"log".equals(uri.getLastPathSegment())) return null;
+        if (shot || !"log".equals(uri.getLastPathSegment())) return null;
         String line = v.getAsString("line");
         if (line == null) return null;
         line = (launcher ? "[inicio] " : "[sistema] ") + line;

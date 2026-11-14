@@ -18,7 +18,7 @@ import com.icehome.up.xp.XposedHelpers;
  * Órdenes de la app de ajustes, sin root: el launcher y la interfaz del sistema escuchan estas
  * difusiones, protegidas por un permiso de firma de la propia app.
  */
-final class Remote {
+public final class Remote {
 
     static final String PERMISSION = "com.icehome.up.permission.CONTROL";
     static final String TUNE = "com.icehome.up.TUNE";
@@ -128,7 +128,7 @@ final class Remote {
     }
 
     /** Para la tarjeta de compatibilidad de la app: cuándo cargó el módulo aquí y con qué versión. */
-    private static void seen(Context ctx, String key) {
+    public static void seen(Context ctx, String key) {
         try {
             String ver = Version.NAME;              // la del módulo cargado aquí, no la de este proceso
             android.content.ContentValues v = new android.content.ContentValues();
