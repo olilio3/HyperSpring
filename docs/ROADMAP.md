@@ -19,14 +19,14 @@ The bar for getting on this list: a fair number of people will use it, it can be
   - This is the most delicate item here: leaving anything half-done crashes System UI. It will ship in a beta first.
 - [ ] **Springy folders on the stock launcher.** The bounce only works with Kashi's launcher for now.
 - [ ] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
-- [x] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately. *Added in 2.10.0* (`.github/workflows/build.yml`).
+- [x] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately. *Added in 2.10.1* (`.github/workflows/build.yml`).
 
 ## Planned
 Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home screen ones, check what Kashi's Launcher Mod already includes.
 
 ### Liquid glass
 - [ ] **Glass dock:** the launcher dock as a floating bar with edge refraction, using the same shader as the app's bar.
-- [x] **Glass notifications:** shade cards and the heads-up popup, with blur and a lit edge. To keep it light, every card has to share a single capture of the background. *Beta in 2.10.0: the liquid-glass edge (refraction, dispersion, light rim); the blur inside is still HyperOS's own.*
+- [x] **Glass notifications:** shade cards and the heads-up popup, with blur and a lit edge. To keep it light, every card has to share a single capture of the background. *Beta in 2.10.1: the whole card is glass, darkened so it reads well (**Darkness** setting), with soft refraction and light rim.*
 - [ ] **Refraction on folders:** add the edge lens to the blur they already have.
 - [ ] **Magnifier on control center sliders:** while dragging brightness or volume, the control turns into a glass drop that magnifies what is behind it. Note: it depends on System UI plugin classes that change between versions.
 - [ ] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap.
@@ -62,6 +62,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 
 ### The app
 - [ ] **Redesigned, heavily animated interface**, like modern websites: staggered entrances, scroll-driven animations, shared transitions between screens and micro-interactions on every control. Always 60 fps on mid-range phones and respecting the system setting that removes animations.
+- [ ] **Feature wheel** (idea from 2026-11-16): once there are many features, Home drops the grid of buttons for a spinning wheel that slides the feature cards, very stylised: the card in the middle sharp, and the ones moving away up and down smaller, tilted and blurred, with inertia and a spring when you let go, and a tick as each one passes.
 - [ ] **Apple-style intro** (idea from 2026-11-14): "HyperSpring" appears, one letter (the "i") repeats at least 20 times, the camera races along them and then the icon drops in. Show the user a preview before building it.
 
 ## Later, if there is demand

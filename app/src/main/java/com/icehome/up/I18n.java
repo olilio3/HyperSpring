@@ -83,6 +83,7 @@ final class I18n {
         s("Gemini", "Gemini");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
+        s("Notificaciones de cristal", "Glass notifications");
         s("Refracción del borde", "Edge refraction");
         s("Canto y línea de luz", "Edge and light rim");
         s("Fondo", "Background");
@@ -189,7 +190,9 @@ final class I18n {
                 "Sharpness of the window during the curtain. Higher looks sharper but costs more.");
 
         i("kashiplus_notif_on", "Glass notifications",
-                "Notification cards, in the shade and when they pop up, get the control center's liquid-glass edge: the background bends at the edge, with rainbow colours in the corners and a light rim. The text is left alone. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
+                "Notification cards, in the shade, on the lock screen and when they pop up, become liquid glass: the background behind them blurred and darkened so the text is easy to read, bent at the edge and with a soft light rim. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
+        i("kashiplus_notif_dark", "Darkness",
+                "How much the notification glass is darkened. Higher reads better over light backgrounds; 0 keeps the background's own brightness.");
         i("kashiplus_cc_on", "Glass control center",
                 "Control center tiles and buttons become liquid glass. Tested with the ModsCenter iOS control center and the stock HyperOS one.");
         i("kashiplus_cc_blur", "Blur",

@@ -1,9 +1,9 @@
 # Changelog
 
-## 2.10.0
+## 2.10.1
 
 **New**
-- **Glass notifications (beta).** Notification cards, in the shade and when they pop up (heads-up), get the control center's liquid-glass edge: what is behind bends at the edge, with rainbow colours in the corners and a light rim on top. The text and the inside of the card are left as HyperOS draws them. All cards share one capture of the background, taken when the shade opens or a notification pops up (not one per card, nor one per frame), and the shader only runs on the ring along the edge. The edge follows each card's real height and corners while it expands or collapses, and the smaller inner corners of grouped notifications. It uses the control center's **Refraction** and **Edge** sliders. Off by default while it is being tested: turn it on in **Home → Glass notifications** and restart System UI. If anything fails, it switches itself off and notes it in the log.
+- **Glass notifications (beta).** Notification cards, in the shade, on the lock screen and when they pop up (heads-up), are liquid glass: what is behind them, blurred and darkened so the text reads well, bent inwards at the edge, with a soft light rim. It is painted as the card's background, under the text and icons. A new **Darkness** slider (System → Glass notifications) sets how dark it is. All cards share one capture of the background, taken when the shade opens or a notification pops up (not one per card, nor one per frame); until it arrives you see the HyperOS background, and the glass fades in. The glass follows each card's real height and corners while it expands or collapses, and the smaller inner corners of grouped notifications. It uses the control center's **Refraction** and **Edge** sliders, with softer rainbow and rim. Off by default while it is being tested: turn it on in **Home → Glass notifications** and restart System UI. If anything fails, it switches itself off and notes it in the log.
 
 Also a full review of the code, looking for anything that could fail. Nothing changes in how the animations look.
 

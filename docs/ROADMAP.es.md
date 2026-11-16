@@ -19,14 +19,14 @@ Criterio para entrar aquí: que lo vaya a usar bastante gente, que se pueda mant
   - Es lo más delicado de la lista: si se deja algo a medias, se cae la interfaz. Saldrá primero en una beta.
 - [ ] **Carpetas con muelle en el launcher de serie.** Ahora el rebote solo funciona con el launcher de Kashi.
 - [ ] **Soporte de POCO Launcher**, integrando el trabajo del fork de la comunidad ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
-- [x] **Compilación automática en GitHub** en cada cambio, para detectar errores antes de publicar. Los APK de las releases se siguen firmando aparte. *Añadida en la 2.10.0* (`.github/workflows/build.yml`).
+- [x] **Compilación automática en GitHub** en cada cambio, para detectar errores antes de publicar. Los APK de las releases se siguen firmando aparte. *Añadida en la 2.10.1* (`.github/workflows/build.yml`).
 
 ## Planeado
 Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hacer las del escritorio, hay que revisar qué trae ya el Launcher Mod de Kashi.
 
 ### Cristal líquido
 - [ ] **Dock de cristal:** el dock del launcher como barra flotante con refracción en el borde, con el mismo shader que la barra de la app.
-- [x] **Notificaciones de cristal:** las tarjetas de la sombra y la notificación emergente (heads-up), con desenfoque y borde iluminado. Para que no pese, todas las tarjetas tienen que usar una sola captura del fondo. *En pruebas en la 2.10.0: el borde de cristal líquido (refracción, dispersión y canto de luz); el desenfoque de dentro sigue siendo el de HyperOS.*
+- [x] **Notificaciones de cristal:** las tarjetas de la sombra y la notificación emergente (heads-up), con desenfoque y borde iluminado. Para que no pese, todas las tarjetas tienen que usar una sola captura del fondo. *En pruebas en la 2.10.1: toda la tarjeta de cristal, oscurecida para leer bien (ajuste **Oscuridad**), con refracción y canto de luz suaves.*
 - [ ] **Refracción en las carpetas:** añadir la lente del borde al desenfoque que ya tienen.
 - [ ] **Lupa en los sliders del CC:** al arrastrar el brillo o el volumen, el control se convierte en una gota de cristal que aumenta lo que tiene debajo. Ojo: depende de clases del plugin de SystemUI que cambian entre versiones.
 - [ ] **Estilos de cristal:** Transparente, Ahumado, Esmerilado, Tinte Monet y Prisma (con más dispersión), elegibles con un toque.
@@ -62,6 +62,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 
 ### La app
 - [ ] **Interfaz renovada, muy animada**, como las webs modernas: entradas escalonadas, animaciones al desplazarse, transiciones compartidas entre pantallas y microinteracciones en cada control. Siempre a 60 fps en gama media y respetando el ajuste del sistema que quita las animaciones.
+- [ ] **Rueda de funciones** (idea del 16-11-2026): cuando haya muchas funciones, Inicio deja la rejilla de botones y pasa a una rueda giratoria que desliza las tarjetas de las funciones, muy estilizada: la tarjeta del centro nítida y las que se alejan hacia arriba y abajo más pequeñas, inclinadas y desenfocadas, con inercia y muelle al soltar, y un tic al pasar cada una.
 - [ ] **Intro al estilo Apple** (idea del 14-11-2026): aparece «HyperSpring», una letra (la «i») se repite al menos 20 veces, la cámara las recorre muy deprisa y al final cae el icono. Antes de hacerla, enseñar una vista previa al usuario.
 
 ## Más adelante, si hay demanda
