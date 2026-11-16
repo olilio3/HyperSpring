@@ -110,6 +110,13 @@ public final class Telon {
                     }
                 });
         XposedHelpers.findAndHookMethod(adapter, "applyTransformation", long.class, ValueAnimator.class, new XC_MethodHook() {
+            // Cada fotograma de cada transición del sistema pasa por aquí. Sin telón en marcha, el
+            // original sin más (sin preparar nada).
+            @Override
+            protected boolean skip(Object self) {
+                return session == null;
+            }
+
             @Override
             protected void afterHookedMethod(MethodHookParam p) {
                 try {

@@ -116,6 +116,13 @@ final class WindowAnim {
         });
 
         XposedHelpers.findAndHookMethod(params, "applyTo", SurfaceControl.Transaction.class, new XC_MethodHook() {
+            // Se llama en cada fotograma de cada ventana que anima MIUI (también en recientes, al
+            // girar…). Sin genio en marcha no hay nada que hacer: el original, sin más.
+            @Override
+            protected boolean skip(Object self) {
+                return Genie.idle();
+            }
+
             @Override
             protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 if (Genie.idle()) return;
@@ -143,6 +150,11 @@ final class WindowAnim {
             }
         });
         XposedHelpers.findAndHookMethod(tx, "setMatrix", compat, Matrix.class, new XC_MethodHook() {
+            @Override
+            protected boolean skip(Object self) {
+                return Genie.idle();
+            }
+
             @Override
             protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 if (Genie.idle() || p.args[0] == null) return;
@@ -216,6 +228,12 @@ final class WindowAnim {
      */
     private static void hookFloatingIcon(ClassLoader cl, Class<?> tx, Class<?> compat) {
         XposedHelpers.findAndHookMethod(P + "views.FloatingIconView2", cl, "draw", Canvas.class, new XC_MethodHook() {
+            // Sin sesión de genio el icono flotante se dibuja entero (transparencia 1): nada que hacer.
+            @Override
+            protected boolean skip(Object self) {
+                return !Genie.hasSession();
+            }
+
             @Override
             protected void beforeHookedMethod(MethodHookParam p) {
                 float a = Genie.floatingIconAlpha();
@@ -241,6 +259,11 @@ final class WindowAnim {
         final Method setAlpha = method(tx, "setAlpha", compat, float.class);
         // showSurfaceControl(ventana, rect, radio, alfa del icono, alfa del velo) → transacción
         XposedBridge.hookAllMethods(layer2, "showSurfaceControl", new XC_MethodHook() {
+            @Override
+            protected boolean skip(Object self) {
+                return !Genie.hasSession();
+            }
+
             @Override
             protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 Object t = p.getResult();
@@ -315,6 +338,11 @@ final class WindowAnim {
         if (shortcut != null) {
             final Method setIconVisibility = method(shortcut, "setIconVisibility", int.class);
             XposedBridge.hookMethod(setIconVisibility, new XC_MethodHook() {
+                @Override
+                protected boolean skip(Object self) {
+                    return !Genie.hasGhost();
+                }
+
                 @Override
                 protected void beforeHookedMethod(MethodHookParam p) {
                     if ((Integer) p.args[0] == View.VISIBLE && Genie.ghostHolds(p.thisObject)) {

@@ -9,6 +9,19 @@ import java.lang.reflect.Member;
  */
 public abstract class XC_MethodHook {
 
+    /**
+     * Filtro rápido, antes de todo lo demás. Si devuelve true, este hook no hace nada en esta
+     * llamada: el motor llama al método original directamente, sin preparar los datos de la
+     * llamada (cada llamada enganchada crea varios objetos, y algunos métodos se llaman miles de
+     * veces por segundo, como el dibujo del fondo de cada vista de SystemUI).
+     *
+     * <p>Tiene que ser muy barato (mirar un campo, nada más) y no lanzar excepciones; si lanza,
+     * se toma como false y el hook se ejecuta normal. Por defecto no salta nunca.
+     */
+    protected boolean skip(Object thisObject) {
+        return false;
+    }
+
     /** Antes del método original. Con {@code p.setResult(...)} el original ya no se ejecuta. */
     protected void beforeHookedMethod(MethodHookParam p) throws Throwable {
     }

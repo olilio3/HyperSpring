@@ -36,6 +36,15 @@ public final class ModernEngine implements Engine {
                 .intercept(new XposedInterface.Hooker() {
                     @Override
                     public Object intercept(XposedInterface.Chain chain) throws Throwable {
+                        // 0) Filtro rápido: si este hook no tiene nada que hacer ahora, el método
+                        // original sin crear ningún objeto (ver XC_MethodHook.skip).
+                        boolean pass;
+                        try {
+                            pass = cb.skip(chain.getThisObject());
+                        } catch (Throwable t) {
+                            pass = false;
+                        }
+                        if (pass) return chain.proceed();
                         XC_MethodHook.MethodHookParam p = new XC_MethodHook.MethodHookParam();
                         p.method = chain.getExecutable();
                         p.thisObject = chain.getThisObject();

@@ -28,6 +28,7 @@ public final class LegacyEngine implements Engine {
 
             @Override
             protected void beforeHookedMethod(MethodHookParam lp) throws Throwable {
+                if (skips(lp.thisObject)) return;                // filtro rápido (XC_MethodHook.skip)
                 XC_MethodHook.MethodHookParam p = new XC_MethodHook.MethodHookParam();
                 p.method = lp.method;
                 p.thisObject = lp.thisObject;
@@ -41,6 +42,7 @@ public final class LegacyEngine implements Engine {
             @Override
             protected void afterHookedMethod(MethodHookParam lp) throws Throwable {
                 XC_MethodHook.MethodHookParam p = (XC_MethodHook.MethodHookParam) lp.getObjectExtra(key);
+                if (p == null && skips(lp.thisObject)) return;  // también se saltó "antes"
                 if (p == null) {
                     p = new XC_MethodHook.MethodHookParam();
                     p.method = lp.method;
@@ -52,6 +54,14 @@ public final class LegacyEngine implements Engine {
                 p.returnEarly = false;
                 cb.afterHookedMethod(p);
                 back(p, lp);
+            }
+
+            private boolean skips(Object self) {
+                try {
+                    return cb.skip(self);
+                } catch (Throwable t) {
+                    return false;
+                }
             }
 
             /** Si nuestro hook puso un resultado o una excepción, se lo pasa a Xposed. */

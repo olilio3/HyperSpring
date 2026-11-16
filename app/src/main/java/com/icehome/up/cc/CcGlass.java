@@ -227,6 +227,15 @@ public final class CcGlass {
         if (FULL_GLASS) {
             try {
                 XposedHelpers.findAndHookMethod(View.class, "drawBackground", Canvas.class, new XC_MethodHook() {
+                    // drawBackground lo llama CADA vista de SystemUI que tenga fondo, en cada
+                    // fotograma (notificaciones, barra de estado, ajustes rápidos…). Casi ninguna
+                    // es nuestra: para esas, el original sin preparar nada.
+                    @Override
+                    protected boolean skip(Object self) {
+                        java.lang.ref.WeakReference<View> r = ccRoot;
+                        return !(r != null && r.get() == self) && SKINS.get((View) self) == null;
+                    }
+
                     @Override
                     protected void afterHookedMethod(MethodHookParam p) {
                         View v = (View) p.thisObject;

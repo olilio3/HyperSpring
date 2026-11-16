@@ -16,6 +16,7 @@ A full review of the code, looking for anything that could fail. No new features
 - The log thread is created like every other module thread (never pinned to the big cores), and only once.
 
 **Faster**
+- **Hooks that have nothing to do cost (almost) nothing.** Some hooked methods run thousands of times per second: the background of every System UI view (notifications, status bar, quick settings) on every frame, every frame of every system transition, every frame of every window MIUI animates. Each call used to build several objects even when HyperSpring had nothing to do. Now a quick check comes first and, if there is nothing to do (no glass on that view, no curtain or genie running), the original method runs straight away. Less work for the main thread of System UI and the launcher, and less garbage to collect, which means fewer small hitches.
 - System UI: calls to original methods (control center glass) reuse a prepared invoker instead of asking for a new one on each call (libxposed API 102).
 - The curtain reads the window matrix without creating a new array on every frame.
 

@@ -374,6 +374,16 @@ final class Genie {
 
     // ------------------------------------------------------------------ entrada desde los hooks
 
+    /** Hay sesión de genio (aunque esté terminando). Para los filtros rápidos de los hooks. */
+    static boolean hasSession() {
+        return session != null;
+    }
+
+    /** Hay un genio suelto volviendo a su icono. Para los filtros rápidos de los hooks. */
+    static boolean hasGhost() {
+        return ghost != null;
+    }
+
     /** Hay un genio en marcha (de cualquier animador). */
     static boolean active() {
         Session s = session;
