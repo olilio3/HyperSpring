@@ -990,6 +990,7 @@ public final class CcGlass {
                             for (Skin s : SKINS.values()) s.backdropChanged();
                             View root = ccRoot != null ? ccRoot.get() : null;
                             if (root != null) root.invalidate();
+                            NotifGlass.backdropChanged();
                         }
                     });
                 } catch (Throwable t) {
@@ -1005,6 +1006,36 @@ public final class CcGlass {
     }
 
     /** Fin de una captura que no llegó a usarse (en el hilo principal). */
+    // ------------------------------------------------------------------ para NotifGlass
+
+    /**
+     * La captura del fondo, si ya es la de la ventana de {@code host}. Si no, pide una (en
+     * segundo plano) y devuelve null: cuando llegue, {@link NotifGlass#backdropChanged} redibuja.
+     */
+    static Bitmap backdropFor(View host) {
+        if (captureBroken) return null;
+        return backdropFits(host) ? backdrop : null;
+    }
+
+    /** px de la captura por px de pantalla. */
+    static float backdropScaleNow() {
+        return backdropScale;
+    }
+
+    /**
+     * La ventana de {@code host} se ha vuelto a mostrar (el panel se ha abierto otra vez): lo que
+     * hay detrás puede ser otro, así que la próxima vez se toma otra captura.
+     */
+    static void markStale(View host) {
+        View root = host.getRootView();
+        if (root != null) WINDOW_STALE.add(root);
+    }
+
+    /** Escala acumulada de la vista y sus padres (x, y). */
+    static float[] scaleOf(View v) {
+        return chainScale(v);
+    }
+
     private static void captureDone() {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override

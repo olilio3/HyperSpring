@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v2.9.2</b> · <a href="README.es.md">Español</a>
+  <b>v2.10.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -104,6 +104,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
   - Blur, saturation, magnifier and gloss.
   - An edge lit with the colour of what's behind it.
   - **Edge refraction** with colour dispersion, based on the [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) lens.
+- **Glass notifications** (beta, off by default): notification cards in the shade and pop-ups get the same liquid-glass edge, sharing a single capture of the background.
 
 ### The app
 - **Look:** system colours (Monet), a floating liquid-glass bar, an animated dot-network background and a dark theme.

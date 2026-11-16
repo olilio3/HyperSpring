@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.9.2</b> · <a href="README.md">English</a>
+  <b>v2.10.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">
@@ -92,6 +92,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
   - Desenfoque, saturación, lupa y brillo.
   - Canto iluminado con el color de lo que hay detrás.
   - **Refracción en el borde** con dispersión de color, basada en la lente de [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass).
+- **Notificaciones de cristal** (en pruebas, apagadas de serie): las tarjetas de notificación, en el panel y las emergentes, llevan el mismo borde de cristal líquido, con una sola captura del fondo para todas.
 
 ### La app
 - Colores del sistema (Monet), barra flotante de cristal líquido, fondo de puntos animado y tema oscuro.

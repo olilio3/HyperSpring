@@ -188,6 +188,8 @@ final class I18n {
         i("telon_quality", "Resolution",
                 "Sharpness of the window during the curtain. Higher looks sharper but costs more.");
 
+        i("kashiplus_notif_on", "Glass notifications",
+                "Notification cards, in the shade and when they pop up, get the control center's liquid-glass edge: the background bends at the edge, with rainbow colours in the corners and a light rim. The text is left alone. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
         i("kashiplus_cc_on", "Glass control center",
                 "Control center tiles and buttons become liquid glass. Tested with the ModsCenter iOS control center and the stock HyperOS one.");
         i("kashiplus_cc_blur", "Blur",

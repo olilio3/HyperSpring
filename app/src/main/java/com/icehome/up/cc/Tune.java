@@ -14,6 +14,7 @@ public final class Tune {
     public static final Object[][] ITEMS = {
             {"#", "General"},
             {"kashiplus_cc_on", "Cristal en el centro de control", 0f, 1f, 1f, -1, "Las tarjetas y botones del centro de control pasan a ser cristal líquido. Probado con el centro de control iOS de ModsCenter y con el de HyperOS."},
+            {"kashiplus_notif_on", "Cristal en las notificaciones", 0f, 1f, 0f, -1, "Las tarjetas de notificación, en el panel y las emergentes, llevan el borde de cristal líquido del centro de control: el fondo se dobla en el borde, con colores de arcoíris en las esquinas y un canto de luz. El texto no se toca. Usa la refracción y el canto del centro de control. En pruebas: se aplica al reiniciar la interfaz del sistema."},
             {"#", "Interior del cristal"},
             {"kashiplus_cc_blur", "Desenfoque", 0f, 40f, 8f, 0, "Cuánto se desenfoca lo que se ve a través de las piezas, en dp."},
             {"kashiplus_cc_sat", "Saturación de las tarjetas", 0.5f, 2.5f, 1.4f, 2, "Intensidad de los colores que se ven a través de las tarjetas grandes. 1 = sin cambio."},
@@ -55,6 +56,11 @@ public final class Tune {
         return get(c, key, read(c));
     }
 
+    /** Interruptor de función al arrancar la interfaz del sistema (con su contexto propio). */
+    public static boolean on(Context c, String key) {
+        return get(c, key) >= 0.5f;
+    }
+
     private static float get(Context c, String key, java.util.Map<String, String> saved) {
         for (Object[] it : ITEMS) {
             if (!it[0].equals(key)) continue;
@@ -78,6 +84,7 @@ public final class Tune {
 
     private static void load(Context c, java.util.Map<String, String> saved) {
         ccOn = get(c, "kashiplus_cc_on", saved) >= 0.5f;
+        NotifGlass.enabled = get(c, "kashiplus_notif_on", saved) >= 0.5f;
         ccBlur = get(c, "kashiplus_cc_blur", saved);
         sat = get(c, "kashiplus_cc_sat", saved);
         satButton = get(c, "kashiplus_cc_sat_button", saved);

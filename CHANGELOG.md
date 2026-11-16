@@ -1,8 +1,11 @@
 # Changelog
 
-## 2.9.2
+## 2.10.0
 
-A full review of the code, looking for anything that could fail. No new features; nothing changes in how the animations look.
+**New**
+- **Glass notifications (beta).** Notification cards, in the shade and when they pop up (heads-up), get the control center's liquid-glass edge: what is behind bends at the edge, with rainbow colours in the corners and a light rim on top. The text and the inside of the card are left as HyperOS draws them. All cards share one capture of the background, taken when the shade opens or a notification pops up (not one per card, nor one per frame), and the shader only runs on the ring along the edge. The edge follows each card's real height and corners while it expands or collapses, and the smaller inner corners of grouped notifications. It uses the control center's **Refraction** and **Edge** sliders. Off by default while it is being tested: turn it on in **Home → Glass notifications** and restart System UI. If anything fails, it switches itself off and notes it in the log.
+
+Also a full review of the code, looking for anything that could fail. Nothing changes in how the animations look.
 
 **Fixed**
 - **Privacy: other apps can no longer read your settings.** The settings provider had to be open to the launcher and System UI, but any installed app could read it too, including the log and the list of apps without genie (which reveals which apps you have). Now only the launcher, System UI, its plugin, the screenshot app and HyperSpring itself can read it, checked by the caller's user ID (which apps can't fake). Only HyperSpring can clear the log.

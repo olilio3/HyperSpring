@@ -11,7 +11,7 @@ android {
         minSdk = 30
         targetSdk = 35
         versionCode = 59
-        versionName = "2.9.2"
+        versionName = "2.10.0"
     }
 
     buildTypes {

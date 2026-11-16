@@ -968,6 +968,7 @@ public class SettingsActivity extends Activity {
                 {Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón", "Curtain")},
                 {Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Captura que encoge", "Squeezing screenshot")},
                 {Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Centro de control", "Control center")},
+                {Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Notificaciones de cristal", "Glass notifications")},
         };
         featureTiles.clear();
         LinearLayout grid = column();
@@ -1275,6 +1276,7 @@ public class SettingsActivity extends Activity {
         f.addView(toggleRow(Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón al cambiar de pantalla", "Curtain when switching screens")));
         f.addView(toggleRow(Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Pantalla que se encoge al hacer una captura", "Screen that squeezes on screenshot")));
         f.addView(toggleRow(Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Cristal en el centro de control", "Glass control center")));
+        f.addView(toggleRow(Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Cristal en las notificaciones", "Glass notifications")));
         return f;
     }
 
@@ -2203,7 +2205,9 @@ public class SettingsActivity extends Activity {
         // Las funciones se enganchan al arrancar el proceso: ofrecer el reinicio.
         if (key.startsWith("icehome_") && key.endsWith("_on") && !key.equals("icehome_press_on")) {
             pendingRestart(false);
-        } else if (key.equals("telon_on")) {
+        } else if (key.equals("telon_on") || (key.equals("kashiplus_notif_on") && on)) {
+            // El cristal de las notificaciones se engancha al arrancar la interfaz; apagarlo es
+            // al momento (se deja de dibujar), así que solo hace falta reiniciar para encenderlo.
             pendingRestart(true);
         }
     }

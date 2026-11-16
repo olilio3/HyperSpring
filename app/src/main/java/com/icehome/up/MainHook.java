@@ -307,6 +307,22 @@ public class MainHook {
                 XposedBridge.log(t);
             }
             watchPluginLoader();
+            // Cristal en las notificaciones: aparte y con su propio interruptor (apagado de serie
+            // mientras está en pruebas). Comparte la captura del fondo con el centro de control.
+            final ClassLoader ncl = cl;
+            onAttach(new WithContext() {
+                @Override
+                public void run(android.content.Context c) {
+                    boolean on = com.icehome.up.cc.Tune.on(c, "kashiplus_notif_on");
+                    com.icehome.up.telon.Log.i("cristal en notificaciones " + onOff(on));
+                    if (!on) return;
+                    try {
+                        com.icehome.up.cc.NotifGlass.install(c, ncl);
+                    } catch (Throwable t) {
+                        com.icehome.up.telon.Log.e("no se pudo instalar el cristal en las notificaciones (¿otra versión de HyperOS?)", t);
+                    }
+                }
+            });
         }
     }
 
