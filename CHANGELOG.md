@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.11.0
+
+**New**
+- **Feature wheel on Home.** The features are no longer a grid of buttons: they sit on a drum that spins vertically, like the iOS time picker but with cards, and wraps around. The card in the middle is sharp, inside a soft frame; the others tilt back, shrink, fade and blur as they move away, and melt into the page at the top and bottom. Drag it, flick it (it keeps spinning and slows down) and a spring settles it on the nearest card, with a tick as each one passes. Tap the middle card to switch it on or off; tap another one to bring it to the middle. What the middle feature does is always written underneath.
+- **Automatic pause** (System → Automatic pause). HyperSpring pauses itself, like the quick settings tile, and resumes on its own: **when the phone is hot** (the system reports severe heat), **in games** (while Game Turbo is boosting one) and, if you turn it on, **with battery saver**. It listens to the system's own notices, so it costs nothing while animating. The log says when and why it pauses.
+
 ## 2.10.1
 
 **New**

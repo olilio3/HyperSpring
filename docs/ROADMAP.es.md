@@ -48,7 +48,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 
 ### Funciones
 - [x] **Lista de apps excluidas del genio:** las apps elegidas se abren y se cierran con la animación de HyperOS. Se aplica al momento. *Publicado en la 2.1.0.* Falta lo mismo para la cortina de la interfaz del sistema.
-- [ ] **Pausa automática:** los efectos pesados se apagan solos con el ahorro de batería, en juegos (Game Turbo) o con el móvil caliente.
+- [x] **Pausa automática:** los efectos pesados se apagan solos con el ahorro de batería, en juegos (Game Turbo) o con el móvil caliente. *Publicada en la 2.11.0.*
 - [ ] **Vibración sutil** sincronizada con las animaciones: cuando el genio aterriza en el icono, cuando rebota una carpeta, cuando cambia la pila de widgets.
 - [x] **Editor visual del muelle:** una gráfica animada de la curva mientras mueves Velocidad y Rebote, con un móvil en miniatura que abre una ventana con ese muelle. *Publicado en la 2.1.0.*
 - [x] **Tile en los ajustes rápidos** que pausa HyperSpring (genio, telón y recientes que se doblan) con un toque, sin reiniciar nada. *Publicado en la 2.7.0.* La pausa es la base de la pausa automática de arriba.
@@ -62,7 +62,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 
 ### La app
 - [ ] **Interfaz renovada, muy animada**, como las webs modernas: entradas escalonadas, animaciones al desplazarse, transiciones compartidas entre pantallas y microinteracciones en cada control. Siempre a 60 fps en gama media y respetando el ajuste del sistema que quita las animaciones.
-- [ ] **Rueda de funciones** (idea del 16-11-2026): cuando haya muchas funciones, Inicio deja la rejilla de botones y pasa a una rueda giratoria que desliza las tarjetas de las funciones, muy estilizada: la tarjeta del centro nítida y las que se alejan hacia arriba y abajo más pequeñas, inclinadas y desenfocadas, con inercia y muelle al soltar, y un tic al pasar cada una.
+- [x] **Rueda de funciones** (idea del 16-11-2026, *publicada en la 2.11.0*): cuando haya muchas funciones, Inicio deja la rejilla de botones y pasa a una rueda giratoria que desliza las tarjetas de las funciones, muy estilizada: la tarjeta del centro nítida y las que se alejan hacia arriba y abajo más pequeñas, inclinadas y desenfocadas, con inercia y muelle al soltar, y un tic al pasar cada una.
 - [ ] **Intro al estilo Apple** (idea del 14-11-2026): aparece «HyperSpring», una letra (la «i») se repite al menos 20 veces, la cámara las recorre muy deprisa y al final cae el icono. Antes de hacerla, enseñar una vista previa al usuario.
 
 ## Más adelante, si hay demanda

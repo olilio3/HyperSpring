@@ -75,6 +75,7 @@ final class I18n {
         s("Funciones", "Features");
         s("Abrir y cerrar apps", "Opening and closing apps");
         s("Recientes que se doblan", "Bending recents");
+        s("Pausa automática", "Automatic pause");
         s("Carpetas", "Folders");
         s("Menú de atajos", "Shortcut menu");
         s("Función", "Feature");
@@ -191,6 +192,12 @@ final class I18n {
 
         i("kashiplus_notif_on", "Glass notifications",
                 "Notification cards, in the shade, on the lock screen and when they pop up, become liquid glass: the background behind them blurred and darkened so the text is easy to read, bent at the edge and with a soft light rim. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
+        i("icehome_auto_heat", "When the phone is hot",
+                "When the system reports that the phone is very hot, HyperSpring pauses itself (genie, curtain and recents) and comes back once it cools down. Like the pause tile, but automatic.");
+        i("icehome_auto_game", "In games",
+                "While Game Turbo is boosting a game, HyperSpring pauses itself, to leave all the power to the game.");
+        i("icehome_auto_saver", "With battery saver",
+                "With battery saver on, HyperSpring pauses itself. Off by default, in case you keep battery saver on all the time.");
         i("kashiplus_notif_dark", "Darkness",
                 "How much the notification glass is darkened. Higher reads better over light backgrounds; 0 keeps the background's own brightness.");
         i("kashiplus_cc_on", "Glass control center",

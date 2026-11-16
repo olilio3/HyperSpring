@@ -869,7 +869,7 @@ public class SettingsActivity extends Activity {
         }
 
         c.addView(label(I18n.t("Funciones", "Features")));
-        c.addView(featuresGrid());
+        c.addView(featuresWheel());
 
         c.addView(label(I18n.t("Perfiles", "Presets")));
         LinearLayout pr = card();
@@ -971,6 +971,7 @@ public class SettingsActivity extends Activity {
                 {Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Notificaciones de cristal", "Glass notifications")},
         };
         featureTiles.clear();
+        featureSpecs = f;
         LinearLayout grid = column();
         grid.setTag(Motion.CASCADE);                     // las filas entran una a una
         grid.setClipChildren(false);
@@ -1004,6 +1005,66 @@ public class SettingsActivity extends Activity {
         grid.addView(info, ilp);
         return grid;
     }
+
+    /**
+     * Las funciones en una rueda giratoria ({@link FeatureWheel}) en vez de la rejilla.
+     * Las fichas son las mismas (encender, mantener pulsado, la onda); debajo se lee qué hace la
+     * que está en el centro.
+     */
+    private LinearLayout featuresWheel() {
+        LinearLayout grid = featuresGrid();             // crea las fichas y el cuadro de explicación
+        final TextView info = (TextView) grid.getChildAt(grid.getChildCount() - 1);
+        grid.removeView(info);
+        final List<View> tiles = new ArrayList<>(featureTiles);
+        final List<String[]> texts = new ArrayList<>();
+        for (Object[] spec : featureSpecs) {
+            Object[] it = (Object[]) spec[1];
+            texts.add(new String[]{(String) spec[2], I18n.desc(it)});
+        }
+        LinearLayout box = column();
+        box.setLayoutParams(new LinearLayout.LayoutParams(-1, -2));
+        FeatureWheel wheel = new FeatureWheel(this, tiles, 60, bg, accent);
+        box.addView(wheel, new LinearLayout.LayoutParams(-1, -2));
+        // Qué hace la del centro, siempre a la vista: cambia con un fundido corto al girar.
+        info.setVisibility(View.VISIBLE);
+        info.setMinLines(3);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(-1, -2);
+        ilp.topMargin = px(6);
+        box.addView(info, ilp);
+        wheel.setOnCenter(new FeatureWheel.OnCenter() {
+            @Override
+            public void center(int index) {
+                if (index < 0 || index >= texts.size()) return;
+                String title = texts.get(index)[0], about = texts.get(index)[1];
+                if (about == null) return;
+                // Como la explicación de siempre: el nombre en color y negrita, y lo que hace.
+                final android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(title);
+                sb.setSpan(new android.text.style.ForegroundColorSpan(accent), 0, title.length(), 0);
+                sb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, title.length(), 0);
+                sb.append("  ").append(about);
+                info.setTag(null);                      // mantener pulsado la vuelve a «abrir»
+                info.animate().cancel();
+                info.setVisibility(View.VISIBLE);
+                info.setTranslationY(0f);
+                if (!ValueAnimator.areAnimatorsEnabled() || info.getText().length() == 0) {
+                    info.setText(sb);
+                    info.setAlpha(1f);
+                    return;
+                }
+                info.animate().alpha(0f).setDuration(90).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        info.setText(sb);
+                        info.animate().alpha(1f).setDuration(160).start();
+                    }
+                }).start();
+            }
+        });
+        return box;
+    }
+
+    /** Las funciones de la rejilla (las usa también la rueda de prueba). */
+    private Object[][] featureSpecs = new Object[0][];
 
     /**
      * Una baldosa de la rejilla: pastilla baja con icono, nombre y estado. {@code info} es el
@@ -1286,6 +1347,7 @@ public class SettingsActivity extends Activity {
         LinearLayout g = card();
         for (Section s : sections(Tune.ITEMS)) {
             if (s.name.startsWith("Funciones")) continue;            // están en Inicio
+            if (s.name.startsWith("Pausa")) continue;                // es de todo el módulo: va en Sistema
             g.addView(sectionRow(s));
         }
         c.addView(g);
@@ -1305,6 +1367,12 @@ public class SettingsActivity extends Activity {
         LinearLayout an = card();
         an.addView(systemSpeedRow());
         c.addView(an);
+        c.addView(label("HyperSpring"));
+        LinearLayout ap = card();
+        for (Section s : sections(Tune.ITEMS)) {
+            if (s.name.startsWith("Pausa")) ap.addView(sectionRow(s));
+        }
+        c.addView(ap);
         c.addView(label(I18n.t("Transiciones", "Transitions")));
         LinearLayout t = card();
         for (Section s : sections(com.icehome.up.telon.Tune.ITEMS)) {
@@ -1815,6 +1883,7 @@ public class SettingsActivity extends Activity {
         if (n.contains("captura")) return Icons.PHONE;
         if (n.contains("gemini")) return Icons.LIGHT;
         if (n.contains("notificaciones")) return Icons.LIGHT;
+        if (n.contains("pausa")) return Icons.TOGGLES;
         if (n.contains("interior")) return Icons.DROP;
         if (n.contains("refracción")) return Icons.PALETTE;
         if (n.contains("canto") || n.contains("luz")) return Icons.LIGHT;

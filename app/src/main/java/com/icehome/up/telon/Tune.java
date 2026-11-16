@@ -53,7 +53,9 @@ public final class Tune {
     public static void reload(Context c) {
         cache = read(c);
         Map<String, String> m = cache;
-        boolean paused = m != null && "1".equals(m.get(PAUSE_KEY));
+        // La pausa del tile, o la automática (calor, juegos, ahorro de batería; ver AutoPause).
+        com.icehome.up.AutoPause.configure(m);
+        boolean paused = (m != null && "1".equals(m.get(PAUSE_KEY))) || com.icehome.up.AutoPause.active();
         // En pausa el telón no se dibuja (fuerza 0 = no empieza), sin reiniciar la interfaz.
         Telon.strength = paused ? 0f : f(c, "telon_strength");
         Telon.maxFps = f(c, "telon_fps");
@@ -76,7 +78,7 @@ public final class Tune {
 
     private static void squeeze(Context c) {
         Map<String, String> m = cache;
-        boolean paused = m != null && "1".equals(m.get(PAUSE_KEY));
+        boolean paused = (m != null && "1".equals(m.get(PAUSE_KEY))) || com.icehome.up.AutoPause.active();
         // En pausa la captura tampoco encoge la pantalla. Se lee al empezar cada captura.
         Squeeze.enabled = !paused && f(c, "telon_squeeze_on") >= 0.5f;
         Squeeze.assist = !paused && f(c, "telon_squeeze_assist") >= 0.5f;

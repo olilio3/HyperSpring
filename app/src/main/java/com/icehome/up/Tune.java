@@ -37,6 +37,10 @@ final class Tune {
             {"icehome_haptic", "Vibración al llegar", 0f, 1f, 0.3f, 2, "Un toque de vibración muy suave cuando la ventana entra en su icono. 0 la quita. Respeta el ajuste de vibración del sistema."},
             {"icehome_anim_speed", "Velocidad", 0.5f, 2f, 1f, 2, "Velocidad de las animaciones de abrir y cerrar. Más de 1 es más rápida."},
             {"icehome_anim_bounce", "Rebote", 0f, 0.4f, 0f, 2, "Cuánto se pasa la ventana de su sitio al llegar antes de asentarse. 0 llega sin rebote."},
+            {"#", "Pausa automática"},
+            {"icehome_auto_heat", "Con el móvil caliente", 0f, 1f, 1f, -1, "Cuando el sistema avisa de que el móvil está muy caliente, HyperSpring se pausa solo (genio, telón y recientes) y vuelve al enfriarse. Como el tile de pausa, pero automático."},
+            {"icehome_auto_game", "En juegos", 0f, 1f, 1f, -1, "Mientras Game Turbo acelera un juego, HyperSpring se pausa solo, para dejarle toda la potencia al juego."},
+            {"icehome_auto_saver", "Con ahorro de batería", 0f, 1f, 0f, -1, "Con el ahorro de batería encendido, HyperSpring se pausa solo. Apagado de serie, por si llevas el ahorro siempre puesto."},
             {"#", "Recientes que se doblan"},
             {"icehome_curtain_strength", "Doblez", 0f, 3f, 1f, 1, "Cuánto se doblan las tarjetas de recientes según la velocidad del dedo."},
             {"icehome_curtain_style", "Estilo telón", 0f, 1f, 0f, -1, "Activado: la parte de arriba queda fija y se dobla la de abajo, como un telón. Desactivado: se dobla el centro, como una cortina."},
@@ -82,7 +86,9 @@ final class Tune {
         Map<String, String> m = cache;
         Exclude.genie = Exclude.parse(m == null ? null : m.get(Exclude.KEY));
         // Pausa (tile de ajustes rápidos): sin genio y sin recientes que se doblan, al momento.
-        boolean paused = paused(m);
+        // La pausa del tile, o la automática (calor, juegos, ahorro de batería; ver AutoPause).
+        AutoPause.configure(m);
+        boolean paused = paused(m) || AutoPause.active();
         Exclude.paused = paused;
         if (paused) RecentsCurtain.strength = 0f;
         ShortcutMenuFx.bounce = f(c, "icehome_menu_bounce");

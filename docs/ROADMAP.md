@@ -48,7 +48,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 
 ### Features
 - [x] **Apps excluded from the genie:** the apps you pick open and close with the HyperOS animation. Applies right away. *Released in 2.1.0.* The same for the System UI curtain is still to do.
-- [ ] **Automatic pause:** heavy effects switch off by themselves with battery saver, in games (Game Turbo) or when the phone is hot.
+- [x] **Automatic pause:** heavy effects switch off by themselves with battery saver, in games (Game Turbo) or when the phone is hot. *Released in 2.11.0.*
 - [ ] **Subtle vibration** in sync with the animations: when the genie lands in the icon, when a folder bounces, when the widget stack changes.
 - [x] **Visual spring editor:** an animated graph of the curve while you move Speed and Bounce, with a tiny phone opening a window with that spring. *Released in 2.1.0.*
 - [x] **Quick settings tile** that pauses HyperSpring (genie, curtain and bending recents) with one tap, without restarting anything. *Released in 2.7.0.* The pause is the base for the automatic pause above.
@@ -62,7 +62,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 
 ### The app
 - [ ] **Redesigned, heavily animated interface**, like modern websites: staggered entrances, scroll-driven animations, shared transitions between screens and micro-interactions on every control. Always 60 fps on mid-range phones and respecting the system setting that removes animations.
-- [ ] **Feature wheel** (idea from 2026-11-16): once there are many features, Home drops the grid of buttons for a spinning wheel that slides the feature cards, very stylised: the card in the middle sharp, and the ones moving away up and down smaller, tilted and blurred, with inertia and a spring when you let go, and a tick as each one passes.
+- [x] **Feature wheel** (idea from 2026-11-16, *released in 2.11.0*): once there are many features, Home drops the grid of buttons for a spinning wheel that slides the feature cards, very stylised: the card in the middle sharp, and the ones moving away up and down smaller, tilted and blurred, with inertia and a spring when you let go, and a tick as each one passes.
 - [ ] **Apple-style intro** (idea from 2026-11-14): "HyperSpring" appears, one letter (the "i") repeats at least 20 times, the camera races along them and then the icon drops in. Show the user a preview before building it.
 
 ## Later, if there is demand

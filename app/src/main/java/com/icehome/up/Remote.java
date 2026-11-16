@@ -78,6 +78,18 @@ public final class Remote {
         Log.attach(ctx);
         Tune.reload(ctx);
         LauncherSafe.started(ctx);
+        try {
+            final Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+            AutoPause.install(app, false, new Runnable() {
+                @Override
+                public void run() {
+                    Tune.reload(app);                       // como si se tocara el tile de pausa
+                }
+            });
+            Tune.reload(ctx);                               // por si ya había que estar en pausa
+        } catch (Throwable t) {
+            Log.e("pausa automática: no se pudo instalar", t);
+        }
         seen(ctx, "launcher_seen");
         IntentFilter f = new IntentFilter(TUNE);
         f.addAction(RESTART_LAUNCHER);
@@ -101,6 +113,18 @@ public final class Remote {
         com.icehome.up.telon.Log.attach(ctx);
         com.icehome.up.telon.Tune.reload(ctx);
         SafeMode.markStableLater(ctx);
+        try {
+            final Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+            AutoPause.install(app, true, new Runnable() {
+                @Override
+                public void run() {
+                    com.icehome.up.telon.Tune.reload(app);
+                }
+            });
+            com.icehome.up.telon.Tune.reload(ctx);
+        } catch (Throwable t) {
+            com.icehome.up.telon.Log.e("pausa automática: no se pudo instalar", t);
+        }
         seen(ctx, "systemui_seen");
         IntentFilter f = new IntentFilter(TUNE);
         f.addAction(RESTART_SYSTEMUI);
