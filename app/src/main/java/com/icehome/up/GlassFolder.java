@@ -97,6 +97,9 @@ final class GlassFolder {
     private static boolean shaderBroken;
     private static android.graphics.Bitmap wall;
     private static int wallId = Integer.MIN_VALUE;
+    /** Última vez que se preguntó qué fondo hay (uptime) y cada cuánto se vuelve a preguntar. */
+    private static long wallCheckedMs;
+    private static final long WALL_CHECK_MS = 2000;
     private static float wallOffsetX = 0.5f, wallOffsetY = 0.5f;
 
     private static Method mIconImageView, mBlurSupported;
@@ -123,10 +126,12 @@ final class GlassFolder {
             protected void afterHookedMethod(MethodHookParam p) {
                 final View folder = (View) p.thisObject;
                 if (LISTENING.containsKey(folder)) return;
+                // El listener usa la vista que le llega (v), no "folder": si la capturase, el valor
+                // del WeakHashMap apuntaría a su propia clave y la carpeta no se liberaría nunca.
                 View.OnLayoutChangeListener l = new View.OnLayoutChangeListener() {
                     @Override
                     public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
-                        apply(folder);
+                        apply(v);
                     }
                 };
                 LISTENING.put(folder, l);
@@ -300,6 +305,13 @@ final class GlassFolder {
     /** Fondo de pantalla actual (reducido al tamaño de la pantalla). Null si es animado o no se puede leer. */
     static void loadWallpaper(android.content.Context ctx) {
         if (android.os.Build.VERSION.SDK_INT < 33) return;
+        // Preguntar qué fondo hay es una llamada al servicio del sistema, y esto se llama en cada
+        // onLayout de cada carpeta (también durante sus animaciones), en el hilo principal. El
+        // fondo cambia muy de vez en cuando: basta con mirarlo cada pocos segundos. retune() (al
+        // cambiar un ajuste) pone wallId a MIN_VALUE y obliga a mirarlo ya.
+        long now = android.os.SystemClock.uptimeMillis();
+        if (wallId != Integer.MIN_VALUE && now - wallCheckedMs < WALL_CHECK_MS) return;
+        wallCheckedMs = now;
         try {
             android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(ctx);
             int id = wm.getWallpaperId(android.app.WallpaperManager.FLAG_SYSTEM);
@@ -348,7 +360,12 @@ final class GlassFolder {
 
     /** Dibujo del cristal (en coordenadas del fondo de la carpeta). */
     static final class Glass extends Drawable {
-        private final View host;
+        /**
+         * La vista que lleva el cristal. Referencia débil: los Glass se guardan en WeakHashMap
+         * cuya clave es esta misma vista, y si el valor la retuviera, nunca se liberaría (cada
+         * carpeta o menú creado se quedaba en memoria para siempre).
+         */
+        private final java.lang.ref.WeakReference<View> hostRef;
         private final float density;
         private final Paint refract = new Paint(Paint.ANTI_ALIAS_FLAG);
         private Object runtimeShader;              // android.graphics.RuntimeShader (API 33+)
@@ -428,7 +445,7 @@ final class GlassFolder {
         }
 
         Glass(View host) {
-            this.host = host;
+            this.hostRef = new java.lang.ref.WeakReference<>(host);
             this.density = host.getResources().getDisplayMetrics().density;
             inner.setStyle(Paint.Style.STROKE);
             rim.setStyle(Paint.Style.STROKE);
@@ -437,18 +454,39 @@ final class GlassFolder {
         /** Si la carpeta se mueve o cambia de escala, el fondo de debajo cambia: redibujar. */
         void track() {
             if (!REFRACTION) return;
-            host.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            View host = hostRef.get();
+            if (host == null) return;
+            final android.view.ViewTreeObserver.OnPreDrawListener pre = new android.view.ViewTreeObserver.OnPreDrawListener() {
                 @Override
                 public boolean onPreDraw() {
-                    if (wall == null || !host.isAttachedToWindow()) return true;
-                    host.getLocationOnScreen(loc);
-                    float[] sc = chainScale(host);
+                    View h = hostRef.get();
+                    if (wall == null || h == null || !h.isAttachedToWindow()) return true;
+                    h.getLocationOnScreen(loc);
+                    float[] sc = chainScale(h);
                     if (loc[0] != lastLoc[0] || loc[1] != lastLoc[1] || sc[0] != lastSx || sc[1] != lastSy) {
                         invalidateSelf();
                     }
                     return true;
                 }
+            };
+            // El listener va en el ViewTreeObserver de la ventana: se pone al entrar en ella y se
+            // quita al salir. Antes se ponía una vez y ya: si la carpeta salía de la ventana y
+            // volvía (al reordenar el escritorio), se perdía; y las carpetas borradas seguían
+            // colgadas de la ventana, retenidas y revisadas en cada fotograma.
+            host.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                @Override
+                public void onViewAttachedToWindow(View v) {
+                    v.getViewTreeObserver().removeOnPreDrawListener(pre);
+                    v.getViewTreeObserver().addOnPreDrawListener(pre);
+                    invalidateSelf();
+                }
+
+                @Override
+                public void onViewDetachedFromWindow(View v) {
+                    v.getViewTreeObserver().removeOnPreDrawListener(pre);
+                }
             });
+            if (host.isAttachedToWindow()) host.getViewTreeObserver().addOnPreDrawListener(pre);
         }
 
         void configure(boolean blur, float radius) {
@@ -548,6 +586,8 @@ final class GlassFolder {
                 }
                 // Qué parte del fondo hay bajo la carpeta: el fondo cubre la pantalla (center-crop)
                 // y se desplaza horizontalmente entre páginas según wallOffsetX.
+                View host = hostRef.get();
+                if (host == null) return false;
                 View root = host.getRootView();
                 float sw = root.getWidth(), sh = root.getHeight();
                 if (sw <= 0f || sh <= 0f) return false;

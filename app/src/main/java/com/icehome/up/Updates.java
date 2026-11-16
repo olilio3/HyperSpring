@@ -235,6 +235,7 @@ final class Updates {
                         int n, lastPct = -1;
                         while ((n = in.read(buf)) > 0) {
                             if (Thread.currentThread().isInterrupted()) throw new IOException("cancelado");
+                            if (total > 0 && got + n > total + (1 << 20)) throw new IOException("descarga demasiado grande");
                             os.write(buf, 0, n);
                             got += n;
                             final float f = total > 0 ? Math.min(1f, got / (float) total) : 0f;
@@ -249,6 +250,9 @@ final class Updates {
                                 });
                             }
                         }
+                        // Si la conexión se corta a mitad, read() devuelve -1 como si hubiera
+                        // acabado: el APK quedaba a medias y el instalador daba un error confuso.
+                        if (total > 0 && got < total) throw new IOException("descarga incompleta (" + got + " de " + total + " bytes)");
                     } finally {
                         h.disconnect();
                     }

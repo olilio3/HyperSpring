@@ -19,7 +19,7 @@ Criterio para entrar aquí: que lo vaya a usar bastante gente, que se pueda mant
   - Es lo más delicado de la lista: si se deja algo a medias, se cae la interfaz. Saldrá primero en una beta.
 - [ ] **Carpetas con muelle en el launcher de serie.** Ahora el rebote solo funciona con el launcher de Kashi.
 - [ ] **Soporte de POCO Launcher**, integrando el trabajo del fork de la comunidad ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
-- [ ] **Compilación automática en GitHub** en cada cambio, para detectar errores antes de publicar. Los APK de las releases se siguen firmando aparte.
+- [x] **Compilación automática en GitHub** en cada cambio, para detectar errores antes de publicar. Los APK de las releases se siguen firmando aparte. *Añadida en la 2.9.2* (`.github/workflows/build.yml`).
 
 ## Planeado
 Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hacer las del escritorio, hay que revisar qué trae ya el Launcher Mod de Kashi.

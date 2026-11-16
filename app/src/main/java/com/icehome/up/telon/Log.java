@@ -3,7 +3,6 @@ package com.icehome.up.telon;
 import android.content.ContentValues;
 import android.content.Context;
 import android.os.Handler;
-import android.os.HandlerThread;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,10 +21,11 @@ public final class Log {
 
     /** Desde que SystemUI tiene Application, las líneas se mandan también a la app. */
     public static synchronized void attach(Context c) {
+        if (sender != null) return;                         // ya estaba: un solo hilo de envío
         app = c.getApplicationContext();
-        HandlerThread t = new HandlerThread("HyperSpring-uilog");
-        t.start();
-        sender = new Handler(t.getLooper());
+        // Con Threads.start, como todos los hilos del módulo: nunca queda atado a los núcleos
+        // grandes aunque se cree justo durante una animación.
+        sender = com.icehome.up.Threads.start("HyperSpring-uilog", android.os.Process.THREAD_PRIORITY_BACKGROUND);
         for (String l : early) send(l);
         early.clear();
     }

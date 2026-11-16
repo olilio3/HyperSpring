@@ -396,6 +396,15 @@ final class FolderMorph {
         @Override
         public void doFrame(long nanos) {
             if (stopped) return;
+            // Salida segura: si esta sesión ya no es la actual (otra la sustituyó) o el redimensionado
+            // se quedó sin su "levantar el dedo" (el launcher se fue a segundo plano a mitad), se
+            // para. Si no, pediría un fotograma tras otro para siempre y gastaría batería.
+            View ov = s.overlay instanceof View ? (View) s.overlay : null;
+            if (session != s || (ov != null && !ov.isAttachedToWindow())) {
+                stop();
+                if (session == s && !s.releasing) release();
+                return;
+            }
             float dt = last == 0 ? 1f / 120f : Math.min(1f / 30f, (nanos - last) / 1e9f);
             last = nanos;
             StackSwipe.springStep(l, s.target.left, SPRING_RESPONSE, SPRING_DAMPING, dt);

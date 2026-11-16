@@ -3225,13 +3225,15 @@ public class SettingsActivity extends Activity {
                 }
                 toast(I18n.t("Ajustes exportados", "Settings exported"));
             } else if (request == REQ_IMPORT) {
-                StringBuilder sb = new StringBuilder();
+                java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
                 try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
                     byte[] buf = new byte[8192];
                     // Un archivo de ajustes ocupa unos pocos KB: no se lee más de 1 MB.
-                    for (int n; sb.length() < (1 << 20) && (n = in.read(buf)) > 0; ) sb.append(new String(buf, 0, n, "UTF-8"));
+                    for (int n; bytes.size() < (1 << 20) && (n = in.read(buf)) > 0; ) bytes.write(buf, 0, n);
                 }
-                int n = Backup.restore(this, sb.toString());
+                // Se convierte a texto de una vez: trozo a trozo, una letra de varios bytes (ñ, é…)
+                // partida entre dos trozos salía estropeada.
+                int n = Backup.restore(this, bytes.toString("UTF-8"));
                 if (n < 0) {
                     toast(I18n.t("Ese archivo no es de ajustes de HyperSpring", "That file is not a HyperSpring settings file"));
                     return;

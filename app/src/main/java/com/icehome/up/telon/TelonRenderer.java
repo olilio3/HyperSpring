@@ -280,6 +280,46 @@ final class TelonRenderer {
 
     private static boolean initContext() {
         if (context != EGL14.EGL_NO_CONTEXT) return true;
+        try {
+            return createContext();
+        } catch (RuntimeException | Error e) {
+            // A medias (p. ej. un shader que este driver no compila) el contexto quedaba creado
+            // pero sin programas ni texturas: cada telón siguiente fallaba igual hasta reiniciar la
+            // interfaz. Se deshace todo y la próxima vez se vuelve a intentar desde cero.
+            destroyContext();
+            throw e;
+        }
+    }
+
+    /** Deshace lo que haya hecho {@link #createContext} (en el hilo del telón). */
+    private static void destroyContext() {
+        synchronized (queueLock) {
+            for (Input in : inputs) {
+                try {
+                    if (in.surface != null) in.surface.release();
+                    if (in.st != null) in.st.release();
+                } catch (Throwable ignored) {
+                }
+                in.surface = null;
+                in.st = null;
+                in.queued = false;
+                in.owner = null;
+            }
+        }
+        try {
+            if (context != EGL14.EGL_NO_CONTEXT) {
+                EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
+                EGL14.eglDestroyContext(display, context);
+            }
+        } catch (Throwable ignored) {
+        }
+        context = EGL14.EGL_NO_CONTEXT;
+        program = programBelow = programDownExt = programDown = 0;
+        // Los framebuffers eran de ese contexto: se vuelven a crear con el siguiente.
+        for (int i = 0; i < 2; i++) fbo[i] = fboTex[i] = fboW[i] = fboH[i] = 0;
+    }
+
+    private static boolean createContext() {
         display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         int[] v = new int[2];
         if (!EGL14.eglInitialize(display, v, 0, v, 1)) throw new IllegalStateException("eglInitialize");

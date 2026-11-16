@@ -32,8 +32,40 @@ public class PrefsProvider extends ContentProvider {
         return true;
     }
 
+    /**
+     * Paquetes que pueden leer los ajustes: los procesos enganchados (launcher, interfaz del
+     * sistema y su plugin, app de capturas). La propia app también, claro.
+     */
+    private static final java.util.Set<String> READERS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "com.miui.home", "com.android.systemui", "miui.systemui.plugin", "com.miui.screenshot"));
+
+    /**
+     * ¿Puede leer quien llama? El proveedor tiene que estar exportado (lo leen otros procesos),
+     * pero eso dejaba que CUALQUIER app leyera los ajustes, el registro y, sobre todo, la lista de
+     * apps sin genio, que dice qué apps tienes instaladas (por eso no va en los códigos HS1:).
+     *
+     * <p>Se mira el UID (el usuario de Linux de la app que llama), no el nombre de paquete que dice
+     * traer: el UID lo pone el sistema y no se puede falsificar. Pasan la propia app, los procesos
+     * del sistema (UID por debajo de 10000: system_server, shell…, que ya pueden leerlo todo) y
+     * las apps de {@link #READERS}. Si algo falla al comprobarlo, no se deja leer: el proceso
+     * enganchado usaría los valores por defecto, nunca se rompe nada.
+     */
+    private boolean trusted() {
+        int uid = android.os.Binder.getCallingUid();
+        if (uid == android.os.Process.myUid() || uid < android.os.Process.FIRST_APPLICATION_UID) return true;
+        try {
+            String[] pkgs = getContext().getPackageManager().getPackagesForUid(uid);
+            if (pkgs != null) {
+                for (String p : pkgs) if (READERS.contains(p)) return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] args, String sort) {
+        if (!trusted()) return new MatrixCursor(new String[]{"key", "value"});
         if ("state".equals(uri.getLastPathSegment())) {
             MatrixCursor c = new MatrixCursor(new String[]{"key", "value"});
             for (Map.Entry<String, ?> e : getContext().getSharedPreferences(STATE_PREFS, 0).getAll().entrySet()) {
@@ -92,6 +124,8 @@ public class PrefsProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String s, String[] a) {
+        // Borrar el registro solo desde la propia app («Acerca de → Registro → Borrar»).
+        if (android.os.Binder.getCallingUid() != android.os.Process.myUid()) return 0;
         if (!"log".equals(uri.getLastPathSegment())) return 0;
         synchronized (log) {
             int n = log.size();

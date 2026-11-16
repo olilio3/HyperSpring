@@ -441,6 +441,32 @@ final class GlRenderer {
 
     private static boolean initContext() {
         if (context != EGL14.EGL_NO_CONTEXT) return true;
+        try {
+            return createContext();
+        } catch (RuntimeException | Error e) {
+            // A medias (p. ej. un shader que este driver no compila) el contexto quedaba creado
+            // pero sin programas: cada animación siguiente fallaba igual hasta reiniciar el
+            // launcher. Se deshace todo y la próxima vez se vuelve a intentar desde cero.
+            destroyContext();
+            throw e;
+        }
+    }
+
+    /** Deshace lo que haya hecho {@link #createContext} (en el hilo de dibujo). */
+    private static void destroyContext() {
+        try {
+            if (context != EGL14.EGL_NO_CONTEXT) {
+                EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
+                EGL14.eglDestroyContext(display, context);
+            }
+        } catch (Throwable ignored) {
+        }
+        context = EGL14.EGL_NO_CONTEXT;
+        programs[0] = programs[1] = null;
+        main = null;
+    }
+
+    private static boolean createContext() {
         display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         int[] version = new int[2];
         if (!EGL14.eglInitialize(display, version, 0, version, 1)) throw new IllegalStateException("eglInitialize");

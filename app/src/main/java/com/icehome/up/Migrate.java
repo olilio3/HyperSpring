@@ -22,8 +22,16 @@ final class Migrate {
     private static final String DONE = "prefs_imported";
 
     /** true si este APK es el de libxposed (lleva META-INF/xposed) y aún no se ha importado. */
+    /** Intentos fallidos (sin root, o root denegado) y cuántos se hacen como mucho. */
+    private static final String TRIES = "prefs_import_tries";
+    private static final int MAX_TRIES = 3;
+
     static boolean needed(Context c) {
-        if (c.getSharedPreferences("app", 0).getBoolean(DONE, false)) return false;
+        SharedPreferences p = c.getSharedPreferences("app", 0);
+        if (p.getBoolean(DONE, false)) return false;
+        // Sin este tope, en un móvil con Magisk en el que no se da root a HyperSpring, se pedía
+        // root (con su aviso) cada vez que arrancaba la app o el launcher leía los ajustes.
+        if (p.getInt(TRIES, 0) >= MAX_TRIES) return false;
         // El APK "legacy" (API 93) sigue con la carpeta de LSPosed: ahí no hay nada que importar.
         return Migrate.class.getClassLoader().getResource("META-INF/xposed/module.prop") != null;
     }
@@ -79,10 +87,11 @@ final class Migrate {
                 }
             }
             p.waitFor();
-            // Sin root (o denegado) no llega el "==fin": se volverá a intentar la próxima vez.
-            if (!complete) return false;
+            // Sin root (o denegado) no llega el "==fin": se vuelve a intentar la próxima vez,
+            // hasta MAX_TRIES veces.
+            if (!complete) return failed(c);
         } catch (Throwable t) {
-            return false;                                   // no hay "su" en este móvil
+            return failed(c);                               // no hay "su" en este móvil
         }
         // commit(): si "app" venía en la importación, la marca se escribe después y no se pierde.
         c.getSharedPreferences("app", 0).edit().putBoolean(DONE, true).commit();
@@ -90,6 +99,13 @@ final class Migrate {
     }
 
     /** Sin root, o si el usuario ya ha cambiado algo a mano: no volver a intentarlo. */
+    /** Un intento sin root: se cuenta, para no volver a pedirlo eternamente. */
+    private static boolean failed(Context c) {
+        SharedPreferences p = c.getSharedPreferences("app", 0);
+        p.edit().putInt(TRIES, p.getInt(TRIES, 0) + 1).commit();
+        return false;
+    }
+
     static void skip(Context c) {
         c.getSharedPreferences("app", 0).edit().putBoolean(DONE, true).apply();
     }

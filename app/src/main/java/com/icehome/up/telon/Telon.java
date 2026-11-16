@@ -386,8 +386,11 @@ public final class Telon {
         }
 
         /** Velocidad horizontal y doblez (muelle duro hacia lo que pide la velocidad). */
+        /** Para leer la matriz en cada fotograma sin crear un array nuevo cada vez. */
+        private final float[] mv = new float[9];
+
         void step(Matrix m, float fraction) {
-            float[] v = new float[9];
+            float[] v = mv;
             m.getValues(v);
             float tx = v[Matrix.MTRANS_X];
             long now = System.nanoTime();

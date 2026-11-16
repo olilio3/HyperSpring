@@ -19,7 +19,7 @@ The bar for getting on this list: a fair number of people will use it, it can be
   - This is the most delicate item here: leaving anything half-done crashes System UI. It will ship in a beta first.
 - [ ] **Springy folders on the stock launcher.** The bounce only works with Kashi's launcher for now.
 - [ ] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
-- [ ] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately.
+- [x] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately. *Added in 2.9.2* (`.github/workflows/build.yml`).
 
 ## Planned
 Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home screen ones, check what Kashi's Launcher Mod already includes.

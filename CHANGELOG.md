@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.9.2
+
+A full review of the code, looking for anything that could fail. No new features; nothing changes in how the animations look.
+
+**Fixed**
+- **Privacy: other apps can no longer read your settings.** The settings provider had to be open to the launcher and System UI, but any installed app could read it too, including the log and the list of apps without genie (which reveals which apps you have). Now only the launcher, System UI, its plugin, the screenshot app and HyperSpring itself can read it, checked by the caller's user ID (which apps can't fake). Only HyperSpring can clear the log.
+- **The genie and the curtain recover from an OpenGL error.** If preparing OpenGL failed halfway (for example a shader that one phone's driver doesn't compile), it stayed half-built and every following animation failed the same way until a launcher or System UI restart. Now it is undone and tried again from scratch.
+- **Memory leak in glass folders and the shortcut menu.** Each folder (and each shortcut menu) kept a reference to itself, so none were ever freed, and deleted folders stayed hooked to the launcher window, checked on every frame. Folder glass also kept working if a folder left the window and came back.
+- **Fewer system calls while folders animate.** Every layout of every folder asked the system which wallpaper is set, on the main thread. Now at most every 2 seconds (and right away after changing a setting).
+- **Folder resize no longer keeps the screen ticking** if the launcher went to the background in the middle of a resize (Kashi's launcher).
+- **Updates:** a download cut off halfway is reported as incomplete instead of handing a broken APK to the installer.
+- **Importing settings** no longer garbles accented letters that fell between two read chunks.
+- **No more endless root requests:** the one-time import of 1.0.x settings asked for root every time the app started if root was denied or missing. Now it tries three times at most.
+- The log thread is created like every other module thread (never pinned to the big cores), and only once.
+
+**Faster**
+- System UI: calls to original methods (control center glass) reuse a prepared invoker instead of asking for a new one on each call (libxposed API 102).
+- The curtain reads the window matrix without creating a new array on every frame.
+
+**New**
+- **Automatic build on GitHub.** Every push and pull request is compiled with the same script as the releases (shaders checked included), and both APKs are attached to the run. Released APKs are still signed separately.
+
 ## 2.9.1
 
 **Important: tick the Screenshot scope.** The squeezing screenshot needs HyperSpring in a third LSPosed scope, **Screenshot** (`com.miui.screenshot`), since 2.7.1. LSPosed does not tick new scopes when you update, so it is probably missing: open LSPosed → HyperSpring and tick it. No reboot needed.

@@ -48,11 +48,22 @@ public final class Remote {
         }
     }
 
+    /**
+     * Ya se registró el receptor en este proceso. Application.onCreate puede llamarse más de una
+     * vez en un mismo proceso (si algo crea otra Application); sin esto habría dos receptores y
+     * cada ajuste se aplicaría dos veces.
+     */
+    private static boolean registered;
+
     /** @param systemUi true en la interfaz del sistema, false en el launcher. */
     static void install(final boolean systemUi) {
         XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam p) {
+                synchronized (Remote.class) {
+                    if (registered) return;
+                    registered = true;
+                }
                 try {
                     if (systemUi) registerSystemUi((Context) p.thisObject);
                     else registerLauncher((Context) p.thisObject);

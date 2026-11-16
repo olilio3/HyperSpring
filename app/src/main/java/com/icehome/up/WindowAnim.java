@@ -545,7 +545,11 @@ final class WindowAnim {
 
     /** Un fotograma: decide si va con genio y pasa el estado al controlador. */
     private static void onFrame(Object impl, RectF cur, Object radii, Rect bounds) throws Throwable {
-        String type = ((Enum<?>) lastAnimType.invoke(impl)).name();
+        // Sin tipo (el animador aún no lo sabe): nada que hacer. Antes daba un error con traza
+        // completa en el registro en cada fotograma, que además es lento.
+        Object kind = lastAnimType.invoke(impl);
+        if (!(kind instanceof Enum)) return;
+        String type = ((Enum<?>) kind).name();
         if (SEEN.add(type + impl.getClass().getSimpleName())) {
             Log.i("animación " + type + " por " + impl.getClass().getSimpleName());
         }

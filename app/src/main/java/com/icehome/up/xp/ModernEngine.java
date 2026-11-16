@@ -75,17 +75,33 @@ public final class ModernEngine implements Engine {
                 });
     }
 
+    /**
+     * Invokers ya preparados, uno por método. El centro de control llama a métodos originales en
+     * cada pieza cada vez que se abre; pedir un invoker nuevo en cada llamada era trabajo de más.
+     * Siempre son de tipo ORIGIN y no se vuelven a cambiar, así que se pueden compartir.
+     */
+    private final java.util.concurrent.ConcurrentHashMap<Member, Object> invokers =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
+    @SuppressWarnings("unchecked")
     public Object invokeOriginal(Member m, Object thisObject, Object[] args) throws Throwable {
         // Un "invoker" de tipo ORIGIN llama al método original saltándose todos los hooks.
-        if (m instanceof Method) {
-            XposedInterface.Invoker<?, Method> inv = x.getInvoker((Method) m);
-            inv.setType(XposedInterface.Invoker.Type.ORIGIN);
-            return inv.invoke(thisObject, args);
+        Object inv = invokers.get(m);
+        if (inv == null) {
+            if (m instanceof Method) {
+                XposedInterface.Invoker<?, Method> mi = x.getInvoker((Method) m);
+                mi.setType(XposedInterface.Invoker.Type.ORIGIN);
+                inv = mi;
+            } else {
+                XposedInterface.CtorInvoker<?> ci = x.getInvoker((Constructor<?>) m);
+                ci.setType(XposedInterface.Invoker.Type.ORIGIN);
+                inv = ci;
+            }
+            invokers.put(m, inv);
         }
-        XposedInterface.CtorInvoker<?> inv = x.getInvoker((Constructor<?>) m);
-        inv.setType(XposedInterface.Invoker.Type.ORIGIN);
-        return inv.invoke(thisObject, args);
+        if (m instanceof Method) return ((XposedInterface.Invoker<?, Method>) inv).invoke(thisObject, args);
+        return ((XposedInterface.CtorInvoker<?>) inv).invoke(thisObject, args);
     }
 
     @Override
