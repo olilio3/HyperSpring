@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="docs/media/trailer.mp4"><img src="docs/media/trailer.jpg" width="360" alt="Ver el tráiler de HyperSpring"></a><br>
-  <b>▶ <a href="docs/media/trailer.mp4">Ver el tráiler de 25 segundos</a></b>
+  <b>▶ <a href="docs/media/trailer.mp4">Ver el tráiler</a></b>
 </p>
 
 ---
