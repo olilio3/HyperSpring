@@ -9,6 +9,11 @@
   <b>v2.9.1</b> · <a href="README.es.md">Español</a>
 </p>
 
+<p align="center">
+  <a href="docs/media/trailer.mp4"><img src="docs/media/trailer.jpg" width="360" alt="Watch the HyperSpring trailer"></a><br>
+  <b>▶ <a href="docs/media/trailer.mp4">Watch the 25-second trailer</a></b>
+</p>
+
 ---
 
 > **A Note on Development:**  
