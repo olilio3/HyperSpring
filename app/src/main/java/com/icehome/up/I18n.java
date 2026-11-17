@@ -192,6 +192,14 @@ final class I18n {
 
         i("kashiplus_notif_on", "Glass notifications",
                 "Notification cards, in the shade, on the lock screen and when they pop up, become liquid glass: the background behind them blurred and darkened so the text is easy to read, bent at the edge and with a soft light rim. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
+        i("icehome_dock_glass_on", "Glass dock",
+                "The row of icons at the bottom of the home screen becomes a floating liquid-glass bar. Uses the folders' glass and needs a static wallpaper. Beta: applies after restarting the launcher.");
+        i("icehome_genie_auto", "Automatic resolution",
+                "If several animations in a row stutter, the resolution drops by 10 % on its own (down to 50 %). It goes back to yours when you touch any setting or restart the launcher.");
+        i("icehome_unlock_zoom", "Unlock zoom",
+                "When you unlock, the home screen comes in slightly larger and settles to its size, all in one piece. 0 turns it off.");
+        i("kashiplus_cc_focus", "Focus when opening",
+                "Switching between notifications and the control center, the page that comes in arrives a bit larger and blurred and settles sharp, and the one that leaves shrinks and blurs, ColorOS-style. 0 turns it off.");
         i("icehome_auto_heat", "When the phone is hot",
                 "When the system reports that the phone is very hot, HyperSpring pauses itself (genie, curtain and recents) and comes back once it cools down. Like the pause tile, but automatic.");
         i("icehome_auto_game", "In games",

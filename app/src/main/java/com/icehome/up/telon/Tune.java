@@ -58,6 +58,8 @@ public final class Tune {
         boolean paused = (m != null && "1".equals(m.get(PAUSE_KEY))) || com.icehome.up.AutoPause.active();
         // En pausa el telón no se dibuja (fuerza 0 = no empieza), sin reiniciar la interfaz.
         Telon.strength = paused ? 0f : f(c, "telon_strength");
+        // Las apps de «Apps sin genio» tampoco llevan telón.
+        Telon.exclude = com.icehome.up.Exclude.parse(m == null ? null : m.get(com.icehome.up.Exclude.KEY));
         Telon.maxFps = f(c, "telon_fps");
         Telon.captureScale = f(c, "telon_quality") / 100f;
         Telon.motionBlur = f(c, "telon_blur");

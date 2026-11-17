@@ -66,7 +66,65 @@ public final class NotifGlass {
      * Fondos de tarjeta vistos, con el momento en que se les pintó cristal por primera vez desde
      * que llegó la captura (0 = aún sin cristal). WeakHashMap con un Long: no retiene la vista.
      */
-    private static final Map<View, Long> SHOWN = new WeakHashMap<>();
+    private static final Map<View, St> SHOWN = new WeakHashMap<>();
+
+    /** Lo que se recuerda de cada fondo de tarjeta. No guarda la vista (ver SHOWN). */
+    private static final class St {
+        /** Cuándo empezó a verse el cristal (0 = aún sin cristal). */
+        long since;
+        /** Dónde estaba en pantalla, y a qué escala, la última vez que se pintó. */
+        int x = Integer.MIN_VALUE, y;
+        float sx, sy;
+    }
+
+    private static St st(View v) {
+        St s = SHOWN.get(v);
+        if (s == null) {
+            s = new St();
+            SHOWN.put(v, s);
+            follow(v);
+        }
+        return s;
+    }
+
+    /**
+     * El cristal enseña lo que hay DETRÁS de la tarjeta, así que depende de dónde está en
+     * pantalla. Al deslizar la lista o apartar una notificación, Android mueve la tarjeta sin
+     * volver a pintarla (solo cambia su posición en la GPU) y el cristal se quedaba con el trozo
+     * de fondo de antes, como una foto pegada. Antes de cada fotograma se mira si la tarjeta se
+     * ha movido y, si es así, se repinta su fondo.
+     */
+    private static void follow(View v) {
+        final java.lang.ref.WeakReference<View> ref = new java.lang.ref.WeakReference<>(v);
+        final int[] at = new int[2];
+        final android.view.ViewTreeObserver.OnPreDrawListener pre = new android.view.ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                View h = ref.get();
+                if (h == null || !enabled || broken || !h.isAttachedToWindow() || !h.isShown()) return true;
+                St s = SHOWN.get(h);
+                if (s == null || s.since == 0L) return true;
+                h.getLocationOnScreen(at);
+                float[] sc = CcGlass.scaleOf(h);
+                if (at[0] != s.x || at[1] != s.y || sc[0] != s.sx || sc[1] != s.sy) h.invalidate();
+                return true;
+            }
+        };
+        // El listener es de la ventana: se pone al entrar en ella y se quita al salir.
+        v.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override
+            public void onViewAttachedToWindow(View a) {
+                a.getViewTreeObserver().removeOnPreDrawListener(pre);
+                a.getViewTreeObserver().addOnPreDrawListener(pre);
+            }
+
+            @Override
+            public void onViewDetachedFromWindow(View a) {
+                a.getViewTreeObserver().removeOnPreDrawListener(pre);
+            }
+        });
+        if (v.isAttachedToWindow()) v.getViewTreeObserver().addOnPreDrawListener(pre);
+    }
     private static long lastDrawMs;
     private static int fails;
     private static boolean broken, logged;
@@ -187,16 +245,13 @@ public final class NotifGlass {
         lastDrawMs = now;
 
         Bitmap b = CcGlass.backdropFor(v);
+        St state = st(v);
         if (b == null) {                                    // aún sin captura: se queda el de HyperOS
-            SHOWN.put(v, 0L);
+            state.since = 0L;
             return;
         }
-        Long since = SHOWN.get(v);
-        if (since == null || since == 0L) {
-            since = now;
-            SHOWN.put(v, since);
-        }
-        float fade = Math.min(1f, (now - since) / (float) FADE_MS);
+        if (state.since == 0L) state.since = now;
+        float fade = Math.min(1f, (now - state.since) / (float) FADE_MS);
         if (fade < 1f) v.postInvalidateOnAnimation();       // seguir hasta acabar el fundido
 
         float half = Math.min(w, h) / 2f;
@@ -256,6 +311,10 @@ public final class NotifGlass {
         float k = CcGlass.backdropScaleNow();
         float[] sc = CcGlass.scaleOf(v);
         v.getLocationOnScreen(LOC);
+        state.x = LOC[0];
+        state.y = LOC[1];
+        state.sx = sc[0];
+        state.sy = sc[1];
         rs.setFloatUniform("origin", (LOC[0] + left * sc[0]) * k, (LOC[1] + top * sc[1]) * k);
         rs.setFloatUniform("scale", sc[0] * k, sc[1] * k);
         rs.setFloatUniform("hasWall", 1f);

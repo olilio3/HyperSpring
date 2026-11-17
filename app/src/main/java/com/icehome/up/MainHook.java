@@ -138,6 +138,13 @@ public class MainHook {
                 XposedBridge.log(t);
             }
         }
+        if (Tune.on(c, "icehome_dock_glass_on")) {
+            try {
+                GlassDock.install(cl);
+            } catch (Throwable t) {
+                Log.e("no se pudo instalar el dock de cristal (¿otra versión del launcher?)", t);
+            }
+        }
         if (Tune.on(c, "icehome_menu_on")) {
             try {
                 ShortcutMenuFx.install(cl);
@@ -307,6 +314,11 @@ public class MainHook {
                 XposedBridge.log(t);
             }
             watchPluginLoader();
+            try {
+                com.icehome.up.cc.PanelFocus.install(cl);
+            } catch (Throwable t) {
+                com.icehome.up.telon.Log.e("enfoque al cambiar de página: sin la lista de notificaciones", t);
+            }
             // Cristal en las notificaciones: aparte y con su propio interruptor (apagado de serie
             // mientras está en pruebas). Comparte la captura del fondo con el centro de control.
             final ClassLoader ncl = cl;

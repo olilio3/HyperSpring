@@ -871,43 +871,24 @@ public class SettingsActivity extends Activity {
         c.addView(label(I18n.t("Funciones", "Features")));
         c.addView(featuresWheel());
 
+        // Modos de sistema: animaciones y cristal a la vez, de un toque.
+        c.addView(label(I18n.t("Modos de sistema", "System modes")));
+        c.addView(presetCard(Presets.MODES, Icons.PALETTE));
+
         c.addView(label(I18n.t("Perfiles", "Presets")));
-        LinearLayout pr = card();
-        pr.setTag(Motion.CASCADE);
-        // Todos con el icono de ajustes (son lo mismo: un grupo de valores) y una marca en el que está puesto.
-        int[] presetIcons = {Icons.SLIDERS};
-        for (int i = 0; i < Presets.ALL.length; i++) {
-            final Object[] preset = Presets.ALL[i];
-            LinearLayout row = (LinearLayout) navRow(presetIcons[i % presetIcons.length], Presets.name(preset),
-                    Presets.about(preset), false, new Runnable() {
-                @Override
-                public void run() {
-                    confirmPreset(preset);
-                }
-            });
-            final TextView inUse = text(I18n.t("En uso", "In use"), 12, accent);
-            inUse.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-            inUse.setPadding(px(9), px(3), px(9), px(3));
-            inUse.setBackground(round(accentSoft, px(100)));
-            LinearLayout.LayoutParams ul = new LinearLayout.LayoutParams(-2, -2);
-            ul.leftMargin = px(10);
-            row.addView(inUse, ul);
-            // Se vuelve a mirar al aplicar un perfil o importar ajustes (settingsReplaced).
-            Runnable mark = new Runnable() {
-                @Override
-                public void run() {
-                    inUse.setVisibility(Presets.active(SettingsActivity.this, preset) ? View.VISIBLE : View.GONE);
-                }
-            };
-            mark.run();
-            refreshers.add(mark);
-            pr.addView(row);
-        }
-        c.addView(pr);
+        c.addView(presetCard(Presets.ALL, Icons.SLIDERS));
 
         c.addView(label(I18n.t("Acciones", "Actions")));
         LinearLayout a = card();
         a.setTag(Motion.CASCADE);
+        a.addView(navRow(Icons.INFO, I18n.t("¿Cómo va mi móvil?", "How is my phone doing?"),
+                I18n.t("Mira si las animaciones van fluidas en tu móvil", "See whether the animations run smoothly on your phone"),
+                true, new Runnable() {
+                    @Override
+                    public void run() {
+                        showHealth();
+                    }
+                }));
         // Reiniciar se hace manteniendo pulsado: un toque sin querer al hacer scroll no cierra nada.
         a.addView(holdRow(Icons.RESTART, I18n.t("Reiniciar launcher", "Restart launcher"),
                 I18n.t("Aplica los cambios de funciones del escritorio", "Applies launcher feature changes"), new Runnable() {
@@ -969,6 +950,7 @@ public class SettingsActivity extends Activity {
                 {Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Captura que encoge", "Squeezing screenshot")},
                 {Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Centro de control", "Control center")},
                 {Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Notificaciones de cristal", "Glass notifications")},
+                {Icons.DROP, item(Tune.ITEMS, "icehome_dock_glass_on"), I18n.t("Dock de cristal", "Glass dock")},
         };
         featureTiles.clear();
         featureSpecs = f;
@@ -1334,6 +1316,7 @@ public class SettingsActivity extends Activity {
         f.addView(toggleRow(Icons.FOLDER, item(Tune.ITEMS, "icehome_folder_morph_on"), I18n.t("Carpetas con muelle", "Springy folders")));
         f.addView(toggleRow(Icons.DROP, item(Tune.ITEMS, "icehome_folder_glass_on"), I18n.t("Cristal en las carpetas", "Glass folders")));
         f.addView(toggleRow(Icons.LIST, item(Tune.ITEMS, "icehome_menu_on"), I18n.t("Menú de atajos con muelle", "Springy shortcut menu")));
+        f.addView(toggleRow(Icons.DROP, item(Tune.ITEMS, "icehome_dock_glass_on"), I18n.t("Dock de cristal", "Glass dock")));
         f.addView(toggleRow(Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón al cambiar de pantalla", "Curtain when switching screens")));
         f.addView(toggleRow(Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Pantalla que se encoge al hacer una captura", "Screen that squeezes on screenshot")));
         f.addView(toggleRow(Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Cristal en el centro de control", "Glass control center")));
@@ -1380,6 +1363,8 @@ public class SettingsActivity extends Activity {
             t.addView(sectionRow(s));
         }
         c.addView(t);
+        c.addView(label(I18n.t("Estilos de cristal", "Glass styles")));
+        c.addView(presetCard(Presets.GLASS, Icons.DROP));
         c.addView(label(I18n.t("Centro de control", "Control center")));
         LinearLayout cc = card();
         for (Section s : sections(com.icehome.up.cc.Tune.ITEMS)) {
@@ -3139,16 +3124,100 @@ public class SettingsActivity extends Activity {
      * importa algo, la pantalla se vuelve a crear con los valores importados.
      */
     /** Pregunta antes de aplicar un perfil: pisa los ajustes de animación que hubiera. */
+    /** Una tarjeta con una fila por perfil (perfiles, estilos de cristal o modos) y la marca «En uso». */
+    private LinearLayout presetCard(Object[][] presets, int iconKind) {
+        LinearLayout pr = card();
+        pr.setTag(Motion.CASCADE);
+        for (final Object[] preset : presets) {
+            LinearLayout row = (LinearLayout) navRow(iconKind, Presets.name(preset),
+                    Presets.about(preset), false, new Runnable() {
+                @Override
+                public void run() {
+                    confirmPreset(preset);
+                }
+            });
+            final TextView inUse = text(I18n.t("En uso", "In use"), 12, accent);
+            inUse.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            inUse.setPadding(px(9), px(3), px(9), px(3));
+            inUse.setBackground(round(accentSoft, px(100)));
+            LinearLayout.LayoutParams ul = new LinearLayout.LayoutParams(-2, -2);
+            ul.leftMargin = px(10);
+            row.addView(inUse, ul);
+            // Se vuelve a mirar al aplicar un perfil o importar ajustes (settingsReplaced).
+            Runnable mark = new Runnable() {
+                @Override
+                public void run() {
+                    inUse.setVisibility(Presets.active(SettingsActivity.this, preset) ? View.VISIBLE : View.GONE);
+                }
+            };
+            mark.run();
+            refreshers.add(mark);
+            pr.addView(row);
+        }
+        return pr;
+    }
+
+    /** «¿Cómo va mi móvil?»: mira en el registro cómo han ido las últimas animaciones del genio. */
+    private void showHealth() {
+        List<String> lines = new ArrayList<>();
+        try (android.database.Cursor cu = getContentResolver().query(PrefsProvider.LOG, null, null, null, null)) {
+            while (cu != null && cu.moveToNext()) lines.add(cu.getString(0));
+        } catch (Throwable ignored) {
+        }
+        final Health h = Health.analyze(lines);
+        String msg;
+        if (h.verdict == Health.UNKNOWN) {
+            msg = I18n.t("Todavía no hay datos suficientes. Abre y cierra unas cuantas apps desde el escritorio (al menos "
+                            + Health.MIN_RUNS + ") con el genio encendido y vuelve a mirar.",
+                    "Not enough data yet. Open and close a few apps from the home screen (at least "
+                            + Health.MIN_RUNS + ") with the genie on and check again.");
+        } else {
+            String stats = String.format(java.util.Locale.ROOT, I18n.t(
+                            "En las últimas %d animaciones: %.0f fotogramas por segundo de media y un %.0f %% de fotogramas con tirón.",
+                            "Over the last %d animations: %.0f frames per second on average and %.0f %% of frames with a hitch."),
+                    h.runs, h.fps(), h.jankRatio() * 100f);
+            String verdict = h.verdict == Health.SMOOTH
+                    ? I18n.t("Va fluido. No hace falta tocar nada.", "It runs smoothly. Nothing to change.")
+                    : h.verdict == Health.TIGHT
+                    ? I18n.t("Va justo. El perfil Rendimiento (menos resolución, sin contenido en vivo) debería notarse.",
+                    "It is a tight fit. The Performance preset (lower resolution, no live content) should help.")
+                    : I18n.t("Le cuesta. Te recomiendo el perfil Rendimiento.", "It struggles. I recommend the Performance preset.");
+            msg = stats + "\n\n" + verdict;
+        }
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
+                .setTitle(I18n.t("¿Cómo va mi móvil?", "How is my phone doing?"))
+                .setMessage(msg)
+                .setNegativeButton(I18n.t("Cerrar", "Close"), null);
+        if (h.verdict == Health.TIGHT || h.verdict == Health.STRUGGLING) {
+            b.setPositiveButton(I18n.t("Aplicar Rendimiento", "Apply Performance"), new android.content.DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(android.content.DialogInterface d, int which) {
+                    Presets.apply(SettingsActivity.this, Presets.ALL[3]);
+                    settingsReplaced();
+                    toast(I18n.t("Perfil aplicado: ", "Preset applied: ") + Presets.name(Presets.ALL[3]));
+                }
+            });
+        }
+        b.show();
+    }
+
     private void confirmPreset(final Object[] preset) {
         new android.app.AlertDialog.Builder(this)
                 .setTitle(I18n.t("Aplicar el perfil «", "Apply the “") + Presets.name(preset) + I18n.t("»", "” preset"))
-                .setMessage(Presets.about(preset) + "\n\n" + I18n.t(
-                        "Cambia los ajustes de forma, velocidad y calidad de las animaciones. No enciende ni apaga "
-                                + "funciones y no toca el cristal ni los fotogramas por segundo. Si quieres poder volver "
-                                + "atrás, exporta antes tus ajustes (Acerca de → Exportar ajustes).",
+                .setMessage(Presets.about(preset) + "\n\n" + (Presets.keys(preset) == Presets.GLASS_KEYS
+                        ? I18n.t("Cambia el aspecto del cristal (centro de control, notificaciones, carpetas y menú de "
+                                + "atajos). No toca las animaciones ni enciende o apaga funciones. ",
+                        "It changes the look of the glass (control center, notifications, folders and shortcut "
+                                + "menu). It leaves the animations alone and doesn't turn features on or off. ")
+                        : Presets.keys(preset) == Presets.MODE_KEYS
+                        ? I18n.t("Cambia a la vez las animaciones y el aspecto del cristal. No enciende ni apaga funciones. ",
+                        "It changes the animations and the look of the glass together. It doesn't turn features on or off. ")
+                        : I18n.t("Cambia los ajustes de forma, velocidad y calidad de las animaciones. No enciende ni apaga "
+                                + "funciones y no toca el cristal ni los fotogramas por segundo. ",
                         "It changes the shape, speed and quality settings of the animations. It doesn't turn features "
-                                + "on or off, and it leaves the glass and the frame rate alone. To be able to go back, "
-                                + "export your settings first (About → Export settings)."))
+                                + "on or off, and it leaves the glass and the frame rate alone. "))
+                        + I18n.t("Si quieres poder volver atrás, exporta antes tus ajustes (Acerca de → Exportar ajustes).",
+                        "To be able to go back, export your settings first (About → Export settings)."))
                 .setNegativeButton(I18n.t("Cancelar", "Cancel"), null)
                 .setPositiveButton(I18n.t("Aplicar", "Apply"), new android.content.DialogInterface.OnClickListener() {
                     @Override

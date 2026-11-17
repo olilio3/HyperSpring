@@ -335,7 +335,11 @@ final class FolderMorph {
             } else if (cand[0] != s.want[0] || cand[1] != s.want[1]) {
                 float dc = (float) Math.sqrt(dist2(pr[0], pr[1], cand[0], cand[1]));
                 float dw = (float) Math.sqrt(dist2(pr[0], pr[1], s.want[0], s.want[1]));
-                if (dw - dc > HYSTERESIS_CELLS) s.want = cand;     // histéresis: sin alternar
+                if (dw - dc > HYSTERESIS_CELLS) {                  // histéresis: sin alternar
+                    s.want = cand;
+                    // Un tic al saltar la carpeta a otro tamaño (si la vibración no está a 0).
+                    if (Haptics.strength > 0f) t.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                }
             }
             setWant(overlay, s.want);
 

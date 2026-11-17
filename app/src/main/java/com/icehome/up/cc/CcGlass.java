@@ -861,6 +861,7 @@ public final class CcGlass {
                         if (Math.abs(r - ccRatio) > 0.002f || (r == 0f) != (ccRatio == 0f)) {
                             ccRatio = r;
                             root.invalidate();
+                            PanelFocus.apply(root, r);      // enfoque al cambiar de página
                         }
                     } catch (Throwable t) {
                         once("bg ratio", t);

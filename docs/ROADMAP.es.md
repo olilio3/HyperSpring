@@ -25,18 +25,18 @@ Criterio para entrar aquí: que lo vaya a usar bastante gente, que se pueda mant
 Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hacer las del escritorio, hay que revisar qué trae ya el Launcher Mod de Kashi.
 
 ### Cristal líquido
-- [ ] **Dock de cristal:** el dock del launcher como barra flotante con refracción en el borde, con el mismo shader que la barra de la app.
+- [x] **Dock de cristal:** el dock del launcher como barra flotante con refracción en el borde, con el mismo shader que la barra de la app. *En pruebas en la 2.12.0.*
 - [x] **Notificaciones de cristal:** las tarjetas de la sombra y la notificación emergente (heads-up), con desenfoque y borde iluminado. Para que no pese, todas las tarjetas tienen que usar una sola captura del fondo. *En pruebas en la 2.10.1: toda la tarjeta de cristal, oscurecida para leer bien (ajuste **Oscuridad**), con refracción y canto de luz suaves.*
 - [ ] **Refracción en las carpetas:** añadir la lente del borde al desenfoque que ya tienen.
 - [ ] **Lupa en los sliders del CC:** al arrastrar el brillo o el volumen, el control se convierte en una gota de cristal que aumenta lo que tiene debajo. Ojo: depende de clases del plugin de SystemUI que cambian entre versiones.
-- [ ] **Estilos de cristal:** Transparente, Ahumado, Esmerilado, Tinte Monet y Prisma (con más dispersión), elegibles con un toque.
-- [ ] **Modos de sistema** (idea del 14-11-2026): «HyperOS 4», «iOS 26» e «iOS 27», elegibles con un toque. Cada modo pone su tipo de cristal líquido (centro de control, carpetas y menú de atajos), su estilo de abrir y cerrar apps, sus rebotes y sus ajustes visuales. Sería un perfil más grande que los de ahora (`Presets`), que también toca las claves del cristal. Encaja con los Estilos de cristal de arriba: se pueden hacer juntos.
+- [x] **Estilos de cristal:** Transparente, Ahumado, Esmerilado, Tinte Monet y Prisma (con más dispersión), elegibles con un toque. *Publicados en la 2.12.0 (sin Tinte Monet).*
+- [x] **Modos de sistema** (idea del 14-11-2026): «HyperOS 4», «iOS 26» e «iOS 27», elegibles con un toque. Cada modo pone su tipo de cristal líquido (centro de control, carpetas y menú de atajos), su estilo de abrir y cerrar apps, sus rebotes y sus ajustes visuales. Sería un perfil más grande que los de ahora (`Presets`), que también toca las claves del cristal. Encaja con los Estilos de cristal de arriba: se pueden hacer juntos. *Publicados en la 2.12.0.*
 - [ ] **Brillo que sigue al dedo:** el reflejo del borde del cristal se mueve hacia donde tocas. Sin giroscopio, así que no gasta batería.
 
 ### Animaciones
 - [ ] **Notificaciones con animación de genio, o una parecida, al estilo de iOS:** al abrir una notificación la app sale de la tarjeta; al descartarla, la tarjeta se recoge.
 - [ ] **Notificaciones con muelle:** la emergente entra con un pequeño rebote.
-- [ ] **Fundido al abrir el CC** con una animación al estilo de ColorOS 17.
+- [x] **Fundido al abrir el CC** con una animación al estilo de ColorOS 17. *Publicado en la 2.12.0 como «Enfoque al abrir».*
 - [ ] **Genio hacia la carpeta:** al cerrar una app que está dentro de una carpeta, la ventana vuelve a la carpeta.
 - [ ] **Genio en los widgets:** al abrir una app desde un widget, la ventana sale del widget.
 - [ ] **Gesto de atrás predictivo con físicas:**
@@ -44,10 +44,10 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
   - Mientras se arrastra el gesto, la pantalla se encoge y se inclina siguiendo el dedo (con la física del telón). Al soltar, vuelve con muelle o se cierra.
 - [ ] **Transiciones entre páginas del escritorio** en las que los iconos se estiran según la velocidad del deslizamiento.
 - [ ] **Modo oscuro con onda circular:** al cambiar el tema, la paleta nueva se extiende en círculo desde el botón del CC.
-- [ ] **Zoom suave al desbloquear:** el escritorio entra con una escala ligera, sin animar cada icono.
+- [x] **Zoom suave al desbloquear:** el escritorio entra con una escala ligera, sin animar cada icono. *Publicado en la 2.12.0.*
 
 ### Funciones
-- [x] **Lista de apps excluidas del genio:** las apps elegidas se abren y se cierran con la animación de HyperOS. Se aplica al momento. *Publicado en la 2.1.0.* Falta lo mismo para la cortina de la interfaz del sistema.
+- [x] **Lista de apps excluidas del genio:** las apps elegidas se abren y se cierran con la animación de HyperOS. Se aplica al momento. *Publicado en la 2.1.0.* Desde la 2.12.0 la misma lista vale para la cortina de la interfaz del sistema.
 - [x] **Pausa automática:** los efectos pesados se apagan solos con el ahorro de batería, en juegos (Game Turbo) o con el móvil caliente. *Publicada en la 2.11.0.*
 - [ ] **Vibración sutil** sincronizada con las animaciones: cuando el genio aterriza en el icono, cuando rebota una carpeta, cuando cambia la pila de widgets.
 - [x] **Editor visual del muelle:** una gráfica animada de la curva mientras mueves Velocidad y Rebote, con un móvil en miniatura que abre una ventana con ese muelle. *Publicado en la 2.1.0.*
@@ -56,7 +56,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 - [x] **Velocidad de las animaciones de Android** (las tres escalas de las opciones de desarrollador) desde la app, con root. *Publicado en la 2.7.0.*
 - [x] **Compartir ajustes** con un código corto `HS1:` y pegar los de otra persona. *Publicado en la 2.7.0.* El código QR queda para más adelante: hace falta una librería o un codificador propio.
 - [ ] **Iconos que se apartan con muelle** al arrastrar uno por el escritorio, en vez de deslizarse en línea recta.
-- [ ] **«¿Cómo va mi móvil?»**: con los fotogramas y tirones del registro, sugerir el perfil Rendimiento cuando el genio va justo.
+- [x] **«¿Cómo va mi móvil?»**: con los fotogramas y tirones del registro, sugerir el perfil Rendimiento cuando el genio va justo. *Publicado en la 2.12.0.*
 - [x] **Aviso de versión nueva:** consulta las releases de GitHub (se puede desactivar), y descarga e instala desde la app. *Publicado en la 2.1.0.*
 - [x] **Novedades al actualizar:** al abrir la app tras actualizarla, una pantalla animada con lo nuevo. *Publicado en la 2.1.0.*
 
@@ -66,7 +66,7 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 - [ ] **Intro al estilo Apple** (idea del 14-11-2026): aparece «HyperSpring», una letra (la «i») se repite al menos 20 veces, la cámara las recorre muy deprisa y al final cae el icono. Antes de hacerla, enseñar una vista previa al usuario.
 
 ## Más adelante, si hay demanda
-- [ ] **Calidad automática:** bajar sola la resolución del genio cuando el registro detecte muchos tirones seguidos. Por ahora lo cubre el perfil «Rendimiento».
+- [x] **Calidad automática:** bajar sola la resolución del genio cuando el registro detecte muchos tirones seguidos. Por ahora lo cubre el perfil «Rendimiento». *Publicada en la 2.12.0.*
 - [ ] **Vista previa dentro de la app.** Obliga a duplicar las animaciones fuera del launcher; con los perfiles y los cambios en vivo, el beneficio es pequeño.
 - [ ] **Revisar qué incluyen HyperCeiler y el HyperOS Launcher Mod de Kashi** antes de añadir funciones nuevas, para no duplicar.
 

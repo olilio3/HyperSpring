@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.12.0
+
+**Fixed**
+- **Glass notifications: the glass no longer stays still when you move the cards.** Scrolling the list or swiping a notification away, the glass kept showing the piece of background from where the card was before, like a photo stuck on it. Android moves the cards without repainting them; now the glass is repainted whenever a card moves.
+
+**New**
+- **Focus when switching between notifications and the control center**, ColorOS-style: the page that comes in arrives slightly larger and blurred and settles sharp; the one that leaves shrinks a little and blurs. It follows your finger (it is tied to how far the control center is open). Strength in **System → Background → Focus when opening** (0 turns it off).
+- **Glass styles** (System → Glass styles): **Liquid** (the default), **Clear**, **Smoked**, **Frosted** and **Prism**, one tap each. They change the glass of the control center, notifications, folders and shortcut menu.
+- **System modes** (Home → System modes): **HyperOS 4**, **iOS 26** and **iOS 27**. Each sets the open/close style, the bounces and the type of glass at once. They are approximations made with the existing settings.
+- **Glass dock (beta).** The row of icons at the bottom of the home screen becomes a floating liquid-glass bar, with the folders' glass. Off by default: **Home → Glass dock**, then restart the launcher.
+- **Unlock zoom.** When you unlock, the home screen comes in slightly larger and settles to its size, in one piece. Off by default: **Launcher → Opening and closing apps → Unlock zoom**.
+- **Automatic resolution.** If three animations in a row stutter, the genie lowers its resolution by 10 % on its own (down to 50 %) and says so in the log. It goes back to yours when you touch a setting or restart the launcher.
+- **"How is my phone doing?"** (Home → Actions): reads the last animations from the log and tells you the average frame rate, how many frames hitched, and whether the Performance preset is worth applying (with a button to apply it).
+- **Apps without genie also skip the curtain:** the same list now applies to the System UI curtain.
+- **A tick when a folder snaps to another size** while you resize it (Kashi's launcher), if vibration is not set to 0.
+
 ## 2.11.0
 
 **New**

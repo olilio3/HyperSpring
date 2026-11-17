@@ -227,6 +227,28 @@ final class Genie {
     /** Por debajo de esta apertura la copa se va convirtiendo en el rectángulo de MIUI (el icono). */
     private static final float CUP_FADE = 0.12f;
     static volatile boolean live = true;
+    /** Resolución automática: baja sola si varias animaciones seguidas van a tirones. Ajuste. */
+    static volatile boolean autoQuality = true;
+    /** Animaciones seguidas con más de {@link #AUTO_JANK} de sus fotogramas tarde. */
+    private static int jankyRuns;
+    private static final float AUTO_JANK = 0.2f, AUTO_STEP = 0.1f, AUTO_MIN = 0.5f;
+    private static final int AUTO_RUNS = 3;
+
+    /** Hilo de dibujo, al acabar cada animación: {@code janks} tirones en {@code frames} fotogramas. */
+    private static void autoQuality(int janks, int frames) {
+        if (frames < 10) return;                           // muy corta: no dice nada
+        if (janks / (float) frames <= AUTO_JANK) {
+            jankyRuns = 0;
+            return;
+        }
+        if (++jankyRuns < AUTO_RUNS || !autoQuality) return;
+        jankyRuns = 0;
+        float now = GlRenderer.wantedScale;
+        if (now <= AUTO_MIN + 0.001f) return;
+        GlRenderer.wantedScale = Math.max(AUTO_MIN, now - AUTO_STEP);
+        Log.i("genio: resolución automática, baja al " + Math.round(GlRenderer.wantedScale * 100)
+                + " % (" + AUTO_RUNS + " animaciones seguidas a tirones)");
+    }
     /**
      * Fotogramas por segundo máximos del genio. Se dibuja al ritmo de los refrescos de la
      * pantalla, como mucho a este: con pantalla a 90-120 Hz y una GPU modesta, dibujar a cada
@@ -1608,6 +1630,7 @@ final class Genie {
                     posted == 0 ? 0f : drawNs / 1e6f / posted,
                     (preloaded ? "; captura precargada" : "") + (iconPreloaded ? "; icono precargado" : "")
                             + (contentPreloaded ? "; con su última imagen" : ""), at50, at90, at99, why));
+            autoQuality(janks, posted);
         }
 
         /** Otra sesión ya colocó la capa sobre su ventana. */

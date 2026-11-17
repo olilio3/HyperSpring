@@ -25,18 +25,18 @@ The bar for getting on this list: a fair number of people will use it, it can be
 Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home screen ones, check what Kashi's Launcher Mod already includes.
 
 ### Liquid glass
-- [ ] **Glass dock:** the launcher dock as a floating bar with edge refraction, using the same shader as the app's bar.
+- [x] **Glass dock:** the launcher dock as a floating bar with edge refraction, using the same shader as the app's bar. *Beta in 2.12.0.*
 - [x] **Glass notifications:** shade cards and the heads-up popup, with blur and a lit edge. To keep it light, every card has to share a single capture of the background. *Beta in 2.10.1: the whole card is glass, darkened so it reads well (**Darkness** setting), with soft refraction and light rim.*
 - [ ] **Refraction on folders:** add the edge lens to the blur they already have.
 - [ ] **Magnifier on control center sliders:** while dragging brightness or volume, the control turns into a glass drop that magnifies what is behind it. Note: it depends on System UI plugin classes that change between versions.
-- [ ] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap.
-- [ ] **System modes** (idea from 2026-11-14): "HyperOS 4", "iOS 26" and "iOS 27", picked with one tap. Each mode sets its own kind of liquid glass (control center, folders and shortcut menu), its app open/close style, its bounces and its visual settings. It would be a bigger preset than the current ones (`Presets`) that also covers the glass keys. It fits with the Glass styles above: they can be built together.
+- [x] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap. *Released in 2.12.0 (without Monet tint).*
+- [x] **System modes** (idea from 2026-11-14): "HyperOS 4", "iOS 26" and "iOS 27", picked with one tap. Each mode sets its own kind of liquid glass (control center, folders and shortcut menu), its app open/close style, its bounces and its visual settings. It would be a bigger preset than the current ones (`Presets`) that also covers the glass keys. It fits with the Glass styles above: they can be built together. *Released in 2.12.0.*
 - [ ] **Highlight that follows your finger:** the glow on the glass edge moves towards where you touch. No gyroscope, so no battery cost.
 
 ### Animations
 - [ ] **Notifications with a genie-style animation (or something like it), iOS style:** opening a notification makes the app come out of the card; dismissing it folds the card away.
 - [ ] **Springy notifications:** the heads-up popup comes in with a small bounce.
-- [ ] **Fade when opening the control center**, with a ColorOS 17 style animation.
+- [x] **Fade when opening the control center**, with a ColorOS 17 style animation. *Released in 2.12.0 as "Focus when opening".*
 - [ ] **Genie into folders:** closing an app that lives inside a folder sends the window back to the folder.
 - [ ] **Genie on widgets:** opening an app from a widget makes the window come out of the widget.
 - [ ] **Predictive back gesture with physics:**
@@ -44,7 +44,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
   - While the gesture is dragged, the screen shrinks and tilts with the finger (using the curtain physics). On release it springs back or closes.
 - [ ] **Home screen page transitions** where icons stretch with the swipe speed.
 - [ ] **Dark mode with a circular wave:** when the theme changes, the new palette spreads in a circle from the control center button.
-- [ ] **Gentle zoom on unlock:** the home screen comes in with a slight scale, without animating each icon.
+- [x] **Gentle zoom on unlock:** the home screen comes in with a slight scale, without animating each icon. *Released in 2.12.0.*
 
 ### Features
 - [x] **Apps excluded from the genie:** the apps you pick open and close with the HyperOS animation. Applies right away. *Released in 2.1.0.* The same for the System UI curtain is still to do.
@@ -56,7 +56,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 - [x] **Android animation speed** (the three developer-options scales) from the app, with root. *Released in 2.7.0.*
 - [x] **Share settings** as a short `HS1:` code and paste someone else's. *Released in 2.7.0.* A QR code is left for later: it needs a library or our own encoder.
 - [ ] **Icons that move aside with a spring** when you drag one on the home screen, instead of sliding in a straight line.
-- [ ] **"How is my phone doing?"**: from the frames and stutters in the log, suggest the Performance preset when the genie struggles.
+- [x] **"How is my phone doing?"**: from the frames and stutters in the log, suggest the Performance preset when the genie struggles. *Released in 2.12.0.*
 - [x] **New version notice:** checks GitHub releases (can be turned off), and downloads and installs from the app. *Released in 2.1.0.*
 - [x] **What's new after updating:** an animated screen with the changes the first time the app opens after an update. *Released in 2.1.0.*
 
@@ -66,7 +66,7 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 - [ ] **Apple-style intro** (idea from 2026-11-14): "HyperSpring" appears, one letter (the "i") repeats at least 20 times, the camera races along them and then the icon drops in. Show the user a preview before building it.
 
 ## Later, if there is demand
-- [ ] **Automatic quality:** lower the genie resolution on its own when the log shows many stutters in a row. For now the "Performance" preset covers it.
+- [x] **Automatic quality:** lower the genie resolution on its own when the log shows many stutters in a row. For now the "Performance" preset covers it. *Released in 2.12.0.*
 - [ ] **In-app preview.** It means duplicating the animations outside the launcher; with presets and live changes, the benefit is small.
 - [ ] **Review what HyperCeiler and Kashi's HyperOS Launcher Mod already include** before adding new features, to avoid duplicates.
 

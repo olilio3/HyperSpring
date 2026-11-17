@@ -49,6 +49,8 @@ public final class Telon {
 
     static volatile float strength = 1f, maxFps = 60f, captureScale = 0.5f, motionBlur = 0.6f, belowBlur = 1f;
     /** Oscurecido máximo de HyperOS en la de debajo (para pasar de oscurecido a desenfoque 0..1). */
+    /** Apps sin telón (la misma lista que «Apps sin genio»). Se sustituye entera al recargar. */
+    static volatile java.util.Set<String> exclude = java.util.Collections.emptySet();
     private static final float DIM_FULL = 0.5f;
     /** Entrada suave del desenfoque al aparecer nuestra capa (ns; al volver empieza desenfocada). */
     private static final long BELOW_IN_NS = 80_000_000L;
@@ -145,6 +147,10 @@ public final class Telon {
             return;
         }
         boolean closing = mode == 2 || mode == 4;
+        if (!exclude.isEmpty() && exclude.contains(packageOf(top))) {
+            skip("app excluida por el usuario");
+            return;
+        }
         Rect b = (Rect) XposedHelpers.callMethod(top, closing ? "getStartAbsBounds" : "getEndAbsBounds");
         SurfaceControl leash = (SurfaceControl) XposedHelpers.callMethod(top, "getLeash");
         if (b == null || b.isEmpty() || leash == null || !leash.isValid()) {
@@ -189,6 +195,19 @@ public final class Telon {
     }
 
     /** La de debajo (segunda de la transición), si también ocupa la pantalla en la misma raíz. */
+    /** Paquete de la app de un cambio de la transición (su tarea), o null. */
+    private static String packageOf(Object change) {
+        try {
+            Object info = XposedHelpers.callMethod(change, "getTaskInfo");
+            if (!(info instanceof android.app.TaskInfo)) return null;
+            android.app.TaskInfo ti = (android.app.TaskInfo) info;
+            android.content.ComponentName cn = ti.topActivity != null ? ti.topActivity : ti.baseActivity;
+            return cn == null ? null : cn.getPackageName();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     private static void below(Session s, Object change, Object info, int topRoot, int dw, int dh, SurfaceControl.Transaction finishT) {
         try {
             int mode = (Integer) XposedHelpers.callMethod(change, "getMode");

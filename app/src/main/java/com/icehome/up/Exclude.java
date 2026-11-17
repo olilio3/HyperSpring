@@ -11,16 +11,16 @@ import java.util.Set;
  * adornos. Se guarda en un solo ajuste de texto con los paquetes separados por comas
  * ({@code com.android.camera,com.whatsapp}), y llega al launcher igual que los demás ajustes.
  */
-final class Exclude {
+public final class Exclude {
 
     /** Clave del ajuste. No está en Tune.ITEMS porque no es un número. */
-    static final String KEY = "icehome_exclude";
+    public static final String KEY = "icehome_exclude";
 
     /** Lo que usa el launcher. Se sustituye entero al recargar, así no hace falta sincronizar hilos. */
     static volatile Set<String> genie = Collections.emptySet();
 
     /** Lee el texto guardado (null = ninguna). */
-    static Set<String> parse(String saved) {
+    public static Set<String> parse(String saved) {
         Set<String> out = new HashSet<>();
         if (saved == null) return out;
         for (String p : saved.split(",")) {

@@ -22,6 +22,7 @@ final class Tune {
             {"icehome_folder_morph_on", "Carpetas con muelle", 0f, 1f, 1f, -1, "Al abrir o cerrar una carpeta, cambia de tamaño con un rebote suave. Se aplica al reiniciar el launcher."},
             {"icehome_folder_glass_on", "Cristal en las carpetas", 0f, 1f, 1f, -1, "El fondo de las carpetas abiertas es cristal desenfocado en vez de un color plano. Se aplica al reiniciar el launcher."},
             {"icehome_curtain_on", "Recientes que se doblan", 0f, 1f, 1f, -1, "En la vista de recientes, las tarjetas se doblan hacia el lado contrario según la fuerza con la que las deslizas. Se aplica al reiniciar el launcher."},
+            {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
             {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
             {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 2 = Ice: copa más suave, con rebote al abrir, el icono que recibe la copa y el escritorio que se oscurece detrás. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
@@ -29,11 +30,13 @@ final class Tune {
             {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
             {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
+            {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas de la animación. Ponlo igual al refresco de tu pantalla (60 si no pasa de 60 Hz) para no gastar de más."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
+            {"icehome_unlock_zoom", "Zoom al desbloquear", 0f, 1.5f, 0f, 2, "Al desbloquear, el escritorio entra un poco más grande y se asienta a su tamaño, todo de una pieza. 0 lo quita."},
             {"icehome_haptic", "Vibración al llegar", 0f, 1f, 0.3f, 2, "Un toque de vibración muy suave cuando la ventana entra en su icono. 0 la quita. Respeta el ajuste de vibración del sistema."},
             {"icehome_anim_speed", "Velocidad", 0.5f, 2f, 1f, 2, "Velocidad de las animaciones de abrir y cerrar. Más de 1 es más rápida."},
             {"icehome_anim_bounce", "Rebote", 0f, 0.4f, 0f, 2, "Cuánto se pasa la ventana de su sitio al llegar antes de asentarse. 0 llega sin rebote."},
@@ -75,6 +78,8 @@ final class Tune {
         RecentsCurtain.strength = f(c, "icehome_curtain_strength");
         RecentsCurtain.mode = f(c, "icehome_curtain_style") >= 0.5f ? 1f : 0f;
         GlRenderer.wantedScale = f(c, "icehome_genie_quality") / 100f;
+        Genie.autoQuality = f(c, "icehome_genie_auto") >= 0.5f;
+        UnlockZoom.strength = f(c, "icehome_unlock_zoom");
         Springs.speed = f(c, "icehome_anim_speed");
         Springs.bounce = f(c, "icehome_anim_bounce");
         GlassFolder.quality = f(c, "icehome_folder_quality");

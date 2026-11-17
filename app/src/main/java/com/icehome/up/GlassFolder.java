@@ -606,7 +606,8 @@ final class GlassFolder {
                 rs.setFloatUniform("band", band);
                 rs.setFloatUniform("disp", STRENGTH_DP * density);
                 rs.setFloatUniform("dispersion", DISPERSION);
-                rs.setFloatUniform("origin", (loc[0] + left) / s, (loc[1] + top) / s);
+                // box.left/top: la caja puede ir con margen dentro de la vista (el dock).
+                rs.setFloatUniform("origin", (loc[0] + box.left * sc[0] + left) / s, (loc[1] + box.top * sc[1] + top) / s);
                 rs.setFloatUniform("scale", sc[0] / s, sc[1] / s);
                 rs.setFloatUniform("hasWall", 1f);
                 rs.setFloatUniform("fill", blur ? 1f : 0f);       // sin texturas avanzadas: solo el canto

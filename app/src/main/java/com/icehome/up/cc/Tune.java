@@ -37,6 +37,7 @@ public final class Tune {
             {"kashiplus_cc_rim_gain", "Intensidad de la línea de luz", 0f, 2.5f, 1f, 2, "Brillo de esa línea. 0 la quita."},
             {"#", "Fondo"},
             {"kashiplus_cc_dim", "Oscurecer el fondo", 0f, 0.7f, 0.5f, 2, "Cuánto se oscurece la pantalla detrás del centro de control."},
+            {"kashiplus_cc_focus", "Enfoque al abrir", 0f, 2f, 1f, 1, "Al pasar de las notificaciones al centro de control, la página que entra llega un poco más grande y desenfocada y se asienta nítida, y la que se va se encoge y se desenfoca, al estilo de ColorOS. 0 lo quita."},
     };
 
     static volatile boolean ccOn = true;
@@ -101,6 +102,7 @@ public final class Tune {
         rim = get(c, "kashiplus_cc_rim", saved);
         rimGain = get(c, "kashiplus_cc_rim_gain", saved);
         dim = get(c, "kashiplus_cc_dim", saved);
+        PanelFocus.amount = get(c, "kashiplus_cc_focus", saved);
         refr = get(c, "kashiplus_cc_refr", saved);
         refrH = get(c, "kashiplus_cc_refr_h", saved);
         chroma = get(c, "kashiplus_cc_chroma", saved);
