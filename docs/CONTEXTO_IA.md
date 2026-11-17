@@ -52,6 +52,7 @@ rama se subió al final de la sesión. Revisa la primera ejecución.
 | 2.11.0 | 62 | Rueda de funciones en Inicio + pausa automática |
 | 2.12.0 | 63 | Diez cosas: enfoque al cambiar de página, estilos y modos, dock, etc. |
 | 2.12.1 | 64 | Arreglo de los tirones al deslizar las notificaciones de cristal |
+| 2.12.2 | 65 | Notificaciones de cristal ligeras (seguían a pocos fps): esmerilado oscuro sin shader |
 
 Detalle de cada una en `CHANGELOG.md` (en inglés).
 
@@ -101,9 +102,12 @@ telón, `SurfaceParams.applyTo`, `TransactionCompat.setMatrix`, el icono flotant
 - **Rendimiento** (2.12.1, tras un vídeo con tirones de 280-530 ms al deslizar): un shader por
   tarjeta configurado solo cuando cambia algo (`configure`); por fotograma solo `origin`/`scale`.
   Sin arcoíris (`chroma` 0: 3 lecturas del fondo por píxel en vez de 7). Al verse del todo, se
-  quita el desenfoque de HyperOS de esa tarjeta con `CcGlass.miClear`. **Pendiente de que el
-  usuario confirme que ya no hay tirones.** Si siguen: dejar de seguir a la tarjeta mientras se
-  mueve y ponerse al día al soltar.
+  quita el desenfoque de HyperOS de esa tarjeta con `CcGlass.miClear`.
+- **Ligero** (2.12.2, el usuario seguía viéndolo a pocos fps): ya no usa `GlassShader`. `darkFor`
+  oscurece y satura la captura UNA vez (ColorMatrix) y cada tarjeta la pinta con un
+  `BitmapShader` y una matriz local (1 lectura de textura por píxel), más un canto de luz con un
+  degradado. Sin refracción en las notificaciones. **Pendiente de que el usuario confirme que ya
+  va fluido.** Si no: dejar de seguir a la tarjeta mientras se mueve y ponerse al día al soltar.
 - Historial: la 2.10.0 lo ponía solo en el borde, por encima del contenido (overlay de la fila
   `ExpandableNotificationRow`). Al usuario le pareció raro: pidió toda la tarjeta y más oscura.
 - Se apaga solo tras 5 fallos seguidos. Líneas útiles del registro: «cristal en notificaciones
@@ -160,7 +164,10 @@ ahorro de batería. Ajustes `icehome_auto_heat`, `icehome_auto_game`, `icehome_a
 
 ## Pendiente
 
-1. **Confirmar con el usuario** que la 2.12.1 ya no da tirones en el panel de notificaciones.
+1. **Confirmar con el usuario** que la 2.12.2 ya va fluida en el panel de notificaciones.
+   Decisiones del 17/11: **no** se harán carpetas con muelle ni pila de widgets para el launcher de
+   serie (la idea es que la gente use el de Kashi); lo siguiente es mejorar la animación del
+   launcher (abrir y cerrar apps).
 2. **Vídeos del README**: el usuario pidió cambiarlos y mandó un solo vídeo (10 s del panel de
    notificaciones). No se hizo porque: no estaba claro qué vídeo sustituye; salían datos
    personales (sus notificaciones de WhatsApp y noticias, y la operadora); y se veían los tirones.

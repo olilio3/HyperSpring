@@ -3,7 +3,6 @@ package com.icehome.up.cc;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.RuntimeShader;
 import android.os.Build;
 import android.os.SystemClock;
 import android.view.View;
@@ -19,9 +18,9 @@ import com.icehome.up.xp.XposedHelpers;
 
 /**
  * Cristal líquido en las notificaciones: cada tarjeta (en el panel, en la pantalla de bloqueo y
- * la emergente) es entera de cristal, como las piezas del centro de control: el fondo de detrás
- * desenfocado y oscurecido para que el texto se lea, doblado hacia dentro junto al borde
- * (refracción) y con un canto de luz suave.
+ * la emergente) es de cristal esmerilado oscuro: el fondo de detrás desenfocado y oscurecido
+ * para que el texto se lea, con un canto de luz suave. Ligero a propósito: una lista que se
+ * desliza repinta todas sus tarjetas en cada fotograma (ver {@link #darkFor}).
  *
  * <p><b>Dónde se dibuja.</b> En el fondo de la tarjeta: Android lo pinta con una vista propia,
  * {@code NotificationBackgroundView}, por debajo del texto y los iconos. Después de que HyperOS
@@ -56,8 +55,6 @@ public final class NotifGlass {
     private static final long FADE_MS = 160;
     /** Por debajo de esta altura (dp) no se dibuja: tarjetas recogiéndose del todo. */
     private static final float MIN_DP = 24f;
-    /** Ancho máximo de la lente del borde (dp). */
-    private static final float MAX_LENS_DP = 14f;
     /** Fallos seguidos al dibujar antes de apagar el cristal de las notificaciones. */
     private static final int MAX_FAILS = 5;
 
@@ -75,66 +72,45 @@ public final class NotifGlass {
         /** Dónde estaba en pantalla, y a qué escala, la última vez que se pintó. */
         int x = Integer.MIN_VALUE, y;
         float sx, sy;
-        /** Su propio shader, con los ajustes ya puestos (ver {@link #configure}). */
-        RuntimeShader shader;
+        /** El fondo ya preparado, como textura, y dónde va dentro de la tarjeta. */
+        final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        final android.graphics.Matrix m = new android.graphics.Matrix();
         Bitmap bound;
-        /** Con qué tamaño, radios y ajustes se configuró por última vez. */
-        float cw, ch, crt, crb, cdark = -1f, cstamp;
+        /** Tamaño con el que se hizo el degradado del canto. */
+        float rimW, rimH;
         /** Ya se le quitó el desenfoque de HyperOS (lo tapa nuestro cristal). */
         boolean miCleared;
     }
 
     /**
-     * Pone en el shader de una tarjeta todo lo que no cambia al moverla (tamaño, radios, ajustes),
-     * solo si ha cambiado. Antes se mandaban unos 30 valores en cada dibujo; al deslizar la lista,
-     * cada tarjeta se repinta en cada fotograma y era trabajo de más en el hilo principal.
+     * El fondo de detrás ya desenfocado (la captura compartida) y además oscurecido y algo más
+     * saturado, hecho UNA vez por captura. Cada tarjeta solo lo pega con su recorte: un acceso a
+     * la textura por píxel, lo más barato que hay para la GPU. (Hasta la 2.12.1 se usaba el shader
+     * de cristal líquido del centro de control en cada píxel de cada tarjeta y en cada fotograma
+     * al deslizar: en una Mali-G52 la lista iba a pocos fotogramas por segundo.)
      */
-    private static void configure(St st, RuntimeShader rs, float w, float h, float rt, float rb, float dp) {
+    private static Bitmap darkFor(Bitmap src) {
         float d = Math.max(0f, Math.min(1f, dark));
-        // Una "huella" de los ajustes del centro de control que usa: si se mueve un deslizador, cambia.
-        float stamp = Tune.edge * 3.1f + Tune.refrH * 5.3f + Tune.refr * 7.7f + Tune.edgeOver * 11.3f
-                + Tune.edgeSat * 13.1f + Tune.rim * 17.9f + Tune.rimGain * 19.7f;
-        if (w == st.cw && h == st.ch && rt == st.crt && rb == st.crb && d == st.cdark && stamp == st.cstamp) return;
-        st.cw = w;
-        st.ch = h;
-        st.crt = rt;
-        st.crb = rb;
-        st.cdark = d;
-        st.cstamp = stamp;
-        float thick = Math.min(Tune.edge * dp, Math.min(w, h) * CcGlass.THICK_MAX_FRACTION);
-        float lensH = Math.min(Math.min(Tune.refrH, MAX_LENS_DP) * dp, Math.min(w, h) / 3f);
-        float want = Tune.refrH * dp;
-        rs.setFloatUniform("size", w, h);
-        rs.setFloatUniform("band", Math.max(1f, thick));
-        rs.setFloatUniform("disp", 0f);
-        rs.setFloatUniform("dispersion", CcGlass.THICK_DISPERSION);
-        rs.setFloatUniform("fill", 1f);                      // la tarjeta entera es cristal
-        rs.setFloatUniform("bandAlpha", 1f);
-        // Oscuro para que se lea: con 0,5, a un 60 % del brillo, y las luces altas apagadas.
-        rs.setFloatUniform("tone", 1f - 0.8f * d);
-        rs.setFloatUniform("darker", 0.15f + 0.35f * d);
-        rs.setFloatUniform("sat", 1.25f);
-        rs.setFloatUniform("whiteMix", 0f);
-        rs.setFloatUniform("edgeLift", 0f);
-        rs.setFloatUniform("stretch", CcGlass.EDGE_STRETCH);
-        rs.setFloatUniform("overshoot", Tune.edgeOver * dp);
-        rs.setFloatUniform("edgeSat", Tune.edgeSat * 0.5f);
-        rs.setFloatUniform("mag", 0f);
-        rs.setFloatUniform("refrH", lensH);
-        rs.setFloatUniform("refrAmt", want > 0f ? Tune.refr * dp * lensH / want : 0f);
-        // Sin arcoíris en las notificaciones: con él, el shader lee el fondo 7 veces por píxel en
-        // toda la tarjeta (sin él, 3). En una lista que se desliza era lo que más pesaba a la GPU,
-        // y sobre una tarjeta con texto apenas se apreciaba.
-        rs.setFloatUniform("chroma", 0f);
-        rs.setFloatUniform("rimw", Tune.rim * dp);
-        rs.setFloatUniform("glow", 0f);
-        rs.setFloatUniform("innerDark", CcGlass.INNER_DARK);
-        rs.setFloatUniform("rimGain", Tune.rimGain * 0.55f);
-        rs.setFloatUniform("light", 0.025f);
-        rs.setFloatUniform("active", 0f);
-        rs.setFloatUniform("hasWall", 1f);
-        if (Math.abs(rt - rb) < 0.5f) rs.setFloatUniform("radius", rt);
+        if (src == darkSrc && d == darkAmount && darkBmp != null) return darkBmp;
+        android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix();
+        cm.setSaturation(1.25f);
+        float t = 1f - 0.8f * d;                            // con 0,5: al 60 % del brillo
+        android.graphics.ColorMatrix tone = new android.graphics.ColorMatrix();
+        tone.setScale(t, t, t, 1f);
+        cm.postConcat(tone);
+        Bitmap out = Bitmap.createBitmap(src.getWidth(), src.getHeight(), Bitmap.Config.ARGB_8888);
+        Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
+        p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
+        new Canvas(out).drawBitmap(src, 0f, 0f, p);
+        darkSrc = src;
+        darkAmount = d;
+        darkBmp = out;
+        return out;
     }
+
+    private static Bitmap darkSrc, darkBmp;
+    private static float darkAmount = -1f;
 
     private static St st(View v) {
         St s = SHOWN.get(v);
@@ -188,7 +164,7 @@ public final class NotifGlass {
     private static int fails;
     private static boolean broken, logged;
     private static final int[] LOC = new int[2];
-    private static final Paint PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final android.graphics.Path PATH = new android.graphics.Path();
 
     /**
      * Engancha el fondo de las tarjetas. Se llama una vez, con la interfaz del sistema ya
@@ -326,13 +302,13 @@ public final class NotifGlass {
         rt = Math.min(half, Math.max(0f, rt));
         rb = Math.min(half, Math.max(0f, rb));
 
-        if (state.shader == null) state.shader = GlassShader.create();
-        RuntimeShader rs = state.shader;
-        if (state.bound != b) {
-            rs.setInputShader("wall", GlassShader.linear(b));
-            state.bound = b;
+        Bitmap dk = darkFor(b);
+        if (state.bound != dk) {
+            // Cada tarjeta comparte la textura, pero con su propia matriz (dónde cae en pantalla).
+            state.fill.setShader(new android.graphics.BitmapShader(dk, android.graphics.Shader.TileMode.CLAMP,
+                    android.graphics.Shader.TileMode.CLAMP));
+            state.bound = dk;
         }
-        configure(state, rs, w, h, rt, rb, dp);
 
         // Nuestro cristal es opaco y tapa la tarjeta entera: el desenfoque que HyperOS calcula
         // debajo (caro, y más al repintar mientras se desliza la lista) ya no se ve. Se quita una
@@ -342,7 +318,8 @@ public final class NotifGlass {
             CcGlass.miClear(v, true);
         }
 
-        // Qué parte de la captura hay detrás de este trozo de pantalla.
+        // Qué parte del fondo hay detrás: el punto (x, y) de la tarjeta está en la pantalla en
+        // LOC + (x, y)·escala, y en la captura en eso por k. La matriz lleva la captura ahí.
         float k = CcGlass.backdropScaleNow();
         float[] sc = CcGlass.scaleOf(v);
         v.getLocationOnScreen(LOC);
@@ -350,26 +327,39 @@ public final class NotifGlass {
         state.y = LOC[1];
         state.sx = sc[0];
         state.sy = sc[1];
-        rs.setFloatUniform("origin", (LOC[0] + left * sc[0]) * k, (LOC[1] + top * sc[1]) * k);
-        rs.setFloatUniform("scale", sc[0] * k, sc[1] * k);
-        PAINT.setShader(rs);
-        PAINT.setAlpha(Math.round(255 * fade));
+        float ox = (LOC[0] + left * sc[0]) * k, oy = (LOC[1] + top * sc[1]) * k;
+        state.m.setTranslate(-ox, -oy);
+        state.m.postScale(1f / Math.max(1e-4f, sc[0] * k), 1f / Math.max(1e-4f, sc[1] * k));
+        state.fill.getShader().setLocalMatrix(state.m);
+        state.fill.setAlpha(Math.round(255 * fade));
+
+        // Canto de luz: más brillante arriba a la izquierda, como el del centro de control.
+        if (w != state.rimW || h != state.rimH) {
+            state.rimW = w;
+            state.rimH = h;
+            state.rim.setStyle(Paint.Style.STROKE);
+            state.rim.setStrokeWidth(Math.max(1f, Tune.rim * dp));
+            state.rim.setShader(new android.graphics.LinearGradient(0, 0, w, h,
+                    new int[]{0x8CFFFFFF, 0x1AFFFFFF, 0x0DFFFFFF, 0x40FFFFFF},
+                    new float[]{0f, 0.35f, 0.7f, 1f}, android.graphics.Shader.TileMode.CLAMP));
+        }
+        state.rim.setAlpha(Math.round(255 * fade * Math.max(0f, Math.min(1.5f, Tune.rimGain)) / 1.5f));
 
         int save = c.save();
         c.translate(left, top);
+        float sw = state.rim.getStrokeWidth() / 2f;
         if (Math.abs(rt - rb) < 0.5f) {
-            c.drawRect(0, 0, w, h, PAINT);                  // el radio ya está puesto (configure)
+            c.drawRoundRect(0, 0, w, h, rt, rt, state.fill);
+            c.drawRoundRect(sw, sw, w - sw, h - sw, Math.max(0f, rt - sw), Math.max(0f, rt - sw), state.rim);
         } else {
-            // Radios distintos arriba y abajo (tarjetas de un grupo): cada mitad con el suyo.
-            float mid = h / 2f;
-            int s2 = c.save();
-            c.clipRect(0, 0, w, mid);
-            rs.setFloatUniform("radius", rt);
-            c.drawRect(0, 0, w, h, PAINT);
-            c.restoreToCount(s2);
-            c.clipRect(0, mid, w, h);
-            rs.setFloatUniform("radius", rb);
-            c.drawRect(0, 0, w, h, PAINT);                  // (aquí el radio se pone en cada dibujo)
+            // Radios distintos arriba y abajo (tarjetas de un grupo).
+            PATH.reset();
+            PATH.addRoundRect(0, 0, w, h, new float[]{rt, rt, rt, rt, rb, rb, rb, rb}, android.graphics.Path.Direction.CW);
+            c.drawPath(PATH, state.fill);
+            PATH.reset();
+            float it = Math.max(0f, rt - sw), ib = Math.max(0f, rb - sw);
+            PATH.addRoundRect(sw, sw, w - sw, h - sw, new float[]{it, it, it, it, ib, ib, ib, ib}, android.graphics.Path.Direction.CW);
+            c.drawPath(PATH, state.rim);
         }
         c.restoreToCount(save);
 

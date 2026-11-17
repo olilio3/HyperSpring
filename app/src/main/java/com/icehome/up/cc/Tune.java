@@ -14,7 +14,7 @@ public final class Tune {
     public static final Object[][] ITEMS = {
             {"#", "General"},
             {"kashiplus_cc_on", "Cristal en el centro de control", 0f, 1f, 1f, -1, "Las tarjetas y botones del centro de control pasan a ser cristal líquido. Probado con el centro de control iOS de ModsCenter y con el de HyperOS."},
-            {"kashiplus_notif_on", "Cristal en las notificaciones", 0f, 1f, 0f, -1, "Las tarjetas de notificación, en el panel, en la pantalla de bloqueo y las emergentes, son de cristal líquido: el fondo de detrás desenfocado y oscurecido para que se lea el texto, doblado en el borde y con un canto de luz suave. Usa la refracción y el canto del centro de control. En pruebas: se aplica al reiniciar la interfaz del sistema."},
+            {"kashiplus_notif_on", "Cristal en las notificaciones", 0f, 1f, 0f, -1, "Las tarjetas de notificación, en el panel, en la pantalla de bloqueo y las emergentes, son de cristal esmerilado oscuro: el fondo de detrás desenfocado y oscurecido para que se lea el texto, con un canto de luz suave. Ligero, para que la lista se deslice fluida. Usa el canto del centro de control. En pruebas: se aplica al reiniciar la interfaz del sistema."},
             {"#", "Notificaciones de cristal"},
             {"kashiplus_notif_dark", "Oscuridad", 0f, 1f, 0.5f, 2, "Cuánto se oscurece el cristal de las notificaciones. Más alto, el texto se lee mejor sobre fondos claros; 0 deja el fondo con su brillo."},
             {"#", "Interior del cristal"},

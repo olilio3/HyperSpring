@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.12.2
+
+**Fixed**
+- **Glass notifications ran at a low frame rate.** The cards used the control center's liquid-glass shader on every pixel, on every frame of a scroll, which is too much for a mid-range GPU. They are now dark frosted glass: the blurred background is darkened once per capture, and each card just shows its piece of it (one texture read per pixel) with a soft light rim. No edge refraction on notifications any more; the control center keeps it.
+
 ## 2.12.1
 
 **Fixed**

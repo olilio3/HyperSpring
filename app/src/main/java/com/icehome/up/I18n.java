@@ -191,7 +191,7 @@ final class I18n {
                 "Sharpness of the window during the curtain. Higher looks sharper but costs more.");
 
         i("kashiplus_notif_on", "Glass notifications",
-                "Notification cards, in the shade, on the lock screen and when they pop up, become liquid glass: the background behind them blurred and darkened so the text is easy to read, bent at the edge and with a soft light rim. Uses the control center's refraction and edge settings. Beta: applies after restarting System UI.");
+                "Notification cards, in the shade, on the lock screen and when they pop up, become dark frosted glass: the background behind them blurred and darkened so the text is easy to read, with a soft light rim. Light on purpose, so the list scrolls smoothly. Uses the control center's edge settings. Beta: applies after restarting System UI.");
         i("icehome_dock_glass_on", "Glass dock",
                 "The row of icons at the bottom of the home screen becomes a floating liquid-glass bar. Uses the folders' glass and needs a static wallpaper. Beta: applies after restarting the launcher.");
         i("icehome_genie_auto", "Automatic resolution",
