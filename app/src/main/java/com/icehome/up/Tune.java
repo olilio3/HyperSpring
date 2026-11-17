@@ -25,7 +25,7 @@ final class Tune {
             {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
             {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
-            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 2 = Ice: copa más suave, con rebote al abrir, el icono que recibe la copa y el escritorio que se oscurece detrás. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
+            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
             {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
             {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
@@ -66,7 +66,9 @@ final class Tune {
     static void reload(Context c) {
         cache = read(c);
         Genie.strength = f(c, "icehome_genie_strength");
-        Genie.style = Math.round(f(c, "icehome_genie_style"));
+        int style = Math.round(f(c, "icehome_genie_style"));
+        // El 2 era la copa «Ice» (quitada en la 2.13.0): quien la tuviera pasa a la Copa.
+        Genie.style = style == 2 ? Genie.STYLE_SAMSUNG : style;
         Genie.depthTaper = f(c, "icehome_depth_taper") / 100f;
         Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;

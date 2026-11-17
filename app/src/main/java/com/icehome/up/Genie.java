@@ -171,8 +171,12 @@ final class Genie {
      * curva del genio clásico. Al cerrar es lo mismo al revés: abajo se mete en el icono antes.
      */
     static volatile int style = 0;   // STYLE_CLASSIC (por defecto)
-    /** Estilos: genio clásico con cola, copa como Samsung, copa «Ice» (la nuestra) y Profundidad (sin genio). */
-    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_ICE = 2, STYLE_DEPTH = 3;
+    /**
+     * Estilos: genio clásico con cola, copa como Samsung y Profundidad (sin genio). El 2 era la
+     * copa «Ice», quitada en la 2.13.0: un 2 guardado se lee como Copa (ver Tune.reload). Los
+     * números no cambian para que sigan valiendo los ajustes guardados y los códigos compartidos.
+     */
+    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3;
     /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
@@ -202,14 +206,6 @@ final class Genie {
     private static final float DEPTH_MAX_BLUR = 0.09f;
     /** Profundidad: oscurecido del escritorio, muy suave (el desenfoque del fondo ya lo pone HyperOS). */
     private static final float DEPTH_DIM = 0.06f;
-    /**
-     * Ice: copa algo más suave que la de Samsung (arriba se adelanta un poco menos, abajo se
-     * estrecha menos y el contenido se lee siempre), el escritorio se oscurece detrás
-     * ({@link #ICE_DIM}) y al cerrar el icono recibe la copa con un pequeño aplastamiento.
-     */
-    private static final float ICE_LEAD = 0.8f, ICE_LAG = 0.75f;
-    /** Ice: oscurecido del escritorio con la app abierta del todo (va con la apertura). */
-    static final float ICE_DIM = 0.14f;
     /**
      * Sin "en vivo", al abrir: capturas a esta distancia hasta tener {@link #OPEN_EARLY_SHOTS}
      * (la primera suele llegar antes de que la app pinte nada: sin esto se veía blanca ~300 ms).
@@ -567,8 +563,40 @@ final class Genie {
             public void run() {
                 if (session != null || ending != null || !Hidden.ok()) return;
                 GlRenderer.warm(root, w, h);
+                if (!captureWarmed) {
+                    captureWarmed = true;
+                    warmCapture(root);
+                }
             }
         });
+    }
+
+    private static boolean captureWarmed;
+    private static final Object WARM_OWNER = new Object();
+
+    /**
+     * Una vez por arranque del launcher: una captura diminuta (16×16) del propio escritorio pasa
+     * por todo el camino de una animación (capturar, meterla en la textura y leerla). La primera
+     * vez el sistema y la GPU preparan muchas cosas (el primer cierre tardaba ~350 ms en dibujar
+     * su primer fotograma); así lo pagan aquí, con el escritorio quieto. Hilo de dibujo.
+     */
+    private static void warmCapture(SurfaceControl root) {
+        long t0 = SystemClock.uptimeMillis();
+        try {
+            Hidden.Shot shot = Hidden.capture(root, new Rect(0, 0, 16, 16), 1f, null);
+            if (shot == null) return;
+            try {
+                if (GlRenderer.queue(shot.buffer, shot.colorSpace, WARM_OWNER)) {
+                    GlRenderer.consume();
+                    GlRenderer.claimWindow(null);   // que ninguna animación la tome por la imagen de una app
+                }
+            } finally {
+                shot.buffer.close();
+            }
+            Log.i("genio: captura preparada en " + (SystemClock.uptimeMillis() - t0) + " ms");
+        } catch (Throwable t) {
+            Log.e("genio: preparar la captura", t);
+        }
     }
 
     /**
@@ -708,9 +736,9 @@ final class Genie {
         }
     }
 
-    /** Oscurecido del escritorio detrás de la copa (solo Ice): va con lo abierta que está. */
+    /** Oscurecido del escritorio detrás de la ventana (solo Profundidad): va con lo abierta que está. */
     private static float dimFor(float pw) {
-        float k = style == STYLE_ICE ? ICE_DIM : style == STYLE_DEPTH ? DEPTH_DIM : 0f;
+        float k = style == STYLE_DEPTH ? DEPTH_DIM : 0f;
         return k * Math.max(0f, Math.min(1f, pw));
     }
 
@@ -967,6 +995,14 @@ final class Genie {
         private final GlRenderer.Geo geoNow = new GlRenderer.Geo();
         private long firstNs, firstPostMs, drawNs, lastDrawNs, maxGapNs;
         private int janks;
+        /**
+         * Por qué llegó tarde cada tirón (para el registro): 0 esperando búfer (eglSwapBuffers),
+         * 1 dibujo lento, 2 el hilo de dibujo empezó tarde (CPU ocupada), 3 captura en marcha, 4 otro.
+         */
+        private final int[] jankWhy = new int[5];
+        private long lastWorkNs, lastSwapNs;
+        private volatile boolean capturing;
+        private boolean lastCapturing;
         private final SurfaceControl.Transaction ownTx = new SurfaceControl.Transaction();
         private volatile long firstSwapNs;
         private boolean started;
@@ -1038,7 +1074,12 @@ final class Genie {
         final Runnable captureTask = new Runnable() {
             @Override
             public void run() {
-                captureOnce();
+                capturing = true;
+                try {
+                    captureOnce();
+                } finally {
+                    capturing = false;
+                }
             }
         };
         final Runnable endTask = new Runnable() {
@@ -1184,10 +1225,6 @@ final class Genie {
             else if (!landed && !following && f.hasIcon && pw < LAND_PW) {
                 landed = true;
                 Haptics.land();
-                if (style == STYLE_ICE) {
-                    java.lang.ref.WeakReference<View> tv = targetView;
-                    IconPress.land(tv == null ? null : tv.get());
-                }
             }
             synchronized (lock) {
                 float dt = (nowNs - prevCurNs) / 1e9f;
@@ -1463,14 +1500,22 @@ final class Genie {
             long t0 = System.nanoTime();
             if (lastDrawNs != 0) {
                 long gap = t0 - lastDrawNs;
-                if (gap > JANK_NS) janks++;
+                if (gap > JANK_NS) {
+                    janks++;
+                    jankWhy[jankCause(t0 - frameNs)]++;
+                }
                 if (gap > maxGapNs) maxGapNs = gap;
             }
             lastDrawNs = t0;
             Ghost gh = ghost;
             boolean ok = GlRenderer.beginFrame(dimFor(Math.max(geoNow.pw, gh != null ? gh.lastPw : 0f)));
             if (ok && gh != null) ok = gh.drawStep(t0);               // el que vuelve solo, debajo
-            ok = ok && redraw() && GlRenderer.endFrame();
+            ok = ok && redraw();
+            long t1 = System.nanoTime();
+            ok = ok && GlRenderer.endFrame();
+            lastWorkNs = t1 - t0;
+            lastSwapNs = System.nanoTime() - t1;
+            lastCapturing = capturing;
             if (!ok) {
                 finishing = true;
                 fail();
@@ -1621,16 +1666,30 @@ final class Genie {
             Log.i(String.format(java.util.Locale.ROOT,
                     "genio %s a %.0f%%: empieza con anchura %.0f%%, %d fotogramas en %d ms (%d tirones, máx. %.0f ms); "
                             + "primer dibujo a %s, ventana a %s, visible a %s (%s); captura %.1f ms (%d/%d fallidas), "
-                            + "dibujo %.1f ms%s; curva 50/90/99%% a %d/%d/%d ms; fin: %s",
+                            + "dibujo %.1f ms%s; curva 50/90/99%% a %d/%d/%d ms; fin: %s; "
+                            + "tirones por búfer/dibujo/hilo/captura/otro: %d/%d/%d/%d/%d",
                     startedOpen ? "abrir" : "cerrar", GlRenderer.scale * 100, firstPw * 100, posted,
                     SystemClock.uptimeMillis() - startMs, janks, maxGapNs / 1e6f,
                     ms(firstPostMs), ms(leashMs), ms(shownMs),
-                    shown ? (shownEarly ? "desde el icono" : "tarde") : "no llegó a verse",
+                    !shown ? "no llegó a verse" : !startedOpen ? "al cerrar" : shownEarly ? "desde el icono" : "tarde",
                     captures == 0 ? 0f : captureNs / 1e6f / captures, failed, captures,
                     posted == 0 ? 0f : drawNs / 1e6f / posted,
                     (preloaded ? "; captura precargada" : "") + (iconPreloaded ? "; icono precargado" : "")
-                            + (contentPreloaded ? "; con su última imagen" : ""), at50, at90, at99, why));
+                            + (contentPreloaded ? "; con su última imagen" : ""), at50, at90, at99, why,
+                    jankWhy[0], jankWhy[1], jankWhy[2], jankWhy[3], jankWhy[4]));
             autoQuality(janks, posted);
+        }
+
+        /**
+         * Causa probable de un tirón: lo que tardó el fotograma anterior (búfer o dibujo), lo tarde
+         * que empezó este ({@code late}, desde el refresco) o una captura a la vez.
+         */
+        private int jankCause(long late) {
+            if (lastSwapNs > 12_000_000L) return 0;
+            if (lastWorkNs > 12_000_000L) return 1;
+            if (late > 12_000_000L) return 2;
+            if (capturing || lastCapturing) return 3;
+            return 4;
         }
 
         /** Otra sesión ya colocó la capa sobre su ventana. */
@@ -1760,8 +1819,7 @@ final class Genie {
             // la altura del icono es cuánto recorre cada extremo (icono alto: arriba llega en
             // seguida y abajo baja mucho; en el dock, al revés).
             flip = 0f;
-            boolean ice = style == STYLE_ICE;
-            float cl = 1f + CUP_LEAD * (ice ? ICE_LEAD : 1f) * g, cg = 1f + CUP_LAG * (ice ? ICE_LAG : 1f) * g;
+            float cl = 1f + CUP_LEAD * g, cg = 1f + CUP_LAG * g;
             float vg = 1f + (cg - 1f) * 0.12f;
             float env = smooth(ph / CUP_FADE);
             float far = (1f - (float) Math.pow(1f - ph, cl) - ph) * env, near = ((float) Math.pow(ph, vg) - ph) * env;
@@ -1937,7 +1995,6 @@ final class Genie {
             boolean ok = GlRenderer.drawGenie(content, true, geo, full.width() * 0.5f, full.height(), bg);
             if (arrived) {
                 Haptics.land();
-                if (style == STYLE_ICE) IconPress.land(iconView == null ? null : iconView.get());
                 finishGhost();
             }
             return ok;

@@ -17,7 +17,6 @@ The bar for getting on this list: a fair number of people will use it, it can be
 - [ ] **Hot reload (libxposed API 102):** module updates and feature switches apply without restarting the launcher or System UI.
   - The module already loads through API 102; it still has to learn to "unmount" itself: stop its threads, remove its listeners and reinstall the hooks with the new code.
   - This is the most delicate item here: leaving anything half-done crashes System UI. It will ship in a beta first.
-- [ ] **Springy folders on the stock launcher.** The bounce only works with Kashi's launcher for now.
 - [ ] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
 - [x] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately. *Added in 2.10.1* (`.github/workflows/build.yml`).
 
@@ -26,7 +25,6 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 
 ### Liquid glass
 - [x] **Glass dock:** the launcher dock as a floating bar with edge refraction, using the same shader as the app's bar. *Beta in 2.12.0.*
-- [x] **Glass notifications:** shade cards and the heads-up popup, with blur and a lit edge. To keep it light, every card has to share a single capture of the background. *Beta in 2.10.1: the whole card is glass, darkened so it reads well (**Darkness** setting), with soft refraction and light rim.*
 - [ ] **Refraction on folders:** add the edge lens to the blur they already have.
 - [ ] **Magnifier on control center sliders:** while dragging brightness or volume, the control turns into a glass drop that magnifies what is behind it. Note: it depends on System UI plugin classes that change between versions.
 - [x] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap. *Released in 2.12.0 (without Monet tint).*
@@ -36,7 +34,6 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 ### Animations
 - [ ] **Notifications with a genie-style animation (or something like it), iOS style:** opening a notification makes the app come out of the card; dismissing it folds the card away.
 - [ ] **Springy notifications:** the heads-up popup comes in with a small bounce.
-- [x] **Fade when opening the control center**, with a ColorOS 17 style animation. *Released in 2.12.0 as "Focus when opening".*
 - [ ] **Genie into folders:** closing an app that lives inside a folder sends the window back to the folder.
 - [ ] **Genie on widgets:** opening an app from a widget makes the window come out of the widget.
 - [ ] **Predictive back gesture with physics:**
@@ -72,6 +69,9 @@ Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home s
 
 ## Dropped
 Ideas that were on the list and have been removed, with the reason:
+- **Glass notifications** (removed on 2026-11-17, beta since 2.10.0). People prefer HyperOS's own blur, and painting every card stuttered while scrolling on mid-range phones.
+- **Focus or bounce when switching between notifications and the control center** (removed on 2026-11-17). The system animation stays: the opening progress jumps in one step (from 0 to 0.52) when switching pages, so there is no reliable signal to sync a bounce on top.
+- **Widget stacks and folders on the stock launcher.** They stay on Kashi's launcher only, which is where stacks and folder sizes exist.
 - **Elastic overscroll in every app's lists.** It needs hooks in the Android framework of every app: a lot of risk and scope for a small effect.
 - **Gyroscope wallpaper parallax.** It keeps a sensor running on the home screen: battery spent on decoration.
 - **Wallpaper ripple on touch** and **icon cascade on unlock.** Eye-catching effects that get old quickly and add GPU work right when the phone is already busy.

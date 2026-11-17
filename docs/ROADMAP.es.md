@@ -17,7 +17,6 @@ Criterio para entrar aquí: que lo vaya a usar bastante gente, que se pueda mant
 - [ ] **Recarga en caliente (libxposed API 102):** que una actualización del módulo y los interruptores de función se apliquen sin reiniciar el launcher ni la interfaz del sistema.
   - El módulo ya se carga con la API 102; falta que sepa "desmontarse": parar sus hilos, quitar sus listeners y volver a instalar los hooks con el código nuevo.
   - Es lo más delicado de la lista: si se deja algo a medias, se cae la interfaz. Saldrá primero en una beta.
-- [ ] **Carpetas con muelle en el launcher de serie.** Ahora el rebote solo funciona con el launcher de Kashi.
 - [ ] **Soporte de POCO Launcher**, integrando el trabajo del fork de la comunidad ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
 - [x] **Compilación automática en GitHub** en cada cambio, para detectar errores antes de publicar. Los APK de las releases se siguen firmando aparte. *Añadida en la 2.10.1* (`.github/workflows/build.yml`).
 
@@ -26,7 +25,6 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 
 ### Cristal líquido
 - [x] **Dock de cristal:** el dock del launcher como barra flotante con refracción en el borde, con el mismo shader que la barra de la app. *En pruebas en la 2.12.0.*
-- [x] **Notificaciones de cristal:** las tarjetas de la sombra y la notificación emergente (heads-up), con desenfoque y borde iluminado. Para que no pese, todas las tarjetas tienen que usar una sola captura del fondo. *En pruebas en la 2.10.1: toda la tarjeta de cristal, oscurecida para leer bien (ajuste **Oscuridad**), con refracción y canto de luz suaves.*
 - [ ] **Refracción en las carpetas:** añadir la lente del borde al desenfoque que ya tienen.
 - [ ] **Lupa en los sliders del CC:** al arrastrar el brillo o el volumen, el control se convierte en una gota de cristal que aumenta lo que tiene debajo. Ojo: depende de clases del plugin de SystemUI que cambian entre versiones.
 - [x] **Estilos de cristal:** Transparente, Ahumado, Esmerilado, Tinte Monet y Prisma (con más dispersión), elegibles con un toque. *Publicados en la 2.12.0 (sin Tinte Monet).*
@@ -36,7 +34,6 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 ### Animaciones
 - [ ] **Notificaciones con animación de genio, o una parecida, al estilo de iOS:** al abrir una notificación la app sale de la tarjeta; al descartarla, la tarjeta se recoge.
 - [ ] **Notificaciones con muelle:** la emergente entra con un pequeño rebote.
-- [x] **Fundido al abrir el CC** con una animación al estilo de ColorOS 17. *Publicado en la 2.12.0 como «Enfoque al abrir».*
 - [ ] **Genio hacia la carpeta:** al cerrar una app que está dentro de una carpeta, la ventana vuelve a la carpeta.
 - [ ] **Genio en los widgets:** al abrir una app desde un widget, la ventana sale del widget.
 - [ ] **Gesto de atrás predictivo con físicas:**
@@ -72,6 +69,9 @@ Ideas apuntadas el 11-11-2026. Están sin empezar y sin orden fijo. Antes de hac
 
 ## Descartado
 Ideas que estaban en la lista y se han quitado, con el motivo:
+- **Notificaciones de cristal** (quitadas el 17-11-2026, estaban en pruebas desde la 2.10.0). La gente prefiere el desenfoque propio de HyperOS, y pintar cada tarjeta daba tirones al deslizar en gama media.
+- **Enfoque o rebote al cambiar entre notificaciones y centro de control** (quitado el 17-11-2026). Se queda la animación del sistema: el avance de apertura salta de golpe (de 0 a 0,52) al cambiar de página, así que no hay una señal fiable para sincronizar un rebote encima.
+- **Pilas de widgets y carpetas en el launcher de serie.** Siguen solo en el launcher de Kashi, que es donde existen las pilas y los tamaños de carpeta.
 - **Rebote elástico en las listas de todas las apps.** Habría que engancharse al framework de Android en cada app: mucho riesgo y mucho ámbito para un efecto pequeño.
 - **Paralaje del fondo con el giroscopio.** Mantiene un sensor encendido en el escritorio: gasta batería a cambio de un adorno.
 - **Onda en el fondo al tocar** y **entrada en cascada al desbloquear.** Efectos vistosos que cansan pronto y añaden trabajo a la GPU justo en los momentos en que el móvil ya va cargado.

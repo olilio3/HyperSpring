@@ -388,7 +388,10 @@ final class StackSwipe {
 
     static void blur(View v, float r) {
         if (Build.VERSION.SDK_INT < 31) return;
-        r = Math.round(r);   // pasos de 1 px: no se recrea en cada fotograma
+        // Escalones de 3 dp: crear un desenfoque nuevo cuesta, y con pasos de 1 px se rehacía
+        // casi en cada fotograma (tirones en GPU modestas). A simple vista no se nota el salto.
+        float step = 3f * v.getResources().getDisplayMetrics().density;
+        r = Math.round(r / step) * step;
         if (r < 1f) r = 0f;
         Float last = BLUR.get(v);
         if ((last == null && r == 0f) || (last != null && last == r)) return;
@@ -733,6 +736,8 @@ final class StackSwipe {
         va.setDuration(4000);
         va.setInterpolator(null);
         final long[] last = {0L};
+        final long[] stats = {System.nanoTime(), 0L, 0L};   // inicio, fotogramas, tirones
+        final float frameS = frameSeconds(layer);
         final float[] clock = {0f, -1f};   // tiempo, momento del paso por detrás
         final boolean[] finished = {false};
         va.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -741,6 +746,8 @@ final class StackSwipe {
                 if (finished[0]) return;       // end() vuelve a llamar aquí: evita la recursión
                 long now = System.nanoTime();
                 float dt = last[0] == 0L ? 1f / 120f : Math.min(1f / 30f, (now - last[0]) / 1e9f);
+                if (last[0] != 0L && (now - last[0]) / 1e9f > frameS * 1.5f) stats[2]++;
+                stats[1]++;
                 last[0] = now;
                 clock[0] += dt;
                 springStep(x, tx, posResp, posDamp, dt);
@@ -802,6 +809,8 @@ final class StackSwipe {
                 if (commit) settle(layer, pages, nb);
                 reset(layer, cur, nb);
                 render(layer, commit ? nb : cur, -1, 0f, false, 0f);
+                XposedBridge.log("IceHome: pila " + stats[1] + " fotogramas en "
+                        + (System.nanoTime() - stats[0]) / 1_000_000L + " ms (" + stats[2] + " tirones)");
             }
         });
         try {
@@ -809,6 +818,13 @@ final class StackSwipe {
         } catch (Throwable ignored) {
         }
         va.start();
+    }
+
+    /** Duración de un fotograma de la pantalla (s). */
+    private static float frameSeconds(View v) {
+        android.view.Display d = v.getDisplay();
+        float hz = d != null ? d.getRefreshRate() : 60f;
+        return 1f / Math.max(30f, hz);
     }
 
     /** Muelle semi-implícito con subpasos de 1/240 s. s = {posición, velocidad}. */

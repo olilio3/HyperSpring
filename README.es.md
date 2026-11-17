@@ -78,7 +78,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 ## Qué hace
 
 ### Escritorio (`com.miui.home`)
-- **Efecto genio al abrir y cerrar apps.** La ventana sale del icono y vuelve a él con forma de copa. La parte de arriba se adelanta y la de abajo la sigue, adaptándose a la altura del icono. Hay tres estilos: genio clásico, copa tipo Samsung y copa «Ice», más suave y con rebote. Se dibuja con OpenGL en un hilo propio para que vaya fluido en gama media.
+- **Efecto genio al abrir y cerrar apps.** La ventana sale del icono y vuelve a él con forma de copa. La parte de arriba se adelanta y la de abajo la sigue, adaptándose a la altura del icono. Hay tres estilos: genio clásico, copa tipo Samsung y Profundidad (una hoja inclinada, sin genio). Se dibuja con OpenGL en un hilo propio para que vaya fluido en gama media.
 - **Arrastrar para cerrar como una lámpara.** La ventana cuelga del dedo y se balancea.
 - **Recientes que se doblan** según la fuerza con la que deslizas las tarjetas.
 - **Iconos que se hunden** al pulsarlos y **zoom del fondo** al abrir apps.
@@ -92,7 +92,6 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
   - Desenfoque, saturación, lupa y brillo.
   - Canto iluminado con el color de lo que hay detrás.
   - **Refracción en el borde** con dispersión de color, basada en la lente de [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass).
-- **Notificaciones de cristal** (en pruebas, apagadas de serie): las tarjetas de notificación, en el panel y las emergentes, son de cristal líquido, oscurecido para que se lean bien, con una sola captura del fondo para todas.
 
 ### La app
 - Colores del sistema (Monet), barra flotante de cristal líquido, fondo de puntos animado y tema oscuro.

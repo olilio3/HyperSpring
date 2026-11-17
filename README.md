@@ -89,7 +89,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 - **Genie effect when opening and closing apps.**
   - The window comes out of its icon and goes back into it as a cup.
   - The top leads and the bottom follows, adapting to where the icon sits on screen.
-  - Three styles: classic genie, Samsung-like cup and "Ice" (softer, with a bounce).
+  - Three styles: classic genie, Samsung-like cup and Depth (a tilted sheet, no genie).
   - Drawn with OpenGL on its own thread so it stays smooth on mid-range phones.
 - **Drag to close like a lamp:** the window hangs from your finger and swings.
 - **Bending recents:** cards bend depending on how hard you swipe.
@@ -104,7 +104,6 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
   - Blur, saturation, magnifier and gloss.
   - An edge lit with the colour of what's behind it.
   - **Edge refraction** with colour dispersion, based on the [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) lens.
-- **Glass notifications** (beta, off by default): notification cards in the shade and pop-ups are liquid glass, darkened so they read well, sharing a single capture of the background.
 
 ### The app
 - **Look:** system colours (Monet), a floating liquid-glass bar, an animated dot-network background and a dark theme.

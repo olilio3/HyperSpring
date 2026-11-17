@@ -29,7 +29,6 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 - **Interfaz del sistema:**
   - `telon/`: transición de cortina y modo seguro de SystemUI.
   - `cc/CcGlass.java` + `cc/GlassShader.java`: cristal del centro de control (y del volumen). Tiene la captura del fondo que comparten todos los cristales de SystemUI.
-  - `cc/NotifGlass.java`: cristal en las notificaciones (en pruebas). `cc/PanelFocus.java`: enfoque al cambiar entre notificaciones y centro de control.
 - **App de ajustes:**
   - `SettingsActivity.java`: toda la interfaz, sin XML.
   - `I18n.java`: textos en español e inglés. Todo texto visible pasa por `I18n.t(es, en)`.

@@ -83,41 +83,6 @@ final class IconPress {
         v.animate().scaleX(1f).scaleY(1f).setDuration(UP_MS).setInterpolator(UP).start();
     }
 
-    /** Ice: al llegar la copa, el icono se aplasta un poco y rebota a su tamaño. */
-    private static final float LAND = 0.92f;
-    private static final long LAND_DOWN_MS = 90, LAND_UP_MS = 320;
-    private static final OvershootInterpolator LAND_UP = new OvershootInterpolator(2.6f);
-
-    static void land(final View v) {
-        if (v == null) return;
-        v.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    v.animate().cancel();
-                    v.animate().scaleX(LAND).scaleY(LAND).setDuration(LAND_DOWN_MS).setInterpolator(DOWN)
-                            .withEndAction(new Runnable() {
-                                @Override
-                                public void run() {
-                                    v.animate().scaleX(1f).scaleY(1f).setDuration(LAND_UP_MS).setInterpolator(LAND_UP).start();
-                                }
-                            }).start();
-                    // Por si algo cancela la vuelta: nunca se queda pequeño.
-                    v.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (v.getScaleX() != 1f && !v.isPressed()) {
-                                v.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
-                            }
-                        }
-                    }, LAND_DOWN_MS + LAND_UP_MS + 400);
-                } catch (Throwable e) {
-                    Log.e("icono al aterrizar", e);
-                }
-            }
-        });
-    }
-
     private IconPress() {
     }
 }

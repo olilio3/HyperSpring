@@ -27,13 +27,13 @@ final class Presets {
             {"Suave", "Smooth",
                     "Animaciones tranquilas, con formas redondeadas y un rebote leve.",
                     "Calm animations with rounded shapes and a slight bounce.",
-                    new String[]{"icehome_genie_style", "2", "icehome_genie_strength", "1.6", "icehome_anim_speed", "0.85",
+                    new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "1.6", "icehome_anim_speed", "0.85",
                             "icehome_anim_bounce", "0.05", "icehome_curtain_strength", "0.8",
                             "telon_strength", "0.8", "telon_curve", "0.6"}},
             {"Estilo iOS", "iOS-like",
                     "La ventana crece desde el icono casi sin deformarse, con rebote al llegar y más zoom del fondo.",
                     "The window grows out of the icon with little distortion, a bounce on landing and more wallpaper zoom.",
-                    new String[]{"icehome_genie_style", "2", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
+                    new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
                             "icehome_anim_bounce", "0.12", "icehome_wallpaper_zoom", "1.2", "icehome_genie_physics", "0.5",
                             "telon_strength", "0.5", "telon_blur", "0.3"}},
             {"Rápido", "Fast",
@@ -52,7 +52,7 @@ final class Presets {
     static final String[] GLASS_KEYS = {
             "kashiplus_cc_blur", "kashiplus_cc_sat", "kashiplus_cc_sat_button", "kashiplus_cc_tone",
             "kashiplus_cc_white", "kashiplus_cc_gloss", "kashiplus_cc_magnify", "kashiplus_cc_refr",
-            "kashiplus_cc_refr_h", "kashiplus_cc_chroma", "kashiplus_cc_rim_gain", "kashiplus_notif_dark",
+            "kashiplus_cc_refr_h", "kashiplus_cc_chroma", "kashiplus_cc_rim_gain",
             "icehome_folder_blur", "icehome_folder_lens", "icehome_folder_refr", "icehome_folder_chroma",
             "icehome_folder_light",
     };
@@ -71,12 +71,12 @@ final class Presets {
                     "Casi sin desenfoque: se ve lo de detrás, con la lente del borde bien marcada.",
                     "Hardly any blur: you see what is behind, with a well-defined edge lens.",
                     new String[]{"kashiplus_cc_blur", "3", "kashiplus_cc_white", "0", "kashiplus_cc_tone", "1.25",
-                            "kashiplus_cc_gloss", "20", "kashiplus_notif_dark", "0.35", "icehome_folder_blur", "2"}, GLASS_KEYS},
+                            "kashiplus_cc_gloss", "20", "icehome_folder_blur", "2"}, GLASS_KEYS},
             {"Ahumado", "Smoked",
                     "Cristal oscuro y sobrio, con menos color. El texto se lee muy bien.",
                     "Dark, sober glass with less colour. Text reads very well.",
                     new String[]{"kashiplus_cc_tone", "0.8", "kashiplus_cc_sat", "1.1", "kashiplus_cc_sat_button", "1",
-                            "kashiplus_cc_white", "0", "kashiplus_cc_gloss", "16", "kashiplus_notif_dark", "0.75",
+                            "kashiplus_cc_white", "0", "kashiplus_cc_gloss", "16",
                             "icehome_folder_light", "0.06"}, GLASS_KEYS},
             {"Esmerilado", "Frosted",
                     "Muy desenfocado y lechoso, sin arcoíris: como un cristal al ácido.",
@@ -92,7 +92,7 @@ final class Presets {
     };
 
     /** Animaciones y cristal a la vez: lo que gestionan los modos de sistema. */
-    static final String[] MODE_KEYS = join(KEYS, GLASS_KEYS, new String[]{"icehome_menu_bounce", "kashiplus_cc_focus"});
+    static final String[] MODE_KEYS = join(KEYS, GLASS_KEYS, new String[]{"icehome_menu_bounce"});
 
     /**
      * Modos de sistema: un perfil grande que pone a la vez el estilo de abrir y cerrar apps, los
@@ -101,18 +101,18 @@ final class Presets {
      */
     static final Object[][] MODES = {
             {"HyperOS 4", "HyperOS 4",
-                    "Copa Ice con un rebote leve y el cristal líquido de serie.",
-                    "Ice cup with a slight bounce and the default liquid glass.",
-                    new String[]{"icehome_genie_style", "2", "icehome_genie_strength", "1.8", "icehome_anim_bounce", "0.05",
+                    "Copa con un rebote leve y el cristal líquido de serie.",
+                    "Cup with a slight bounce and the default liquid glass.",
+                    new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "1.8", "icehome_anim_bounce", "0.05",
                             "icehome_menu_bounce", "0.4"}, MODE_KEYS},
             {"iOS 26", "iOS 26",
                     "La ventana crece desde el icono casi sin deformarse, con rebote, más zoom del fondo y un cristal claro con la lente marcada.",
                     "The window grows out of the icon with little distortion, a bounce, more wallpaper zoom and a clear glass with a marked lens.",
-                    new String[]{"icehome_genie_style", "2", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
+                    new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
                             "icehome_anim_bounce", "0.12", "icehome_wallpaper_zoom", "1.2", "icehome_genie_physics", "0.5",
                             "icehome_menu_bounce", "0.7", "telon_strength", "0.5", "telon_blur", "0.3",
                             "kashiplus_cc_blur", "5", "kashiplus_cc_white", "0", "kashiplus_cc_chroma", "1.6",
-                            "kashiplus_cc_refr", "28", "kashiplus_notif_dark", "0.4", "icehome_folder_blur", "3",
+                            "kashiplus_cc_refr", "28", "icehome_folder_blur", "3",
                             "icehome_folder_chroma", "1.8"}, MODE_KEYS},
             {"iOS 27", "iOS 27",
                     "Estilo Profundidad (la ventana como una hoja que se inclina), rebote suave y un cristal más esmerilado y tranquilo.",
@@ -120,8 +120,7 @@ final class Presets {
                     new String[]{"icehome_genie_style", "3", "icehome_anim_speed", "1.05", "icehome_anim_bounce", "0.1",
                             "icehome_wallpaper_zoom", "1.2", "icehome_menu_bounce", "0.6", "telon_strength", "0.6",
                             "kashiplus_cc_blur", "16", "kashiplus_cc_white", "0.08", "kashiplus_cc_chroma", "0.5",
-                            "kashiplus_notif_dark", "0.55", "icehome_folder_blur", "12", "icehome_folder_chroma", "0.6",
-                            "kashiplus_cc_focus", "1.4"}, MODE_KEYS},
+                            "icehome_folder_blur", "12", "icehome_folder_chroma", "0.6"}, MODE_KEYS},
     };
 
     private static String[] join(String[]... parts) {

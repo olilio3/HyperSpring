@@ -84,7 +84,6 @@ final class I18n {
         s("Gemini", "Gemini");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
-        s("Notificaciones de cristal", "Glass notifications");
         s("Refracción del borde", "Edge refraction");
         s("Canto y línea de luz", "Edge and light rim");
         s("Fondo", "Background");
@@ -101,7 +100,7 @@ final class I18n {
         i("icehome_curtain_on", "Bending recents",
                 "In recents, cards bend the other way depending on how hard you swipe them. Applies after restarting the launcher.");
         i("icehome_genie_style", "Style",
-                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 2 = Ice: a softer cup with a bounce on open, the icon catching the cup and the home screen dimming behind. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur.");
+                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur.");
         i("icehome_genie_strength", "Strength",
                 "How much the window bends. 0 is a plain rectangle; 1.8–2.2 looks like Samsung.");
         i("icehome_depth_taper", "Top narrowing",
@@ -190,24 +189,18 @@ final class I18n {
         i("telon_quality", "Resolution",
                 "Sharpness of the window during the curtain. Higher looks sharper but costs more.");
 
-        i("kashiplus_notif_on", "Glass notifications",
-                "Notification cards, in the shade, on the lock screen and when they pop up, become dark frosted glass: the background behind them blurred and darkened so the text is easy to read, with a soft light rim. Light on purpose, so the list scrolls smoothly. Uses the control center's edge settings. Beta: applies after restarting System UI.");
         i("icehome_dock_glass_on", "Glass dock",
                 "The row of icons at the bottom of the home screen becomes a floating liquid-glass bar. Uses the folders' glass and needs a static wallpaper. Beta: applies after restarting the launcher.");
         i("icehome_genie_auto", "Automatic resolution",
                 "If several animations in a row stutter, the resolution drops by 10 % on its own (down to 50 %). It goes back to yours when you touch any setting or restart the launcher.");
         i("icehome_unlock_zoom", "Unlock zoom",
                 "When you unlock, the home screen comes in slightly larger and settles to its size, all in one piece. 0 turns it off.");
-        i("kashiplus_cc_focus", "Focus when opening",
-                "Switching between notifications and the control center, the page that comes in arrives a bit larger and blurred and settles sharp, and the one that leaves shrinks and blurs, ColorOS-style. 0 turns it off.");
         i("icehome_auto_heat", "When the phone is hot",
                 "When the system reports that the phone is very hot, HyperSpring pauses itself (genie, curtain and recents) and comes back once it cools down. Like the pause tile, but automatic.");
         i("icehome_auto_game", "In games",
                 "While Game Turbo is boosting a game, HyperSpring pauses itself, to leave all the power to the game.");
         i("icehome_auto_saver", "With battery saver",
                 "With battery saver on, HyperSpring pauses itself. Off by default, in case you keep battery saver on all the time.");
-        i("kashiplus_notif_dark", "Darkness",
-                "How much the notification glass is darkened. Higher reads better over light backgrounds; 0 keeps the background's own brightness.");
         i("kashiplus_cc_on", "Glass control center",
                 "Control center tiles and buttons become liquid glass. Tested with the ModsCenter iOS control center and the stock HyperOS one.");
         i("kashiplus_cc_blur", "Blur",

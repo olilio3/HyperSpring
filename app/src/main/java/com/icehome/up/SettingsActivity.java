@@ -949,7 +949,6 @@ public class SettingsActivity extends Activity {
                 {Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón", "Curtain")},
                 {Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Captura que encoge", "Squeezing screenshot")},
                 {Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Centro de control", "Control center")},
-                {Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Notificaciones de cristal", "Glass notifications")},
                 {Icons.DROP, item(Tune.ITEMS, "icehome_dock_glass_on"), I18n.t("Dock de cristal", "Glass dock")},
         };
         featureTiles.clear();
@@ -1320,7 +1319,6 @@ public class SettingsActivity extends Activity {
         f.addView(toggleRow(Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón al cambiar de pantalla", "Curtain when switching screens")));
         f.addView(toggleRow(Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Pantalla que se encoge al hacer una captura", "Screen that squeezes on screenshot")));
         f.addView(toggleRow(Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Cristal en el centro de control", "Glass control center")));
-        f.addView(toggleRow(Icons.LIGHT, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_notif_on"), I18n.t("Cristal en las notificaciones", "Glass notifications")));
         return f;
     }
 
@@ -2260,9 +2258,7 @@ public class SettingsActivity extends Activity {
         // Las funciones se enganchan al arrancar el proceso: ofrecer el reinicio.
         if (key.startsWith("icehome_") && key.endsWith("_on") && !key.equals("icehome_press_on")) {
             pendingRestart(false);
-        } else if (key.equals("telon_on") || (key.equals("kashiplus_notif_on") && on)) {
-            // El cristal de las notificaciones se engancha al arrancar la interfaz; apagarlo es
-            // al momento (se deja de dibujar), así que solo hace falta reiniciar para encenderlo.
+        } else if (key.equals("telon_on")) {
             pendingRestart(true);
         }
     }
@@ -2499,7 +2495,7 @@ public class SettingsActivity extends Activity {
         final int decimals = (Integer) it[5];
         if (decimals < 0) return toggleRow(-1, it, I18n.title(it));
         final String key = (String) it[0];
-        if ("icehome_genie_style".equals(key)) return pickerRow(it, styleNames(), styleHints());
+        if ("icehome_genie_style".equals(key)) return styleRow(it);
         final float min = (Float) it[2], max = (Float) it[3];
         LinearLayout r = rowBase();
         r.setOrientation(LinearLayout.VERTICAL);
@@ -2604,14 +2600,13 @@ public class SettingsActivity extends Activity {
 
     private String[] styleNames() {
         return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Copa", "Cup"),
-                "Ice", I18n.t("Profundidad", "Depth")};
+                I18n.t("Profundidad", "Depth")};
     }
 
     private String[] styleHints() {
         return new String[]{
                 I18n.t("Sale del icono con cola, como en un Mac", "Comes out of the icon with a tail, like on a Mac"),
                 I18n.t("Arriba sube primero, como Samsung", "The top rises first, like Samsung"),
-                I18n.t("Copa suave con rebote y fondo oscurecido", "Soft cup with a bounce and a dimmed background"),
                 I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail")};
     }
 
@@ -2637,6 +2632,31 @@ public class SettingsActivity extends Activity {
      * números, el nombre de la opción en una pastilla. Al tocarla se despliega un menú encima,
      * como en HyperOS 4 o iOS.
      */
+    /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
+    private static final int[] STYLE_VALUES = {0, 1, 3};
+
+    /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
+    private View styleRow(final Object[] it) {
+        final String key = (String) it[0];
+        final Runnable[] refresh = new Runnable[1];
+        LinearLayout r = choiceRow(I18n.title(it), styleNames(), styleHints(), new Chosen() {
+            @Override
+            public int now() {
+                int v = Math.round(stored(it));
+                if (v == 2) v = 1;                       // Ice guardado: se muestra (y funciona) como Copa
+                for (int i = 0; i < STYLE_VALUES.length; i++) if (STYLE_VALUES[i] == v) return i;
+                return 0;
+            }
+        }, new MenuPick() {
+            @Override
+            public void pick(int index) {
+                write(key, String.valueOf(STYLE_VALUES[Math.max(0, Math.min(STYLE_VALUES.length - 1, index))]));
+            }
+        }, refresh);
+        resetOnLongPress(r, it, refresh[0]);
+        return r;
+    }
+
     private View pickerRow(final Object[] it, final String[] names, final String[] hints) {
         final String key = (String) it[0];
         final int max = Math.round((Float) it[3]);
@@ -3205,9 +3225,9 @@ public class SettingsActivity extends Activity {
         new android.app.AlertDialog.Builder(this)
                 .setTitle(I18n.t("Aplicar el perfil «", "Apply the “") + Presets.name(preset) + I18n.t("»", "” preset"))
                 .setMessage(Presets.about(preset) + "\n\n" + (Presets.keys(preset) == Presets.GLASS_KEYS
-                        ? I18n.t("Cambia el aspecto del cristal (centro de control, notificaciones, carpetas y menú de "
+                        ? I18n.t("Cambia el aspecto del cristal (centro de control, carpetas y menú de "
                                 + "atajos). No toca las animaciones ni enciende o apaga funciones. ",
-                        "It changes the look of the glass (control center, notifications, folders and shortcut "
+                        "It changes the look of the glass (control center, folders and shortcut "
                                 + "menu). It leaves the animations alone and doesn't turn features on or off. ")
                         : Presets.keys(preset) == Presets.MODE_KEYS
                         ? I18n.t("Cambia a la vez las animaciones y el aspecto del cristal. No enciende ni apaga funciones. ",

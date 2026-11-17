@@ -14,9 +14,6 @@ public final class Tune {
     public static final Object[][] ITEMS = {
             {"#", "General"},
             {"kashiplus_cc_on", "Cristal en el centro de control", 0f, 1f, 1f, -1, "Las tarjetas y botones del centro de control pasan a ser cristal líquido. Probado con el centro de control iOS de ModsCenter y con el de HyperOS."},
-            {"kashiplus_notif_on", "Cristal en las notificaciones", 0f, 1f, 0f, -1, "Las tarjetas de notificación, en el panel, en la pantalla de bloqueo y las emergentes, son de cristal esmerilado oscuro: el fondo de detrás desenfocado y oscurecido para que se lea el texto, con un canto de luz suave. Ligero, para que la lista se deslice fluida. Usa el canto del centro de control. En pruebas: se aplica al reiniciar la interfaz del sistema."},
-            {"#", "Notificaciones de cristal"},
-            {"kashiplus_notif_dark", "Oscuridad", 0f, 1f, 0.5f, 2, "Cuánto se oscurece el cristal de las notificaciones. Más alto, el texto se lee mejor sobre fondos claros; 0 deja el fondo con su brillo."},
             {"#", "Interior del cristal"},
             {"kashiplus_cc_blur", "Desenfoque", 0f, 40f, 8f, 0, "Cuánto se desenfoca lo que se ve a través de las piezas, en dp."},
             {"kashiplus_cc_sat", "Saturación de las tarjetas", 0.5f, 2.5f, 1.4f, 2, "Intensidad de los colores que se ven a través de las tarjetas grandes. 1 = sin cambio."},
@@ -37,7 +34,6 @@ public final class Tune {
             {"kashiplus_cc_rim_gain", "Intensidad de la línea de luz", 0f, 2.5f, 1f, 2, "Brillo de esa línea. 0 la quita."},
             {"#", "Fondo"},
             {"kashiplus_cc_dim", "Oscurecer el fondo", 0f, 0.7f, 0.5f, 2, "Cuánto se oscurece la pantalla detrás del centro de control."},
-            {"kashiplus_cc_focus", "Enfoque al abrir", 0f, 2f, 1f, 1, "Al pasar de las notificaciones al centro de control, la página que entra llega un poco más grande y desenfocada y se asienta nítida, y la que se va se encoge y se desenfoca, al estilo de ColorOS. 0 lo quita."},
     };
 
     static volatile boolean ccOn = true;
@@ -87,8 +83,6 @@ public final class Tune {
 
     private static void load(Context c, java.util.Map<String, String> saved) {
         ccOn = get(c, "kashiplus_cc_on", saved) >= 0.5f;
-        NotifGlass.enabled = get(c, "kashiplus_notif_on", saved) >= 0.5f;
-        NotifGlass.dark = get(c, "kashiplus_notif_dark", saved);
         ccBlur = get(c, "kashiplus_cc_blur", saved);
         sat = get(c, "kashiplus_cc_sat", saved);
         satButton = get(c, "kashiplus_cc_sat_button", saved);
@@ -102,7 +96,6 @@ public final class Tune {
         rim = get(c, "kashiplus_cc_rim", saved);
         rimGain = get(c, "kashiplus_cc_rim_gain", saved);
         dim = get(c, "kashiplus_cc_dim", saved);
-        PanelFocus.amount = get(c, "kashiplus_cc_focus", saved);
         refr = get(c, "kashiplus_cc_refr", saved);
         refrH = get(c, "kashiplus_cc_refr_h", saved);
         chroma = get(c, "kashiplus_cc_chroma", saved);

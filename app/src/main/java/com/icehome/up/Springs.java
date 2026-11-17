@@ -21,8 +21,6 @@ import com.icehome.up.xp.XposedHelpers;
 final class Springs {
 
     static volatile float speed = 1f, bounce = 0f;
-    /** Ice: rebote mínimo al abrir y velocidad relativa al cerrar. */
-    private static final float ICE_OPEN_BOUNCE = 0.08f, ICE_CLOSE_SPEED = 0.85f;
 
     private static Constructor<?> make;
     private static Field key, damping, response, impulse;
@@ -55,15 +53,6 @@ final class Springs {
     /** Copia ajustada del array de muelles, o null si no hay nada que cambiar. */
     private static Object adjust(Class<?> param, Object[] in, boolean open) throws Exception {
         float s = speed, b = bounce;
-        if (Genie.style == Genie.STYLE_ICE) {
-            // Ice: al abrir, un pequeño rebote al llegar; al cerrar, algo más lenta (hacia un punto
-            // pequeño, si va igual de rápida parece que desaparece) y sin rebote (no tiembla en el icono).
-            if (open) b = Math.max(b, ICE_OPEN_BOUNCE);
-            else {
-                s *= ICE_CLOSE_SPEED;
-                b = 0f;
-            }
-        }
         if (in == null || (s == 1f && b == 0f)) return null;
         Object out = Array.newInstance(param, in.length);
         for (int i = 0; i < in.length; i++) {
