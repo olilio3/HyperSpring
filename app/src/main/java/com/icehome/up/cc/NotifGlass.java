@@ -51,7 +51,7 @@ public final class NotifGlass {
     /** Oscuridad del cristal (0-1): más alta, más se lee el texto. Ajuste. */
     static volatile float dark = 0.5f;
     /** Sin dibujar cristal durante este tiempo, el panel se había cerrado: se toma otra captura. */
-    private static final long REOPEN_MS = 1200;
+    private static final long REOPEN_MS = 2500;
     /** Fundido de entrada del cristal cuando llega la captura. */
     private static final long FADE_MS = 160;
     /** Por debajo de esta altura (dp) no se dibuja: tarjetas recogiéndose del todo. */
@@ -75,6 +75,65 @@ public final class NotifGlass {
         /** Dónde estaba en pantalla, y a qué escala, la última vez que se pintó. */
         int x = Integer.MIN_VALUE, y;
         float sx, sy;
+        /** Su propio shader, con los ajustes ya puestos (ver {@link #configure}). */
+        RuntimeShader shader;
+        Bitmap bound;
+        /** Con qué tamaño, radios y ajustes se configuró por última vez. */
+        float cw, ch, crt, crb, cdark = -1f, cstamp;
+        /** Ya se le quitó el desenfoque de HyperOS (lo tapa nuestro cristal). */
+        boolean miCleared;
+    }
+
+    /**
+     * Pone en el shader de una tarjeta todo lo que no cambia al moverla (tamaño, radios, ajustes),
+     * solo si ha cambiado. Antes se mandaban unos 30 valores en cada dibujo; al deslizar la lista,
+     * cada tarjeta se repinta en cada fotograma y era trabajo de más en el hilo principal.
+     */
+    private static void configure(St st, RuntimeShader rs, float w, float h, float rt, float rb, float dp) {
+        float d = Math.max(0f, Math.min(1f, dark));
+        // Una "huella" de los ajustes del centro de control que usa: si se mueve un deslizador, cambia.
+        float stamp = Tune.edge * 3.1f + Tune.refrH * 5.3f + Tune.refr * 7.7f + Tune.edgeOver * 11.3f
+                + Tune.edgeSat * 13.1f + Tune.rim * 17.9f + Tune.rimGain * 19.7f;
+        if (w == st.cw && h == st.ch && rt == st.crt && rb == st.crb && d == st.cdark && stamp == st.cstamp) return;
+        st.cw = w;
+        st.ch = h;
+        st.crt = rt;
+        st.crb = rb;
+        st.cdark = d;
+        st.cstamp = stamp;
+        float thick = Math.min(Tune.edge * dp, Math.min(w, h) * CcGlass.THICK_MAX_FRACTION);
+        float lensH = Math.min(Math.min(Tune.refrH, MAX_LENS_DP) * dp, Math.min(w, h) / 3f);
+        float want = Tune.refrH * dp;
+        rs.setFloatUniform("size", w, h);
+        rs.setFloatUniform("band", Math.max(1f, thick));
+        rs.setFloatUniform("disp", 0f);
+        rs.setFloatUniform("dispersion", CcGlass.THICK_DISPERSION);
+        rs.setFloatUniform("fill", 1f);                      // la tarjeta entera es cristal
+        rs.setFloatUniform("bandAlpha", 1f);
+        // Oscuro para que se lea: con 0,5, a un 60 % del brillo, y las luces altas apagadas.
+        rs.setFloatUniform("tone", 1f - 0.8f * d);
+        rs.setFloatUniform("darker", 0.15f + 0.35f * d);
+        rs.setFloatUniform("sat", 1.25f);
+        rs.setFloatUniform("whiteMix", 0f);
+        rs.setFloatUniform("edgeLift", 0f);
+        rs.setFloatUniform("stretch", CcGlass.EDGE_STRETCH);
+        rs.setFloatUniform("overshoot", Tune.edgeOver * dp);
+        rs.setFloatUniform("edgeSat", Tune.edgeSat * 0.5f);
+        rs.setFloatUniform("mag", 0f);
+        rs.setFloatUniform("refrH", lensH);
+        rs.setFloatUniform("refrAmt", want > 0f ? Tune.refr * dp * lensH / want : 0f);
+        // Sin arcoíris en las notificaciones: con él, el shader lee el fondo 7 veces por píxel en
+        // toda la tarjeta (sin él, 3). En una lista que se desliza era lo que más pesaba a la GPU,
+        // y sobre una tarjeta con texto apenas se apreciaba.
+        rs.setFloatUniform("chroma", 0f);
+        rs.setFloatUniform("rimw", Tune.rim * dp);
+        rs.setFloatUniform("glow", 0f);
+        rs.setFloatUniform("innerDark", CcGlass.INNER_DARK);
+        rs.setFloatUniform("rimGain", Tune.rimGain * 0.55f);
+        rs.setFloatUniform("light", 0.025f);
+        rs.setFloatUniform("active", 0f);
+        rs.setFloatUniform("hasWall", 1f);
+        if (Math.abs(rt - rb) < 0.5f) rs.setFloatUniform("radius", rt);
     }
 
     private static St st(View v) {
@@ -130,8 +189,6 @@ public final class NotifGlass {
     private static boolean broken, logged;
     private static final int[] LOC = new int[2];
     private static final Paint PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private static RuntimeShader shader;
-    private static Bitmap bound;
 
     /**
      * Engancha el fondo de las tarjetas. Se llama una vez, con la interfaz del sistema ya
@@ -269,43 +326,21 @@ public final class NotifGlass {
         rt = Math.min(half, Math.max(0f, rt));
         rb = Math.min(half, Math.max(0f, rb));
 
-        if (shader == null) shader = GlassShader.create();
-        RuntimeShader rs = shader;
-        if (bound != b) {
+        if (state.shader == null) state.shader = GlassShader.create();
+        RuntimeShader rs = state.shader;
+        if (state.bound != b) {
             rs.setInputShader("wall", GlassShader.linear(b));
-            bound = b;
+            state.bound = b;
         }
-        float d = Math.max(0f, Math.min(1f, dark));
-        float thick = Math.min(Tune.edge * dp, Math.min(w, h) * CcGlass.THICK_MAX_FRACTION);
-        float lensH = Math.min(Math.min(Tune.refrH, MAX_LENS_DP) * dp, Math.min(w, h) / 3f);
-        float want = Tune.refrH * dp;
-        rs.setFloatUniform("size", w, h);
-        rs.setFloatUniform("band", Math.max(1f, thick));
-        rs.setFloatUniform("disp", 0f);
-        rs.setFloatUniform("dispersion", CcGlass.THICK_DISPERSION);
-        rs.setFloatUniform("fill", 1f);                      // la tarjeta entera es cristal
-        rs.setFloatUniform("bandAlpha", 1f);
-        // Oscuro para que se lea: con 0,5, a un 60 % del brillo, y las luces altas apagadas.
-        rs.setFloatUniform("tone", 1f - 0.8f * d);
-        rs.setFloatUniform("darker", 0.15f + 0.35f * d);
-        rs.setFloatUniform("sat", 1.25f);
-        rs.setFloatUniform("whiteMix", 0f);
-        rs.setFloatUniform("edgeLift", 0f);
-        rs.setFloatUniform("stretch", CcGlass.EDGE_STRETCH);
-        rs.setFloatUniform("overshoot", Tune.edgeOver * dp);
-        rs.setFloatUniform("edgeSat", Tune.edgeSat * 0.5f);
-        rs.setFloatUniform("mag", 0f);
-        rs.setFloatUniform("refrH", lensH);
-        rs.setFloatUniform("refrAmt", want > 0f ? Tune.refr * dp * lensH / want : 0f);
-        // Arcoíris y canto de luz más suaves que en el centro de control: en una tarjeta con
-        // texto distraían (era lo raro de la primera versión).
-        rs.setFloatUniform("chroma", Tune.chroma * 0.35f);
-        rs.setFloatUniform("rimw", Tune.rim * dp);
-        rs.setFloatUniform("glow", 0f);
-        rs.setFloatUniform("innerDark", CcGlass.INNER_DARK);
-        rs.setFloatUniform("rimGain", Tune.rimGain * 0.55f);
-        rs.setFloatUniform("light", 0.025f);
-        rs.setFloatUniform("active", 0f);
+        configure(state, rs, w, h, rt, rb, dp);
+
+        // Nuestro cristal es opaco y tapa la tarjeta entera: el desenfoque que HyperOS calcula
+        // debajo (caro, y más al repintar mientras se desliza la lista) ya no se ve. Se quita una
+        // vez, cuando el cristal ya se ve del todo.
+        if (fade >= 1f && !state.miCleared) {
+            state.miCleared = true;
+            CcGlass.miClear(v, true);
+        }
 
         // Qué parte de la captura hay detrás de este trozo de pantalla.
         float k = CcGlass.backdropScaleNow();
@@ -317,15 +352,13 @@ public final class NotifGlass {
         state.sy = sc[1];
         rs.setFloatUniform("origin", (LOC[0] + left * sc[0]) * k, (LOC[1] + top * sc[1]) * k);
         rs.setFloatUniform("scale", sc[0] * k, sc[1] * k);
-        rs.setFloatUniform("hasWall", 1f);
         PAINT.setShader(rs);
         PAINT.setAlpha(Math.round(255 * fade));
 
         int save = c.save();
         c.translate(left, top);
         if (Math.abs(rt - rb) < 0.5f) {
-            rs.setFloatUniform("radius", rt);
-            c.drawRect(0, 0, w, h, PAINT);
+            c.drawRect(0, 0, w, h, PAINT);                  // el radio ya está puesto (configure)
         } else {
             // Radios distintos arriba y abajo (tarjetas de un grupo): cada mitad con el suyo.
             float mid = h / 2f;
@@ -336,7 +369,7 @@ public final class NotifGlass {
             c.restoreToCount(s2);
             c.clipRect(0, mid, w, h);
             rs.setFloatUniform("radius", rb);
-            c.drawRect(0, 0, w, h, PAINT);
+            c.drawRect(0, 0, w, h, PAINT);                  // (aquí el radio se pone en cada dibujo)
         }
         c.restoreToCount(save);
 

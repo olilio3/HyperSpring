@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.12.1
+
+**Fixed**
+- **Glass notifications stuttered while scrolling.** Since 2.12.0 the glass follows each card as it moves, so every card is repainted on every frame of a scroll, and that showed three costs that added up:
+  - Each card sent about 30 values to its shader on every repaint. Now each card keeps its own shader with everything already set, and only its position is updated.
+  - The rainbow in the corners made the shader read the background 7 times per pixel over the whole card. Notifications no longer have it (3 reads): on a card with text it was barely visible.
+  - HyperOS kept computing its own blur under each card, hidden under our glass, which is opaque. Now it is switched off on each card once the glass is fully visible.
+- A new background capture is taken only if the shade has been still for 2.5 s (it was 1.2 s): pausing in the middle of a scroll no longer triggers one.
+
 ## 2.12.0
 
 **Fixed**
