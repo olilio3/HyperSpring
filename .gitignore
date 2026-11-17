@@ -6,3 +6,4 @@ local.properties
 local-build/out/
 .tools/
 apk/
+local-build/out-maven/

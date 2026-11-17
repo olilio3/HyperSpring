@@ -2,6 +2,8 @@
 
 Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher y a la interfaz del sistema, y cristal líquido al centro de control. Lo mantiene **olilio3** (github.com/olilio3/HyperSpring), que está aprendiendo Java. **Responde siempre en español** y explica lo que cambias de forma sencilla.
 
+> **Sesión anterior (16-17/11/2026, versiones 2.9.2 a 2.12.1):** lee `docs/CONTEXTO_IA.md`. Resume lo hecho, cómo compilar sin SDK y lo que quedó pendiente.
+
 ## Lo básico
 
 - **Paquete:** `com.icehome.up`. **No cambiarlo nunca**: así se actualiza encima de versiones anteriores y se conservan los ajustes.
@@ -22,21 +24,26 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
   - `GlRenderer.java`: OpenGL, shaders del genio (`VERTEX`, `FRAGMENT_*`).
   - `RecentsCurtain.java`: tarjetas de recientes que se doblan (AGSL).
   - `FolderMorph`, `GlassFolder`, `StackSwipe`, `IconPress`, `WallpaperZoom`, `Springs`: el resto de efectos.
-  - `Exclude.java`: apps sin genio. Un ajuste de texto (`icehome_exclude`, paquetes separados por comas) fuera de `Tune.ITEMS`; `WindowAnim.onFrame` lo mira al empezar cada animación.
+  - `GlassDock.java` (en pruebas), `UnlockZoom.java`.
+  - `Exclude.java`: apps sin genio (y sin telón). Un ajuste de texto (`icehome_exclude`, paquetes separados por comas) fuera de `Tune.ITEMS`; `WindowAnim.onFrame` lo mira al empezar cada animación.
 - **Interfaz del sistema:**
   - `telon/`: transición de cortina y modo seguro de SystemUI.
-  - `cc/CcGlass.java` + `cc/GlassShader.java`: cristal del centro de control (y del volumen).
+  - `cc/CcGlass.java` + `cc/GlassShader.java`: cristal del centro de control (y del volumen). Tiene la captura del fondo que comparten todos los cristales de SystemUI.
+  - `cc/NotifGlass.java`: cristal en las notificaciones (en pruebas). `cc/PanelFocus.java`: enfoque al cambiar entre notificaciones y centro de control.
 - **App de ajustes:**
   - `SettingsActivity.java`: toda la interfaz, sin XML.
   - `I18n.java`: textos en español e inglés. Todo texto visible pasa por `I18n.t(es, en)`.
   - `Tune.java` / `telon/Tune.java` / `cc/Tune.java`: ajustes y sus valores por defecto. La tabla `ITEMS` es la fuente de verdad.
   - `PrefsProvider.java`: guarda los ajustes. `Remote.java`: avisos entre la app y los procesos enganchados.
-  - `Presets.java`: perfiles de un toque (solo tocan las claves de `Presets.KEYS`). `Backup.java`: exportar e importar ajustes en JSON. `Migrate.java`: importación única de los ajustes de la 1.0.x.
+  - `FeatureWheel.java`: la rueda de funciones de Inicio. `Health.java`: «¿Cómo va mi móvil?». `AutoPause.java`: pausa sola con calor, juegos o ahorro de batería.
+  - `Presets.java`: perfiles (`ALL`), estilos de cristal (`GLASS`) y modos de sistema (`MODES`). Cada uno solo toca sus claves (`Presets.keys`). `Backup.java`: exportar e importar ajustes en JSON. `Migrate.java`: importación única de los ajustes de la 1.0.x.
 - **Registro:** `Log.java` / `telon/Log.java`. Se ve en la app con **Acerca de → Copiar registro**. Es lo que piden los usuarios en los issues.
 
 ## Compilar
 
 - **Con Android SDK:** `./gradlew assembleRelease`.
+- **Sin SDK ni GitHub** (sesiones en la nube): `TOOLS=/ruta bash local-build/maven/build.sh`. Solo usa Maven Central; las URL de cada herramienta están en su cabecera.
+- **CI:** `.github/workflows/build.yml` compila en cada push con `build.sh` y sube los APK.
 - **Sin SDK:** `TOOLS=/ruta bash local-build/build.sh`.
   - Necesita JDK 17, `android.jar` (API 35), jadx, apktool y uber-apk-signer.
   - Salen dos APK en `local-build/out/`: `HyperSpring.apk` (libxposed 102, lleva `META-INF/xposed`) y `HyperSpring-legacy.apk` (solo API 93, sin esa carpeta). Los LSPosed antiguos solo conocen la API 100, ya retirada, y no cargarían el primero.
@@ -53,6 +60,9 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 ## Cómo trabajar aquí
 
 - **Listar métodos de clases del launcher:** usa `XposedHelpers.declaredMethods(clase)` y `m.getParameterCount()`, no `clase.getDeclaredMethods()`: este falla entero si un solo método nombra una clase que no existe (pasa con `BaseLauncher` del launcher de Kashi).
+- **Hooks de métodos muy frecuentes:** sobrescribe `XC_MethodHook.skip(thisObject)` para salir sin crear objetos cuando no hay nada que hacer.
+- **`WeakHashMap` con vistas como clave:** el valor nunca debe retener la vista (usa `WeakReference`), y los listeners usan la vista que reciben, no la capturan. Si no, la vista no se libera nunca.
+- **`PrefsProvider` solo deja leer a los procesos de `READERS`** (por UID). Si añades un ámbito nuevo que lea ajustes, añádelo ahí.
 - **Cada función se instala por separado y en `try/catch`:** si un hook falla, se anota en el registro y lo demás sigue funcionando. Mantén ese patrón.
 - **Nunca bloquees ni lances excepciones en un hook de SystemUI o del launcher.** Un fallo repetido activa el modo seguro y apaga esa parte.
 - **Hilos:**
@@ -75,6 +85,7 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 ## Pendiente
 
 - **Hoja de ruta completa:** `docs/ROADMAP.md` y `docs/ROADMAP.es.md`.
+- **De la sesión del 16-17/11:** ver «Pendiente» en `docs/CONTEXTO_IA.md` (confirmar que no hay tirones en las notificaciones de cristal, cambiar los vídeos del README, ver correr el CI…).
 - **Recarga en caliente (libxposed 102):** siguiente paso. Hay que implementar `onHotReloading`/`onHotReloaded` en `ModernEntry`: parar los hilos del módulo, quitar listeners y receptores, y volver a instalar los hooks con el código nuevo (`replaceHook`). Ahora devuelve `false` (valor por defecto) y el framework no recarga.
 - **Carpetas, pendiente de mirar con el usuario:** desde la 2.0.0 el hook de `BaseLauncher.bindFolderResize` sí se instala (antes fallaba al listar los métodos). No da errores en el registro, pero el redimensionado de carpetas con el dedo no se ha probado a mano.
 - **Confirmado en el móvil:** las correcciones de la 1.0.2 funcionan (volumen, centro de control, genio clásico, recientes).
