@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.13.1
+
+**New**
+- **Frames per second** (Opening and closing apps): Auto, 30, 60, 90, 120, 144 or 185. It caps the genie and the curtain. Auto follows the screen up to 90.
+
+**Fixed**
+- 2.13.0 capped the genie and the curtain at 60 fps on every phone, including 90 Hz ones that ran fine. Now Auto allows up to 90.
+
 ## 2.13.0
 
 **Important: new signature.** From this version the APKs are signed with the project's own private key (until 2.12.x they used a public debug key). Android won't install it over 2.12.x or older: export your settings (**Save or share settings**), uninstall, install 2.13.0 and load them back. The in-app updater detects it and explains the steps.

@@ -2688,6 +2688,7 @@ public class SettingsActivity extends Activity {
         if (decimals < 0) return toggleRow(-1, it, I18n.title(it));
         final String key = (String) it[0];
         if ("icehome_genie_style".equals(key)) return styleRow(it);
+        if ("icehome_genie_fps".equals(key)) return fpsRow(it);
         final float min = (Float) it[2], max = (Float) it[3];
         LinearLayout r = rowBase();
         r.setOrientation(LinearLayout.VERTICAL);
@@ -2848,6 +2849,19 @@ public class SettingsActivity extends Activity {
         }, refresh);
         resetOnLongPress(r, it, refresh[0]);
         return r;
+    }
+
+    /** «Fotogramas por segundo»: Auto y los topes de Tune.FPS_CHOICES. */
+    private View fpsRow(Object[] it) {
+        int[] v = Tune.FPS_CHOICES;
+        String[] names = new String[v.length], hints = new String[v.length];
+        names[0] = "Auto";
+        hints[0] = I18n.t("Lo que da la pantalla, hasta 90", "What the screen does, up to 90");
+        for (int i = 1; i < v.length; i++) {
+            names[i] = String.valueOf(v[i]);
+            hints[i] = v[i] <= 60 ? I18n.t("Gasta menos GPU", "Uses less GPU") : I18n.t("Más fluido si la pantalla llega", "Smoother if the screen goes that high");
+        }
+        return pickerRow(it, names, hints);
     }
 
     private View pickerRow(final Object[] it, final String[] names, final String[] hints) {

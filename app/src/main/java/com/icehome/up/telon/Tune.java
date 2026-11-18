@@ -59,7 +59,7 @@ public final class Tune {
         Telon.strength = paused ? 0f : f(c, "telon_strength");
         // Las apps de «Apps sin genio» tampoco llevan telón.
         Telon.exclude = com.icehome.up.Exclude.parse(m == null ? null : m.get(com.icehome.up.Exclude.KEY));
-        Telon.maxFps = Math.min(60f, com.icehome.up.Tune.maxRefresh(c));  // tope de 60, como el genio: a 120 Hz era el doble de GPU
+        Telon.maxFps = com.icehome.up.Tune.fpsCap(c, m);   // el mismo tope que el genio
         Telon.captureScale = f(c, "telon_quality") / 100f;
         Telon.motionBlur = f(c, "telon_blur");
         Telon.belowBlur = f(c, "telon_bg_blur");

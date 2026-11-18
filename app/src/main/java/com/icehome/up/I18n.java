@@ -109,6 +109,8 @@ final class I18n {
                 "Depth only: the trail the window leaves as it moves. 0 turns it off.");
         i("icehome_genie_quality", "Resolution",
                 "Sharpness of the animation. Higher looks sharper but uses more GPU; on modest phones, 50–60 %.");
+        i("icehome_genie_fps", "Frames per second",
+                "Frame cap for the genie and the curtain. Auto follows the screen up to 90 (at 120 Hz or more it stuttered on many phones). More frames look smoother but use more GPU; if it stutters, try 60.");
         i("icehome_genie_physics", "Drag physics",
                 "When you close an app with your finger, the window swings like a hanging lamp. 0 keeps it rigid.");
         i("icehome_genie_live", "Live content",

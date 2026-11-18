@@ -31,6 +31,7 @@ public final class Tune {
             {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
+            {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto sigue a la pantalla hasta 90 (a 120 Hz o más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
@@ -72,8 +73,7 @@ public final class Tune {
         Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;
         Genie.physics = f(c, "icehome_genie_physics");
-        // Tope de 60: a 120 Hz el genio dibujaba el doble y daba tirones en pantallas 1.5K (Reddit, Redmi Note 13 Pro).
-        Genie.maxFps = Math.min(60f, maxRefresh(c));
+        Genie.maxFps = fpsCap(c, cache);
         Haptics.strength = f(c, "icehome_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
@@ -116,6 +116,24 @@ public final class Tune {
             // sin pantalla (no debería pasar en el launcher): se queda en 60
         }
         return max;
+    }
+
+    /** Opciones de «Fotogramas por segundo»; el ajuste guarda la posición (0 = Auto). */
+    public static final int[] FPS_CHOICES = {0, 30, 60, 90, 120, 144, 185};
+    /** En Auto, tope de 90: a 120 Hz el genio dibujaba el doble y daba tirones en pantallas 1.5K (Reddit, Redmi Note 13 Pro). */
+    static final float FPS_AUTO_MAX = 90f;
+
+    /** Tope de fotogramas del genio y del telón (lo usan los dos procesos, cada uno con sus ajustes leídos). */
+    public static float fpsCap(Context c, Map<String, String> saved) {
+        int i = 0;
+        try {
+            i = Math.round(Float.parseFloat(saved.get("icehome_genie_fps")));
+        } catch (Throwable ignored) {
+            // sin guardar o mal escrito: Auto
+        }
+        float screen = maxRefresh(c);
+        if (i <= 0 || i >= FPS_CHOICES.length) return Math.min(FPS_AUTO_MAX, screen);
+        return Math.min(FPS_CHOICES[i], screen);   // pedir más de lo que da la pantalla no sirve de nada
     }
 
     /** ¿Está puesta la pausa? Es texto ("1") fuera de ITEMS, como la lista de apps sin genio. */
