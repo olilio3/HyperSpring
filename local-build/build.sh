@@ -65,9 +65,21 @@ cp "$OUT/apk/unsigned.apk" "$OUT/apk/legacy/HyperSpring-legacy.apk"
 mv "$OUT/apk/unsigned.apk" "$OUT/apk/modern/HyperSpring.apk"
 (cd app/src/main/resources && zip -q -r "../../../../$OUT/apk/modern/HyperSpring.apk" META-INF/xposed)
 
-# 6) Alinear y firmar (clave de depuración de uber-apk-signer)
+# 6) Alinear y firmar.
+#    - Releases (desde la 2.13.0): con la clave privada. KEYSTORE=/ruta/al/archivo.jks (fuera del
+#      repo); alias en KS_ALIAS (por defecto "hyperspring"). La contraseña la pide uber-apk-signer.
+#    - Sin KEYSTORE (CI y pruebas): clave de depuración de uber-apk-signer. Esos APK ya no se
+#      instalan encima de las releases.
+SIGN=()
+if [ -n "${KEYSTORE:-}" ]; then
+  SIGN=(--ks "$KEYSTORE" --ksAlias "${KS_ALIAS:-hyperspring}")
+fi
 for v in modern legacy; do
-  java -jar "$TOOLS/uber-apk-signer.jar" -a "$OUT/apk/$v" -o "$OUT/apk/$v/signed" --allowResign >/dev/null
+  if [ ${#SIGN[@]} -gt 0 ]; then
+    java -jar "$TOOLS/uber-apk-signer.jar" -a "$OUT/apk/$v" -o "$OUT/apk/$v/signed" --allowResign "${SIGN[@]}"
+  else
+    java -jar "$TOOLS/uber-apk-signer.jar" -a "$OUT/apk/$v" -o "$OUT/apk/$v/signed" --allowResign >/dev/null
+  fi
 done
 cp "$OUT"/apk/modern/signed/*.apk "$OUT/HyperSpring.apk"
 cp "$OUT"/apk/legacy/signed/*.apk "$OUT/HyperSpring-legacy.apk"

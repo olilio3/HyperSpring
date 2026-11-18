@@ -85,14 +85,22 @@ public final class GlassShader {
             + "  if (d <= 0.0) return half4(0.0);\n"
             + "  float aa = clamp(d, 0.0, 1.0);\n"
             + "  float t = clamp(1.0 - d / band, 0.0, 1.0);\n"
-            + "  float2 g = float2(sd(p + float2(1.0, 0.0), h, radius) - sd(p - float2(1.0, 0.0), h, radius),\n"
-            + "                    sd(p + float2(0.0, 1.0), h, radius) - sd(p - float2(0.0, 1.0), h, radius));\n"
-            + "  float2 n = g / max(length(g), 0.0001);\n"
+            // La normal (4 sd) solo se usa cerca del borde: en la franja, el núcleo del canto o donde
+            // el halo aún se ve (exp(-6)·0,55 < 1/255). Más adentro vale 0 y nos ahorramos el cálculo.
+            + "  bool edge = d < max(band, max(rimw * 1.4, glow * 6.0));\n"
+            + "  float2 n = float2(0.0);\n"
+            + "  if (edge) {\n"
+            + "    float2 g = float2(sd(p + float2(1.0, 0.0), h, radius) - sd(p - float2(1.0, 0.0), h, radius),\n"
+            + "                      sd(p + float2(0.0, 1.0), h, radius) - sd(p - float2(0.0, 1.0), h, radius));\n"
+            + "    n = g / max(length(g), 0.0001);\n"
+            + "  }\n"
             + "  float f = dot(n, float2(-0.55, -0.835));\n"   // + arriba-izquierda, - abajo-derecha
             + "  float k = t * t * (3.0 - 2.0 * t);\n"
             + "  half4 acc = half4(0.0);\n"
             + "  float3 tint = float3(1.0);\n"
-            + "  if (hasWall > 0.5) {\n"
+            // Con fill y bandAlpha a 0 (pasada de lente del CC) el fondo solo tiñe el canto: lejos
+            // del borde no hace falta leerlo.
+            + "  if (hasWall > 0.5 && (fill > 0.0 || bandAlpha > 0.0 || edge)) {\n"
             + "    float2 dv = -n * disp * k - p * mag + n * (d * stretch + overshoot) * k;\n"
             + "    float2 lens = float2(0.0);\n"
             + "    if (refrH > 0.0 && d < refrH) {\n"
@@ -111,7 +119,9 @@ public final class GlassShader {
             + "                   cy.b / 3.0 + b.b / 3.0 + v.b / 3.0);\n"
             + "    } else {\n"
             + "      float2 dd = (dv + lens) * dispersion * scale;\n"
-            + "      raw = float3(at(base + dd).r, at(base).g, at(base - dd).b);\n"
+            // Separación de menos de medio píxel del fondo (ya desenfocado): no se nota, 1 muestra.
+            + "      if (dot(dd, dd) < 0.25) raw = at(base);\n"
+            + "      else raw = float3(at(base + dd).r, at(base).g, at(base - dd).b);\n"
             + "    }\n"
             + "    float3 bg = vivid(raw);\n"
             + "    float le = dot(bg, float3(0.299, 0.587, 0.114));\n"

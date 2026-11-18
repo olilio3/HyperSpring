@@ -22,7 +22,23 @@ public class PauseTile extends TileService {
 
     @Override
     public void onStartListening() {
+        added(this, true);                    // si escucha, está en el panel
         refresh();
+    }
+
+    @Override
+    public void onTileAdded() {
+        added(this, true);
+    }
+
+    @Override
+    public void onTileRemoved() {
+        added(this, false);
+    }
+
+    /** La app esconde la fila «Tile de ajustes rápidos» cuando ya está puesto. */
+    static void added(android.content.Context c, boolean on) {
+        c.getSharedPreferences("app", 0).edit().putBoolean("tile_added", on).apply();
     }
 
     @Override

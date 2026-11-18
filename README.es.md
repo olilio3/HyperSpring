@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.12.2</b> · <a href="README.md">English</a>
+  <b>v2.13.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 > HyperSpring es un proyecto de la comunidad, sin relación con Xiaomi ni respaldado por ella. Antes se llamaba **HyperTweak**.
 
 > [!WARNING]
-> **Solo se ha probado en un Redmi 14C con HyperOS 3 (Android 16).** No se asegura que funcione en otros dispositivos. Si algo falla, abre un *issue* con tu móvil, la versión de HyperOS y del launcher, y el registro (**Acerca de → Copiar registro**). Cada función se instala por separado: si una falla, se anota en el registro y las demás siguen funcionando. Si el launcher o la interfaz se cierran varias veces seguidas, HyperSpring se desactiva solo en esa parte (ver [Modo seguro](#modo-seguro)).
+> **Solo se ha probado en un Redmi 14C con HyperOS 3 (Android 16).** No se asegura que funcione en otros dispositivos. Si algo falla, abre un *issue* con tu móvil, la versión de HyperOS y del launcher, y el registro: **Acerca de → Informar de un error** lo copia y abre el issue con esos datos ya puestos. Cada función se instala por separado: si una falla, se anota en el registro y las demás siguen funcionando. Si el launcher o la interfaz se cierran varias veces seguidas, HyperSpring se desactiva solo en esa parte (ver [Modo seguro](#modo-seguro)).
 
 ## Vista previa
 
@@ -133,8 +133,8 @@ Si el móvil no arranca bien, desactiva el módulo en LSPosed. También puedes a
 | En **Compatibilidad** sale «No detectado» | Revisa que el módulo y sus dos ámbitos estén activos en LSPosed y reinicia el móvil. |
 | Activo o desactivo una función y no cambia | Las funciones del escritorio y el telón se aplican al reiniciar el launcher o la interfaz: pestaña **Inicio → Reiniciar…**. Concede root a HyperSpring para que el reinicio sea inmediato. |
 | El centro de control no tiene cristal | Reinicia la interfaz desde **Inicio**. Con otros centros de control distintos del de serie y el iOS de Mods Center puede no encontrar las piezas: manda el registro. |
-| Va a tirones | Baja **Resolución** y pon los **Fotogramas por segundo** igual al refresco de tu pantalla. Los dos están en *Escritorio → Abrir y cerrar apps* y en *Sistema → Telón*. |
-| Quiero informar de un fallo | Abre un *issue* y pega el registro: **Acerca de → Copiar registro** (incluye ya tu móvil y versiones). |
+| Va a tirones | Baja la **Resolución** en *Escritorio → Abrir y cerrar apps* y en *Sistema → Telón*, o usa **Inicio → ¿Cómo va mi móvil?**. Los fotogramas siguen solos el refresco de tu pantalla. |
+| Quiero informar de un fallo | **Acerca de → Informar de un error**: copia el registro y abre un *issue* con tu móvil y versiones ya escritos. Pega el registro y envíalo. |
 
 ## Compilar
 
@@ -156,7 +156,7 @@ Para conservar los ajustes al actualizar, el paquete sigue siendo `com.icehome.u
 
 ## Próximamente
 
-En camino: recarga en caliente con libxposed API 102, carpetas con muelle en el launcher de serie y soporte de POCO Launcher. La lista completa está en [`docs/ROADMAP.es.md`](docs/ROADMAP.es.md). Ideas y peticiones en [Issues](https://github.com/olilio3/HyperSpring/issues).
+En camino: abrir y cerrar apps aún más pulido, recarga en caliente con libxposed API 102 y soporte de POCO Launcher. La lista completa está en [`docs/ROADMAP.es.md`](docs/ROADMAP.es.md). Ideas y peticiones en [Issues](https://github.com/olilio3/HyperSpring/issues).
 
 ## Créditos
 

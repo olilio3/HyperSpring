@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.13.0
+
+**Important: new signature.** From this version the APKs are signed with the project's own private key (until 2.12.x they used a public debug key). Android won't install it over 2.12.x or older: export your settings (**Save or share settings**), uninstall, install 2.13.0 and load them back. The in-app updater detects it and explains the steps.
+
+**New**
+- **Stacked widgets like HyperOS 4.** Rebuilt from the HyperOS 4 launcher's own springs and numbers:
+  - **Free drag** in any direction with a rubber band that gets harder the further you pull (sideways it follows less).
+  - **Pull down** to bring the next widget: it rises from the back, and when you let go it drops in front with a small bounce that keeps your finger's speed.
+  - **Fanned deck at rest:** the two widgets behind peek out blurred, one tilted to each side, like cards.
+- **Find a setting:** search every launcher and system setting from one place.
+- **App icon shortcuts:** pause/resume, restart launcher and "How is my phone doing?".
+- **Report a bug** button: copies the log and opens a GitHub issue with the template filled in.
+- **Compatibility card** shows which launcher effects hooked and which failed.
+- Save/share settings in two rows: a file, or a short **HS1:** code you can paste on Telegram or Reddit (no phone data, no app list).
+
+**Faster**
+- Genie and curtain capped at **60 fps**: on 90/120 Hz phones they no longer drop frames trying to keep up.
+- Lighter control center glass: the edge refraction is only computed near the edge.
+- Control center and folder glass reuse their per-frame work instead of recomputing it.
+- First genie close after restarting the launcher draws its first frame in ~10 ms (was ~350 ms).
+
+**Removed**
+- The **Ice** style (saved as Ice → Cup), glass notifications and the control center page focus.
+- Automatic import of settings from 1.0.x and from the legacy APK: export and import them instead.
+
 ## 2.12.2
 
 **Fixed**

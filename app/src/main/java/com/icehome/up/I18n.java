@@ -111,8 +111,6 @@ final class I18n {
                 "Sharpness of the animation. Higher looks sharper but uses more GPU; on modest phones, 50–60 %.");
         i("icehome_genie_physics", "Drag physics",
                 "When you close an app with your finger, the window swings like a hanging lamp. 0 keeps it rigid.");
-        i("icehome_genie_fps", "Frames per second",
-                "Maximum frame rate of the animation. Set it to your screen's refresh rate (60 if it doesn't go above 60 Hz) to avoid wasted work.");
         i("icehome_genie_live", "Live content",
                 "While opening, the app keeps updating as it grows. Off saves GPU work and the image stays still until the end.");
         i("icehome_press_on", "Icons sink when pressed",
@@ -184,8 +182,6 @@ final class I18n {
                 "Blur along the direction of movement when the window moves fast. 0 turns it off.");
         i("telon_bg_blur", "Blur the screen below",
                 "The screen behind blurs while the new one comes in and sharpens again when you go back. 0 turns it off.");
-        i("telon_fps", "Frames per second",
-                "Maximum frame rate of the curtain. Set it to your screen's refresh rate.");
         i("telon_quality", "Resolution",
                 "Sharpness of the window during the curtain. Higher looks sharper but costs more.");
 

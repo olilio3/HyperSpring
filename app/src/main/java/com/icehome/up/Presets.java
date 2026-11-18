@@ -30,12 +30,6 @@ final class Presets {
                     new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "1.6", "icehome_anim_speed", "0.85",
                             "icehome_anim_bounce", "0.05", "icehome_curtain_strength", "0.8",
                             "telon_strength", "0.8", "telon_curve", "0.6"}},
-            {"Estilo iOS", "iOS-like",
-                    "La ventana crece desde el icono casi sin deformarse, con rebote al llegar y más zoom del fondo.",
-                    "The window grows out of the icon with little distortion, a bounce on landing and more wallpaper zoom.",
-                    new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
-                            "icehome_anim_bounce", "0.12", "icehome_wallpaper_zoom", "1.2", "icehome_genie_physics", "0.5",
-                            "telon_strength", "0.5", "telon_blur", "0.3"}},
             {"Rápido", "Fast",
                     "Todo más deprisa y sin rebote, para quien no quiere esperar a la animación.",
                     "Everything quicker and without bounce, for those who don't want to wait for the animation.",
@@ -47,6 +41,9 @@ final class Presets {
                     new String[]{"icehome_genie_quality", "50", "icehome_genie_live", "0", "icehome_anim_speed", "1.2",
                             "icehome_wallpaper_zoom", "0", "telon_quality", "30", "telon_blur", "0", "telon_bg_blur", "0"}},
     };
+
+    /** El perfil Rendimiento, el que propone «¿Cómo va mi móvil?». */
+    static final Object[] PERFORMANCE = ALL[ALL.length - 1];
 
     /** Ajustes del aspecto del cristal: los que gestionan los estilos de cristal. */
     static final String[] GLASS_KEYS = {

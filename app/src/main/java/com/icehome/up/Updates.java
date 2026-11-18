@@ -277,6 +277,29 @@ final class Updates {
      * algo falla, {@code onError} recibe el mensaje.
      */
     static void install(final Activity a, File apk, final Callback onError) {
+        if (!sameSigner(a, apk)) {
+            // Android no deja instalar encima un APK firmado con otra clave (pasa una vez, en la
+            // 2.13.0, al dejar la clave de depuración). Mejor explicarlo que el «App no instalada».
+            a.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    new android.app.AlertDialog.Builder(a)
+                            .setTitle(I18n.t("Hace falta reinstalar", "A reinstall is needed"))
+                            .setMessage(I18n.t("Esta versión está firmada con una clave nueva y Android no deja instalarla "
+                                            + "encima. Exporta tus ajustes (Acerca de → Guardar o compartir ajustes), desinstala HyperSpring, "
+                                            + "instala el APK descargado de GitHub, vuelve a activarlo en LSPosed con sus ámbitos "
+                                            + "e importa los ajustes. Solo hay que hacerlo una vez.",
+                                    "This version is signed with a new key and Android won't install it on top. Export "
+                                            + "your settings (About → Save or share settings), uninstall HyperSpring, install the APK "
+                                            + "from GitHub, enable it again in LSPosed with its scopes and import the settings. "
+                                            + "You only have to do this once."))
+                            .setPositiveButton(I18n.t("Entendido", "Got it"), null)
+                            .show();
+                }
+            });
+            onError.done(null, I18n.t("firma distinta", "different signature"));
+            return;
+        }
         try {
             PackageInstaller pi = a.getPackageManager().getPackageInstaller();
             PackageInstaller.SessionParams sp = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
@@ -320,6 +343,20 @@ final class Updates {
             }
         } catch (Throwable t) {
             onError.done(null, t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
+        }
+    }
+
+    /** ¿El APK descargado lleva la misma firma que la app instalada? Si no se puede leer, deja probar. */
+    static boolean sameSigner(Context c, File apk) {
+        try {
+            android.content.pm.PackageManager pm = c.getPackageManager();
+            int flag = android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES;
+            android.content.pm.PackageInfo nu = pm.getPackageArchiveInfo(apk.getPath(), flag);
+            if (nu == null || nu.signingInfo == null) return true;
+            android.content.pm.Signature[] mine = pm.getPackageInfo(c.getPackageName(), flag).signingInfo.getApkContentsSigners();
+            return java.util.Arrays.equals(mine, nu.signingInfo.getApkContentsSigners());
+        } catch (Throwable t) {
+            return true;
         }
     }
 

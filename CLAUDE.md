@@ -35,7 +35,7 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
   - `Tune.java` / `telon/Tune.java` / `cc/Tune.java`: ajustes y sus valores por defecto. La tabla `ITEMS` es la fuente de verdad.
   - `PrefsProvider.java`: guarda los ajustes. `Remote.java`: avisos entre la app y los procesos enganchados.
   - `FeatureWheel.java`: la rueda de funciones de Inicio. `Health.java`: «¿Cómo va mi móvil?». `AutoPause.java`: pausa sola con calor, juegos o ahorro de batería.
-  - `Presets.java`: perfiles (`ALL`), estilos de cristal (`GLASS`) y modos de sistema (`MODES`). Cada uno solo toca sus claves (`Presets.keys`). `Backup.java`: exportar e importar ajustes en JSON. `Migrate.java`: importación única de los ajustes de la 1.0.x.
+  - `Presets.java`: perfiles (`ALL`), estilos de cristal (`GLASS`) y modos de sistema (`MODES`). Cada uno solo toca sus claves (`Presets.keys`). `Backup.java`: exportar e importar ajustes en JSON.
 - **Registro:** `Log.java` / `telon/Log.java`. Se ve en la app con **Acerca de → Copiar registro**. Es lo que piden los usuarios en los issues.
 
 ## Compilar
@@ -48,9 +48,9 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
   - Salen dos APK en `local-build/out/`: `HyperSpring.apk` (libxposed 102, lleva `META-INF/xposed`) y `HyperSpring-legacy.apk` (solo API 93, sin esa carpeta). Los LSPosed antiguos solo conocen la API 100, ya retirada, y no cargarían el primero.
   - Se compila contra `local-build/xposed-stub` (API 93) y `local-build/libxposed-stub` (copia de libxposed 102). Ninguno va en el APK.
 - **Firma, importante:**
-  - Las releases publicadas están firmadas con la **clave de depuración de uber-apk-signer**.
-  - Un APK de Gradle se firma con la clave de depuración de cada ordenador, así que **no se instala encima** de las versiones publicadas.
-  - **Antes de publicar, firma con uber-apk-signer** (como hace `build.sh`) o habla con el usuario de pasar a una clave de release privada. Eso obligaría a todos a reinstalar una vez. Una clave privada es más segura: la de depuración es pública y cualquiera podría firmar una "actualización" falsa.
+  - Hasta la 2.12.x las releases iban firmadas con la clave de depuración de uber-apk-signer (pública). **Desde la 2.13.0 van con la clave privada del usuario**, que vive fuera del repo (`C:\HyperSpring\Keys\`). Compilar una release: `KEYSTORE=/ruta/hyperspring.jks TOOLS=/ruta bash local-build/build.sh` (la contraseña la escribe el usuario).
+  - Sin `KEYSTORE` (CI, pruebas, `maven/build.sh`) sale con la clave de depuración: **no se instala encima** de las releases.
+  - El actualizador de la app (`Updates.sameSigner`) detecta un APK con otra firma y explica cómo reinstalar.
   - Nunca subas un keystore al repo.
 - **Shaders, valídalos siempre antes de compilar:**
   - **AGSL:** `python3 local-build/agsl_check.py <archivo.java>`. Necesita `pip install skia-python`.
@@ -73,7 +73,7 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 - **Ajustes reales:** depende del APK.
   - Con libxposed (102): en `shared_prefs` de la app, lo normal.
   - Con el APK legacy (93): LSPosed los redirige a `/data/misc/<id>/prefs/com.icehome.up/` (porque `xposedminversion` es 93).
-  - `Migrate.java` importa los antiguos, con root, la primera vez que arranca la 1.1.0.
+  - Desde la 2.13.0 ya no se importan solos los ajustes del APK legacy ni de la 1.0.x (se quitó `Migrate.java`): hay que exportarlos e importarlos.
   - Si los tocas con root, escribe con `cat >` (conserva dueño y etiqueta SELinux), nunca con `sed -i`.
 - **Avisos de la app a los procesos enganchados:** siempre con `Remote.send` (dirigido a cada paquete). Con `sendBroadcast(i, PERMISSION)` el launcher no lo recibe.
 - **Listeners de `ViewTreeObserver`:** se pierden si la ventana se quita y se vuelve a poner. Vuelve a registrarlos con `OnAttachStateChangeListener`, como en `CcGlass.watchRoot` y `Skin.track`.

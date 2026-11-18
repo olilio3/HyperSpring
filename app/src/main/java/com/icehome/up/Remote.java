@@ -169,12 +169,16 @@ public final class Remote {
 
     /** Para la tarjeta de compatibilidad de la app: cuándo cargó el módulo aquí y con qué versión. */
     public static void seen(Context ctx, String key) {
+        // hora | versión del módulo cargado aquí | API con la que se cargó (para la tarjeta de compatibilidad)
+        state(ctx, key, System.currentTimeMillis() + "|" + Version.NAME + "|" + MainHook.engineName());
+    }
+
+    /** Guarda un dato de estado en la app (PrefsProvider solo lo acepta del launcher y la interfaz). */
+    static void state(Context ctx, String key, String value) {
         try {
-            String ver = Version.NAME;              // la del módulo cargado aquí, no la de este proceso
             android.content.ContentValues v = new android.content.ContentValues();
             v.put("key", key);
-            // hora | versión | API con la que se cargó (para la tarjeta de compatibilidad)
-            v.put("value", System.currentTimeMillis() + "|" + ver + "|" + MainHook.engineName());
+            v.put("value", value);
             ctx.getContentResolver().insert(PrefsProvider.STATE, v);
         } catch (Throwable ignored) {
         }

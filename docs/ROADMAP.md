@@ -2,86 +2,55 @@
 
 What is planned for the next versions. Plans may change. Suggestions are welcome in [Issues](https://github.com/olilio3/HyperSpring/issues).
 
-The bar for getting on this list: a fair number of people will use it, it can be maintained when HyperOS changes, and it costs no battery or smoothness to those who don't use it. A flashy effect that gets turned off after two days doesn't make it.
+The bar for getting on this list: a fair number of people will use it, it can be maintained when HyperOS changes, and it costs no battery or smoothness to those who don't use it. A flashy effect that gets turned off after two days doesn't make it. Before starting anything for the home screen, check whether Kashi's Launcher Mod or HyperCeiler already has it.
 
-## Known bugs
-- [x] **Welcome** (fixed in 2.2.0): on the first screen, the text slides under the icon. Idea: the icon pushes the letters as it comes down, and they blur until they disappear.
-- [x] **About** (fixed in 2.2.0): the floating icon gets cut off when it reaches the top.
-- If you find one, open an issue with the log (**About → Copy log**) and your settings (**About → Export settings**).
+Found a bug? Use **About → Report a bug**: it copies the log and opens the issue with your details filled in.
 
 ## Next
-- [ ] **Opening and closing apps, better than ever:** polish the animation until it feels like Xiaomi made it and is a visual treat.
-  - **No sudden jumps:** capturing the window takes time now (~100 ms on mid-range phones), so the first frame sometimes arrives late and the window jumps. The capture has to be ready before it starts moving, and the hand-off between the real window and ours must be invisible.
-  - **Like stock:** the same springs, timings, corners and shadows as HyperOS, so nobody can tell it's a module.
-  - **A show:** more physics and more light in the styles (Depth above all), without losing smoothness on mid-range phones.
+- [ ] **Release what has piled up.** There has been no release since 2.9.1: 2.9.2 to 2.12.x only live on the branch. First, remove from the CHANGELOG what no longer exists (glass notifications, focus when switching pages).
+- [ ] **Opening and closing apps, better than ever:** make it feel like Xiaomi made it.
+  - **No sudden jumps:** the capture has to be ready before the window moves. *Since 2.12.x the first capture is prepared when the launcher starts (first close went from 354 ms to 9 ms).*
+  - **Like stock:** the same springs, timings, corners and shadows as HyperOS. Needs a side-by-side check by eye.
+  - **A show:** more physics and more light in Depth, without losing smoothness on mid-range phones.
+- [ ] **Glass dock out of beta:** it has been a beta since 2.12.0.
 - [ ] **Hot reload (libxposed API 102):** module updates and feature switches apply without restarting the launcher or System UI.
-  - The module already loads through API 102; it still has to learn to "unmount" itself: stop its threads, remove its listeners and reinstall the hooks with the new code.
+  - The module still has to learn to "unmount" itself: stop its threads, remove its listeners and reinstall the hooks with the new code.
   - This is the most delicate item here: leaving anything half-done crashes System UI. It will ship in a beta first.
 - [ ] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
-- [x] **Automatic builds on GitHub** on every change, to catch mistakes before a release. Release APKs are still signed separately. *Added in 2.10.1* (`.github/workflows/build.yml`).
 
 ## Planned
-Ideas noted on 2026-11-11. Not started yet, in no fixed order. Before the home screen ones, check what Kashi's Launcher Mod already includes.
+Not started, in no fixed order.
 
-### Liquid glass
-- [x] **Glass dock:** the launcher dock as a floating bar with edge refraction, using the same shader as the app's bar. *Beta in 2.12.0.*
-- [ ] **Refraction on folders:** add the edge lens to the blur they already have.
-- [ ] **Magnifier on control center sliders:** while dragging brightness or volume, the control turns into a glass drop that magnifies what is behind it. Note: it depends on System UI plugin classes that change between versions.
-- [x] **Glass styles:** Clear, Smoked, Frosted, Monet tint and Prism (more dispersion), picked with one tap. *Released in 2.12.0 (without Monet tint).*
-- [x] **System modes** (idea from 2026-11-14): "HyperOS 4", "iOS 26" and "iOS 27", picked with one tap. Each mode sets its own kind of liquid glass (control center, folders and shortcut menu), its app open/close style, its bounces and its visual settings. It would be a bigger preset than the current ones (`Presets`) that also covers the glass keys. It fits with the Glass styles above: they can be built together. *Released in 2.12.0.*
-- [ ] **Highlight that follows your finger:** the glow on the glass edge moves towards where you touch. No gyroscope, so no battery cost.
-
-### Animations
-- [ ] **Notifications with a genie-style animation (or something like it), iOS style:** opening a notification makes the app come out of the card; dismissing it folds the card away.
-- [ ] **Springy notifications:** the heads-up popup comes in with a small bounce.
+- [ ] **Highlight that follows your finger in the control center:** the glass glow moves towards where you touch, as folders already do (**Touch glow**). A test version from 2026-11-16 was never saved to any branch: it has to be redone.
+- [ ] **Genie from notifications:** opening a notification makes the app come out of the card. First check what the curtain already does in that transition.
 - [ ] **Genie into folders:** closing an app that lives inside a folder sends the window back to the folder.
 - [ ] **Genie on widgets:** opening an app from a widget makes the window come out of the widget.
-- [ ] **Predictive back gesture with physics:**
-  - On the Redmi 14C HyperOS ships no predictive back animations, so they have to be created as well, not just restyled.
-  - While the gesture is dragged, the screen shrinks and tilts with the finger (using the curtain physics). On release it springs back or closes.
-- [ ] **Home screen page transitions** where icons stretch with the swipe speed.
-- [ ] **Dark mode with a circular wave:** when the theme changes, the new palette spreads in a circle from the control center button.
-- [x] **Gentle zoom on unlock:** the home screen comes in with a slight scale, without animating each icon. *Released in 2.12.0.*
-
-### Features
-- [x] **Apps excluded from the genie:** the apps you pick open and close with the HyperOS animation. Applies right away. *Released in 2.1.0.* The same for the System UI curtain is still to do.
-- [x] **Automatic pause:** heavy effects switch off by themselves with battery saver, in games (Game Turbo) or when the phone is hot. *Released in 2.11.0.*
-- [ ] **Subtle vibration** in sync with the animations: when the genie lands in the icon, when a folder bounces, when the widget stack changes.
-- [x] **Visual spring editor:** an animated graph of the curve while you move Speed and Bounce, with a tiny phone opening a window with that spring. *Released in 2.1.0.*
-- [x] **Quick settings tile** that pauses HyperSpring (genie, curtain and bending recents) with one tap, without restarting anything. *Released in 2.7.0.* The pause is the base for the automatic pause above.
-- [x] **Springy shortcut menu with a liquid-glass edge** when long-pressing an icon. *Released in 2.7.0.*
-- [x] **Android animation speed** (the three developer-options scales) from the app, with root. *Released in 2.7.0.*
-- [x] **Share settings** as a short `HS1:` code and paste someone else's. *Released in 2.7.0.* A QR code is left for later: it needs a library or our own encoder.
-- [ ] **Icons that move aside with a spring** when you drag one on the home screen, instead of sliding in a straight line.
-- [x] **"How is my phone doing?"**: from the frames and stutters in the log, suggest the Performance preset when the genie struggles. *Released in 2.12.0.*
-- [x] **New version notice:** checks GitHub releases (can be turned off), and downloads and installs from the app. *Released in 2.1.0.*
-- [x] **What's new after updating:** an animated screen with the changes the first time the app opens after an update. *Released in 2.1.0.*
-
-### The app
-- [ ] **Redesigned, heavily animated interface**, like modern websites: staggered entrances, scroll-driven animations, shared transitions between screens and micro-interactions on every control. Always 60 fps on mid-range phones and respecting the system setting that removes animations.
-- [x] **Feature wheel** (idea from 2026-11-16, *released in 2.11.0*): once there are many features, Home drops the grid of buttons for a spinning wheel that slides the feature cards, very stylised: the card in the middle sharp, and the ones moving away up and down smaller, tilted and blurred, with inertia and a spring when you let go, and a tick as each one passes.
-- [ ] **Apple-style intro** (idea from 2026-11-14): "HyperSpring" appears, one letter (the "i") repeats at least 20 times, the camera races along them and then the icon drops in. Show the user a preview before building it.
-
-## Later, if there is demand
-- [x] **Automatic quality:** lower the genie resolution on its own when the log shows many stutters in a row. For now the "Performance" preset covers it. *Released in 2.12.0.*
-- [ ] **In-app preview.** It means duplicating the animations outside the launcher; with presets and live changes, the benefit is small.
-- [ ] **Review what HyperCeiler and Kashi's HyperOS Launcher Mod already include** before adding new features, to avoid duplicates.
+- [ ] **Predictive back gesture with physics:** while dragging, the screen shrinks and tilts with your finger (with the curtain physics); on release it springs back or closes. On the Redmi 14C HyperOS ships no predictive back animations, so they have to be created.
+- [ ] **Icons that spring out of the way** when you drag one across the home screen, instead of sliding in a straight line.
+- [ ] **A tick when the widget stack changes**, like the ones the genie (on landing) and folders (on resize) already have.
 
 ## Dropped
-Ideas that were on the list and have been removed, with the reason:
-- **Glass notifications** (removed on 2026-11-17, beta since 2.10.0). People prefer HyperOS's own blur, and painting every card stuttered while scrolling on mid-range phones.
-- **Focus or bounce when switching between notifications and the control center** (removed on 2026-11-17). The system animation stays: the opening progress jumps in one step (from 0 to 0.52) when switching pages, so there is no reliable signal to sync a bounce on top.
+Ideas that were on the list and were removed, with the reason:
+- **Glass notifications** (removed 2026-11-17). People prefer HyperOS's own blur, and painting every card stuttered while scrolling on mid-range phones.
+- **Springy notifications** (2026-11-18). Same reason: notifications stay the way HyperOS makes them.
+- **Focus or bounce when switching between notifications and the control center** (2026-11-17). The opening progress jumps (from 0 to 0.52) when switching pages: there is no reliable signal to sync anything to.
+- **Magnifier on the control center sliders** (2026-11-18). It depends on System UI plugin classes that change with every version, like the rubber effect.
+- **Rubber effect on the volume and brightness sliders.** Same reason: a lot of upkeep for a detail.
+- **Dark mode circular wave** and **home screen pages that stretch the icons** (2026-11-18). Flashy effects that get turned off within days; the second also clashes with the transitions of Kashi's launcher.
+- **Redesigned app** (2026-11-18). The current design stays; the entrances, the app's predictive back and the animated backgrounds are already there.
+- **In-app preview.** It means duplicating the animations outside the launcher; with presets and live changes, it adds little.
 - **Widget stacks and folders on the stock launcher.** They stay on Kashi's launcher only, which is where stacks and folder sizes exist.
-- **Elastic overscroll in every app's lists.** It needs hooks in the Android framework of every app: a lot of risk and scope for a small effect.
-- **Gyroscope wallpaper parallax.** It keeps a sensor running on the home screen: battery spent on decoration.
-- **Wallpaper ripple on touch** and **icon cascade on unlock.** Eye-catching effects that get old quickly and add GPU work right when the phone is already busy.
-- **Rubber-band volume and brightness sliders.** They depend on System UI plugin classes that change with every HyperOS version; a lot of upkeep for a detail.
-- **More recents styles (fan, 3D stack).** What people asked for was a way to turn the bending off, and that already exists (**Home → Recents that bend**).
+- **Elastic overscroll in every app's lists.** It needs hooking the Android framework in every app: a lot of risk for a small effect.
+- **Gyroscope wallpaper parallax.** It keeps a sensor running on the home screen: battery for decoration.
+- **Wallpaper ripple on tap** and **cascade entrance on unlock.** Eye-catching, but they get old fast and load the GPU right when the phone is already busy. Unlock zoom covers this instead.
+- **More recents styles (fan, 3D stack).** What people asked for was a way to turn the folding off, and that exists.
 
 ## Done
-- [x] 2.7.0: springy shortcut menu with a liquid-glass edge, quick settings tile to pause HyperSpring, Android animation speed and shareable settings codes. Details in the CHANGELOG.
-- [x] 2.1.0: Depth style (the window as a rigid sheet that tilts, with motion blur), style picker as a pull-down menu, visual spring editor, apps without genie, in-app updates and a redesigned app. Details in the CHANGELOG.
-- [x] 2.0.0: libxposed API 102 through our own hook facade with two engines (the legacy one, API 93, stays as a separate APK). One-tap presets (Smooth, iOS-like, Fast, Performance). Export and import settings. The compatibility card shows which API the module loaded with. Sliders reach the launcher without restarting it.
-- [x] 1.0.3: smoother genie that looks closer to stock HyperOS (threads on every core, drawing on every refresh with prediction, the app's own colour when opening, landing in the icon like MIUI). Details in the CHANGELOG.
-- [x] 1.0.2: the control center glass stopped working after a while. Recents cards only bend when you move them with your finger.
-- [x] 1.0.0: the APK was built with targetSdk 30, so Android 16 refused to install it. Fixed (now targetSdk 35).
+- [x] 2.9.2 to 2.12.x (not released yet): full code review, automatic GitHub builds, feature wheel, automatic pause (heat, games, battery saver), glass styles, system modes (HyperOS 4, iOS 26, iOS 27), glass dock (beta), unlock zoom, automatic genie resolution, "How is my phone doing?", refraction on folders and the app intro. Details in the CHANGELOG.
+- [x] 2.7.0: springy shortcut menu with a liquid-glass rim, quick settings tile to pause HyperSpring, Android animation speed and `HS1:` codes to share settings.
+- [x] 2.2.0: the welcome text no longer slides under the icon, and the About icon no longer gets cut off.
+- [x] 2.1.0: Depth style, visual spring editor, apps without genie, in-app updates and what's new, and the redesigned app.
+- [x] 2.0.0: libxposed API 102 with two engines (the old API 93 one as a separate APK), one-tap presets, settings export and import.
+- [x] 1.0.3: smoother genie, closer to HyperOS's own.
+- [x] 1.0.2: the control center glass stopped working after a while; recents cards only fold when moved with a finger.
+- [x] 1.0.0: the APK was built with targetSdk 30 and Android 16 refused to install it.

@@ -7,3 +7,6 @@ local-build/out/
 .tools/
 apk/
 local-build/out-maven/
+*.jks
+*.keystore
+!local-build/**/debug.keystore

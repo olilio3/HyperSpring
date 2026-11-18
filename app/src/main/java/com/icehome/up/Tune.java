@@ -12,7 +12,7 @@ import java.util.Map;
  * guardan en memoria: las animaciones nunca consultan el proveedor en mitad de un fotograma.
  * Los interruptores de función se aplican al reiniciar el launcher; los valores, al momento.
  */
-final class Tune {
+public final class Tune {
 
     /** Clave, nombre, mínimo, máximo, por defecto, decimales (-1 = interruptor), explicación. "#" = sección. */
     public static final Object[][] ITEMS = {
@@ -32,7 +32,6 @@ final class Tune {
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
-            {"icehome_genie_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas de la animación. Ponlo igual al refresco de tu pantalla (60 si no pasa de 60 Hz) para no gastar de más."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
@@ -73,7 +72,8 @@ final class Tune {
         Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;
         Genie.physics = f(c, "icehome_genie_physics");
-        Genie.maxFps = f(c, "icehome_genie_fps");
+        // Tope de 60: a 120 Hz el genio dibujaba el doble y daba tirones en pantallas 1.5K (Reddit, Redmi Note 13 Pro).
+        Genie.maxFps = Math.min(60f, maxRefresh(c));
         Haptics.strength = f(c, "icehome_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
@@ -100,6 +100,22 @@ final class Tune {
         if (paused) RecentsCurtain.strength = 0f;
         ShortcutMenuFx.bounce = f(c, "icehome_menu_bounce");
         ShortcutMenuFx.glass = f(c, "icehome_menu_glass") >= 0.5f;
+    }
+
+    /**
+     * El refresco más alto que admite la pantalla. Antes era un ajuste («Fotogramas por segundo»);
+     * el genio dibuja al ritmo de los refrescos y esto solo es el techo, así que pasarse no gasta más.
+     */
+    public static float maxRefresh(Context c) {
+        float max = 60f;
+        try {
+            android.view.Display d = c.getSystemService(android.hardware.display.DisplayManager.class)
+                    .getDisplay(android.view.Display.DEFAULT_DISPLAY);
+            for (android.view.Display.Mode m : d.getSupportedModes()) max = Math.max(max, m.getRefreshRate());
+        } catch (Throwable ignored) {
+            // sin pantalla (no debería pasar en el launcher): se queda en 60
+        }
+        return max;
     }
 
     /** ¿Está puesta la pausa? Es texto ("1") fuera de ITEMS, como la lista de apps sin genio. */

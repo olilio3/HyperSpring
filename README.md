@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v2.12.2</b> · <a href="README.es.md">Español</a>
+  <b>v2.13.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 
 > [!WARNING]
 > **Only tested on a Redmi 14C with HyperOS 3 (Android 16).** I can't guarantee it works on other devices.
-> - **If something breaks:** please open an [issue](../../issues) and paste the log from **About → Copy log**. It already includes your phone and the HyperOS and launcher versions.
+> - **If something breaks:** please open an [issue](../../issues) with **About → Report a bug**: it copies the log and opens the issue with your phone and the HyperOS and launcher versions already filled in.
 > - **If a part fails on your device:** each feature is installed separately, so the error is written to the log and the rest keeps working.
 > - **If the launcher or System UI crashes repeatedly:** HyperSpring turns itself off in that part (see [Safe mode](#safe-mode)).
 
@@ -149,7 +149,7 @@ If the phone doesn't boot properly, disable the module in LSPosed, or boot into 
 | I turn a feature on or off and nothing changes | Launcher features and the curtain apply after restarting the launcher or System UI: **Home → Restart…**. Grant root to HyperSpring so the restart is instant. |
 | The restart buttons don't work | Grant root to HyperSpring in Magisk, KernelSU or APatch. Without root, HyperSpring asks System UI to do it, which may not work on every phone. |
 | The control center has no glass | Restart System UI from **Home**. Control centers other than the stock one and the Mods Center iOS one may not be recognised; send the log. |
-| It stutters | Lower **Resolution** and set **Frames per second** to your screen's refresh rate (in *Launcher → Opening and closing apps* and in *System → Curtain*). |
+| It stutters | Lower **Resolution** (in *Launcher → Opening and closing apps* and in *System → Curtain*) or use **Home → How is my phone doing?**. The frame rate follows your screen on its own. |
 
 ## Building
 
@@ -171,7 +171,7 @@ If the phone doesn't boot properly, disable the module in LSPosed, or boot into 
 
 ## Roadmap
 
-Coming next: hot reload on libxposed API 102, springy folders on the stock launcher and POCO Launcher support. See the full list in [`docs/ROADMAP.md`](docs/ROADMAP.md). Ideas and requests are welcome in [Issues](https://github.com/olilio3/HyperSpring/issues).
+Coming next: even more polished app opening and closing, hot reload on libxposed API 102 and POCO Launcher support. See the full list in [`docs/ROADMAP.md`](docs/ROADMAP.md). Ideas and requests are welcome in [Issues](https://github.com/olilio3/HyperSpring/issues).
 
 ## Credits
 

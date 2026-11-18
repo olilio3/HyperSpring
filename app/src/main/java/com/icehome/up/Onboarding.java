@@ -684,8 +684,9 @@ final class Onboarding extends FrameLayout {
                 grid.addView(row, rl);
             }
             LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(0, -1, 1f);
-            if (i % 2 == 0) cl.rightMargin = px(6);
-            else cl.leftMargin = px(6);
+            boolean alone = i % 2 == 0 && i == Presets.ALL.length - 1;   // el último, si es impar, ocupa la fila
+            if (i % 2 == 0 && !alone) cl.rightMargin = px(6);
+            else if (i % 2 == 1) cl.leftMargin = px(6);
             row.addView(presetCard(Presets.ALL[i]), cl);
         }
         grid.addView(presetCard(null), new LinearLayout.LayoutParams(-1, -2));

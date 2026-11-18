@@ -94,8 +94,8 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        importOldPrefs();
         I18n.init(this);
+        if (b == null && quickAction(getIntent().getStringExtra(SHORTCUT))) return;
         dp = getResources().getDisplayMetrics().density;
         palette();
         getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -161,6 +161,55 @@ public class SettingsActivity extends Activity {
         if (first) showOnboarding();
         if (b == null) startupUpdates(first);
         setupBack();
+        publishShortcuts();
+        if (b == null && "health".equals(getIntent().getStringExtra(SHORTCUT))) showHealth();
+    }
+
+    // ---------------------------------------------------------------- atajos del icono
+    /** Extra de los atajos que salen al mantener pulsado el icono de la app. */
+    private static final String SHORTCUT = "hs_shortcut";
+
+    /**
+     * Atajos del icono: Pausar o reanudar, Reiniciar launcher y «¿Cómo va mi móvil?». Con
+     * HyperSpring activo, el propio menú sale con su muelle y su borde de cristal.
+     */
+    private void publishShortcuts() {
+        try {
+            android.content.pm.ShortcutManager sm = getSystemService(android.content.pm.ShortcutManager.class);
+            android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this,
+                    getResources().getIdentifier("ic_tile", "drawable", getPackageName()));
+            String[][] all = {
+                    {"pause", I18n.t("Pausar o reanudar", "Pause or resume")},
+                    {"restart", I18n.t("Reiniciar launcher", "Restart launcher")},
+                    {"health", I18n.t("¿Cómo va mi móvil?", "How is my phone doing?")},
+            };
+            List<android.content.pm.ShortcutInfo> list = new ArrayList<>();
+            for (String[] s : all) {
+                android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW).setClass(this, SettingsActivity.class).putExtra(SHORTCUT, s[0]);
+                list.add(new android.content.pm.ShortcutInfo.Builder(this, s[0])
+                        .setShortLabel(s[1]).setIcon(icon).setIntent(i).build());
+            }
+            sm.setDynamicShortcuts(list);              // se rehacen al abrir la app: siguen el idioma
+        } catch (Throwable ignored) {
+            // un launcher sin atajos no es motivo para fallar
+        }
+    }
+
+    /** Pausar y reiniciar se hacen sin abrir la app. Devuelve true si ya está hecho (y se cierra). */
+    private boolean quickAction(String what) {
+        if ("pause".equals(what)) {
+            boolean now = !PauseTile.paused(this);
+            PauseTile.setPaused(this, now);
+            toast(now ? I18n.t("HyperSpring en pausa", "HyperSpring paused") : I18n.t("HyperSpring reanudado", "HyperSpring resumed"));
+            finish();
+            return true;
+        }
+        if ("restart".equals(what)) {
+            restart(false);
+            finish();
+            return true;
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- gesto de atrás
@@ -462,12 +511,6 @@ public class SettingsActivity extends Activity {
         super.onResume();
         refreshLog();
         for (Runnable r : refreshers) r.run();
-    }
-
-    @Override
-    protected void onDestroy() {
-        Migrate.listener = null;
-        super.onDestroy();
     }
 
     @Override
@@ -871,12 +914,17 @@ public class SettingsActivity extends Activity {
         c.addView(label(I18n.t("Funciones", "Features")));
         c.addView(featuresWheel());
 
-        // Modos de sistema: animaciones y cristal a la vez, de un toque.
-        c.addView(label(I18n.t("Modos de sistema", "System modes")));
-        c.addView(presetCard(Presets.MODES, Icons.PALETTE));
-
+        // Una sola tarjeta de perfiles: primero los modos de sistema (animaciones y cristal a la
+        // vez) y debajo los de solo animación. Las filas de la segunda tarjeta pasan a la primera.
         c.addView(label(I18n.t("Perfiles", "Presets")));
-        c.addView(presetCard(Presets.ALL, Icons.SLIDERS));
+        LinearLayout presets = presetCard(Presets.MODES, Icons.PALETTE);
+        LinearLayout anim = presetCard(Presets.ALL, Icons.SLIDERS);
+        while (anim.getChildCount() > 0) {
+            View row = anim.getChildAt(0);
+            anim.removeViewAt(0);
+            presets.addView(row);
+        }
+        c.addView(presets);
 
         c.addView(label(I18n.t("Acciones", "Actions")));
         LinearLayout a = card();
@@ -904,7 +952,7 @@ public class SettingsActivity extends Activity {
                 restart(true);
             }
         }));
-        a.addView(navRow(Icons.TOGGLES, I18n.t("Tile de ajustes rápidos", "Quick settings tile"),
+        if (!getSharedPreferences("app", 0).getBoolean("tile_added", false)) a.addView(navRow(Icons.TOGGLES, I18n.t("Tile de ajustes rápidos", "Quick settings tile"),
                 I18n.t("Pausa HyperSpring con un toque desde el panel, sin reiniciar nada", "Pause HyperSpring with one tap from the panel, without restarting anything"),
                 false, new Runnable() {
             @Override
@@ -1324,6 +1372,7 @@ public class SettingsActivity extends Activity {
 
     private ScrollView desktopTab() {
         LinearLayout c = column();
+        c.addView(searchRow());
         c.addView(label(I18n.t("Animaciones", "Animations")));
         LinearLayout g = card();
         for (Section s : sections(Tune.ITEMS)) {
@@ -1344,6 +1393,7 @@ public class SettingsActivity extends Activity {
 
     private ScrollView systemTab() {
         LinearLayout c = column();
+        c.addView(searchRow());
         c.addView(label("Android"));
         LinearLayout an = card();
         an.addView(systemSpeedRow());
@@ -1386,10 +1436,10 @@ public class SettingsActivity extends Activity {
                         + "launcher versions, and the log (button below).")));
         LinearLayout lb = new LinearLayout(this);
         lb.setPadding(0, px(12), 0, 0);
-        lb.addView(button(I18n.t("Copiar registro", "Copy log"), true, new View.OnClickListener() {
+        lb.addView(button(I18n.t("Informar de un error", "Report a bug"), true, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                copyLog();
+                reportBug();
             }
         }), new LinearLayout.LayoutParams(-1, -2));
         c.addView(lb);
@@ -1398,6 +1448,8 @@ public class SettingsActivity extends Activity {
         LinearLayout k = glassCard();
         k.addView(infoRow(Icons.PHONE, I18n.t("Este móvil", "This phone"), Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion()));
         k.addView(statusRow(Icons.HOME, I18n.t("Escritorio", "Launcher"), appVersion("com.miui.home"), "launcher_seen"));
+        String fx = launcherFx();
+        if (fx != null) k.addView(infoRow(Icons.SPARKLE, I18n.t("Efectos del escritorio", "Launcher effects"), fx));
         k.addView(statusRow(Icons.CURTAIN, I18n.t("Interfaz del sistema", "System UI"), appVersion("com.android.systemui"), "systemui_seen"));
         k.addView(statusRow(Icons.PHONE, I18n.t("App de capturas", "Screenshot app"), appVersion("com.miui.screenshot"), "shot_seen"));
         String cc = state("cc_seen");
@@ -1477,34 +1529,35 @@ public class SettingsActivity extends Activity {
         r.addView(prefToggleRow(Icons.RESTART, I18n.t("Buscar al abrir la app", "Check when opening the app"),
                 I18n.t("Como mucho cada 6 horas. Solo pregunta a GitHub por la última versión.",
                         "At most every 6 hours. It only asks GitHub for the latest version."), "upd_auto", true));
-        r.addView(navRow(Icons.LIST, I18n.t("Exportar ajustes", "Export settings"),
-                I18n.t("Guarda todos los ajustes en un archivo. Adjúntalo si reportas un error.",
-                        "Saves every setting to a file. Attach it when you report a bug."), false, new Runnable() {
+        // Antes eran cuatro filas (exportar, importar, compartir, pegar): ahora una para sacar los
+        // ajustes y otra para traerlos, que mira sola si hay un código HS1: copiado.
+        r.addView(navRow(Icons.LIST, I18n.t("Guardar o compartir ajustes", "Save or share settings"),
+                I18n.t("En un archivo (adjúntalo si reportas un error) o en un código corto para Telegram, Reddit…",
+                        "To a file (attach it when you report a bug) or as a short code for Telegram, Reddit…"), false, new Runnable() {
             @Override
             public void run() {
-                pickFile(true);
+                new android.app.AlertDialog.Builder(SettingsActivity.this)
+                        .setTitle(I18n.t("Guardar o compartir", "Save or share"))
+                        .setItems(new String[]{
+                                I18n.t("Guardar en un archivo", "Save to a file"),
+                                I18n.t("Compartir un código (sin datos del móvil ni de tus apps)", "Share a code (no phone data, no app list)")
+                        }, new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface d, int which) {
+                                if (which == 0) pickFile(true);
+                                else shareSettings();
+                            }
+                        })
+                        .show();
             }
         }));
-        r.addView(navRow(Icons.LIST, I18n.t("Importar ajustes", "Import settings"),
-                I18n.t("Sustituye los ajustes por los de un archivo exportado", "Replaces the settings with those from an exported file"), false, new Runnable() {
+        r.addView(navRow(Icons.DOWNLOAD, I18n.t("Cargar ajustes", "Load settings"),
+                I18n.t("Si has copiado un código HS1:, lo usa; si no, eliges un archivo guardado",
+                        "Uses a copied HS1: code if there is one; otherwise you pick a saved file"), false, new Runnable() {
             @Override
             public void run() {
-                pickFile(false);
-            }
-        }));
-        r.addView(navRow(Icons.DOWNLOAD, I18n.t("Compartir mis ajustes", "Share my settings"),
-                I18n.t("Un código corto para pasarlo por Telegram, Reddit… Sin datos del móvil ni de tus apps.",
-                        "A short code to send over Telegram, Reddit… No phone data and no list of your apps."), false, new Runnable() {
-            @Override
-            public void run() {
-                shareSettings();
-            }
-        }));
-        r.addView(navRow(Icons.DOWNLOAD, I18n.t("Pegar ajustes compartidos", "Paste shared settings"),
-                I18n.t("Copia el mensaje con el código HS1: y tócalo aquí", "Copy the message with the HS1: code and tap here"), false, new Runnable() {
-            @Override
-            public void run() {
-                pasteSettings();
+                if (Backup.fromCode(clipText()) != null) pasteSettings();
+                else pickFile(false);
             }
         }));
         r.addView(navRow(Icons.RESTART, I18n.t("Restablecer todo", "Reset everything"),
@@ -1743,7 +1796,22 @@ public class SettingsActivity extends Activity {
             String key = (String) it[0];
             // Si ya están en la tarjeta de la gráfica, no se repiten.
             if (springGraph != null && ("icehome_anim_speed".equals(key) || "icehome_anim_bounce".equals(key))) continue;
-            k.addView(settingRow(it));
+            final View row = settingRow(it);
+            k.addView(row);
+            // Solo lo que sirve para el estilo elegido: Estrechamiento y Desenfoque de movimiento son de
+            // Profundidad, e Intensidad (cuánto se deforma) no se usa en Profundidad.
+            final boolean depthOnly = key.startsWith("icehome_depth_");
+            if (depthOnly || "icehome_genie_strength".equals(key)) {
+                Runnable vis = new Runnable() {
+                    @Override
+                    public void run() {
+                        boolean depth = Math.round(stored(item(Tune.ITEMS, "icehome_genie_style"))) == Genie.STYLE_DEPTH;
+                        row.setVisibility(depth == depthOnly ? View.VISIBLE : View.GONE);
+                    }
+                };
+                vis.run();
+                refreshers.add(vis);
+            }
         }
         c.addView(k);
         TextView hint = text(I18n.t("Toca una fila para leer qué hace. Mantén pulsada para volver a su valor por defecto.",
@@ -1762,6 +1830,86 @@ public class SettingsActivity extends Activity {
         }), new LinearLayout.LayoutParams(-1, -2));
         c.addView(b);
         return page(shortName(I18n.section(s.name)), null, true, c);
+    }
+
+    // ---------------------------------------------------------------- buscador
+    /** Fila que abre el buscador; va arriba de Escritorio y de Sistema. */
+    private View searchRow() {
+        LinearLayout s = card();
+        s.addView(navRow(Icons.SLIDERS, I18n.t("Buscar un ajuste", "Find a setting"),
+                I18n.t("Todos los ajustes del launcher y del sistema en un sitio", "Every launcher and system setting in one place"),
+                true, new Runnable() {
+                    @Override
+                    public void run() {
+                        push(searchPage());
+                    }
+                }));
+        return s;
+    }
+
+    /**
+     * Todas las filas de las tres tablas de ajustes en una lista que se filtra mientras escribes
+     * (por nombre, explicación o sección). Las filas son las de siempre: se cambian aquí mismo.
+     */
+    private ScrollView searchPage() {
+        LinearLayout c = column();
+        c.addView(space(16));
+        final android.widget.EditText search = new android.widget.EditText(this);
+        search.setHint(I18n.t("Genio, rebote, cristal…", "Genie, bounce, glass…"));
+        search.setHintTextColor(text3);
+        search.setTextColor(text);
+        search.setTextSize(15);
+        search.setSingleLine(true);
+        search.setBackground(round(card, px(18)));
+        search.setPadding(px(18), px(12), px(18), px(12));
+        c.addView(search, new LinearLayout.LayoutParams(-1, -2));
+        c.addView(space(12));
+
+        final LinearLayout list = card();
+        final TextView none = text(I18n.t("Escribe para buscar entre todos los ajustes.", "Type to search every setting."), 14, text3);
+        none.setPadding(px(18), px(18), px(18), px(18));
+        list.addView(none);
+        final List<View> rows = new ArrayList<>();
+        final List<String> words = new ArrayList<>();      // lo que se busca de cada fila, en minúsculas
+        for (Object[][] table : new Object[][][]{Tune.ITEMS, com.icehome.up.telon.Tune.ITEMS, com.icehome.up.cc.Tune.ITEMS}) {
+            for (Section s : sections(table)) {
+                String sec = I18n.section(s.name);
+                for (Object[] it : s.items) {
+                    View row = settingRow(it);
+                    row.setVisibility(View.GONE);
+                    list.addView(row);
+                    rows.add(row);
+                    String d = I18n.desc(it);
+                    words.add((I18n.title(it) + " " + (d == null ? "" : d) + " " + sec).toLowerCase(java.util.Locale.ROOT));
+                }
+            }
+        }
+        c.addView(list);
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int a, int b, int n) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int a, int b, int n) {
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                String q = s.toString().trim().toLowerCase(java.util.Locale.ROOT);
+                int shown = 0;
+                for (int i = 0; i < rows.size(); i++) {
+                    boolean on = !q.isEmpty() && words.get(i).contains(q);
+                    rows.get(i).setVisibility(on ? View.VISIBLE : View.GONE);
+                    if (on) shown++;
+                }
+                none.setText(q.isEmpty() ? I18n.t("Escribe para buscar entre todos los ajustes.", "Type to search every setting.")
+                        : I18n.t("Nada con «" + q + "».", "Nothing matches “" + q + "”."));
+                none.setVisibility(shown == 0 ? View.VISIBLE : View.GONE);
+            }
+        });
+        search.requestFocus();
+        return page(I18n.t("Buscar", "Search"), null, true, c);
     }
 
     // ---------------------------------------------------------------- registro
@@ -1815,6 +1963,50 @@ public class SettingsActivity extends Activity {
         android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         cm.setPrimaryClip(android.content.ClipData.newPlainText("HyperSpring", head + readLog()));
         toast(I18n.t("Registro copiado", "Log copied"));
+    }
+
+    /**
+     * Informe de error en un toque: copia el registro (no cabe en un enlace) y abre un issue nuevo
+     * en GitHub con el móvil, las versiones y los efectos activos ya escritos. El usuario lo revisa
+     * y lo envía él; la app no manda nada por su cuenta.
+     */
+    private void reportBug() {
+        copyLog();
+        String fx = launcherFx();
+        String body = "**" + I18n.t("Qué pasa", "What happens") + ":**\n\n\n"
+                + "**" + I18n.t("Pasos para que pase", "Steps to make it happen") + ":**\n\n\n"
+                + "---\n"
+                + "- HyperSpring " + version() + "\n"
+                + "- " + Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion() + "\n"
+                + "- Launcher " + appVersion("com.miui.home") + " · System UI " + appVersion("com.android.systemui") + "\n"
+                + (fx != null ? "- " + I18n.t("Efectos del escritorio", "Launcher effects") + ": " + fx + "\n" : "")
+                + "\n**" + I18n.t("Registro", "Log") + "** (" + I18n.t("ya está copiado: pégalo aquí", "already copied: paste it here") + "):\n\n```\n\n```\n";
+        try {
+            startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(
+                    "https://github.com/olilio3/HyperSpring/issues/new?body=" + android.net.Uri.encode(body))));
+        } catch (Throwable t) {
+            toast(I18n.t("No hay navegador para abrir GitHub", "No browser to open GitHub"));
+        }
+    }
+
+    /** «6 de 7 activos (fallan: …)» con lo que contó el launcher al arrancar, o null si aún no hay dato. */
+    private String launcherFx() {
+        String v = state("launcher_fx");
+        if (v == null) return null;
+        int bar = v.indexOf('|');
+        String[] n = (bar < 0 ? v : v.substring(0, bar)).split("/");
+        if (n.length != 2) return null;
+        String out = I18n.t(n[0] + " de " + n[1] + " activos", n[0] + " of " + n[1] + " active");
+        if (bar >= 0 && bar + 1 < v.length()) {
+            StringBuilder names = new StringBuilder();
+            for (String key : v.substring(bar + 1).split(", ")) {
+                String title = key;
+                for (Object[] it : Tune.ITEMS) if (it[0].equals(key)) title = I18n.title(it);
+                names.append(names.length() > 0 ? ", " : "").append(title);
+            }
+            out += I18n.t(" (fallan: ", " (failing: ") + names + ")";
+        }
+        return out;
     }
 
     private String readLog() {
@@ -2651,6 +2843,7 @@ public class SettingsActivity extends Activity {
             @Override
             public void pick(int index) {
                 write(key, String.valueOf(STYLE_VALUES[Math.max(0, Math.min(STYLE_VALUES.length - 1, index))]));
+                for (Runnable rf : refreshers) rf.run();       // enseña u oculta los ajustes de cada estilo
             }
         }, refresh);
         resetOnLongPress(r, it, refresh[0]);
@@ -3138,11 +3331,6 @@ public class SettingsActivity extends Activity {
     }
 
     // ---------------------------------------------------------------- datos
-    /**
-     * Primera vez que se abre la app tras pasar a libxposed (1.1.0): trae los ajustes de las
-     * versiones anteriores (ver {@link Migrate}). Va en segundo plano porque pide root; si
-     * importa algo, la pantalla se vuelve a crear con los valores importados.
-     */
     /** Pregunta antes de aplicar un perfil: pisa los ajustes de animación que hubiera. */
     /** Una tarjeta con una fila por perfil (perfiles, estilos de cristal o modos) y la marca «En uso». */
     private LinearLayout presetCard(Object[][] presets, int iconKind) {
@@ -3212,9 +3400,9 @@ public class SettingsActivity extends Activity {
             b.setPositiveButton(I18n.t("Aplicar Rendimiento", "Apply Performance"), new android.content.DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(android.content.DialogInterface d, int which) {
-                    Presets.apply(SettingsActivity.this, Presets.ALL[3]);
+                    Presets.apply(SettingsActivity.this, Presets.PERFORMANCE);
                     settingsReplaced();
-                    toast(I18n.t("Perfil aplicado: ", "Preset applied: ") + Presets.name(Presets.ALL[3]));
+                    toast(I18n.t("Perfil aplicado: ", "Preset applied: ") + Presets.name(Presets.PERFORMANCE));
                 }
             });
         }
@@ -3233,18 +3421,38 @@ public class SettingsActivity extends Activity {
                         ? I18n.t("Cambia a la vez las animaciones y el aspecto del cristal. No enciende ni apaga funciones. ",
                         "It changes the animations and the look of the glass together. It doesn't turn features on or off. ")
                         : I18n.t("Cambia los ajustes de forma, velocidad y calidad de las animaciones. No enciende ni apaga "
-                                + "funciones y no toca el cristal ni los fotogramas por segundo. ",
+                                + "funciones y no toca el cristal. ",
                         "It changes the shape, speed and quality settings of the animations. It doesn't turn features "
-                                + "on or off, and it leaves the glass and the frame rate alone. "))
-                        + I18n.t("Si quieres poder volver atrás, exporta antes tus ajustes (Acerca de → Exportar ajustes).",
-                        "To be able to go back, export your settings first (About → Export settings)."))
+                                + "on or off, and it leaves the glass alone. "))
+                        + I18n.t("Podrás deshacerlo justo después.", "You can undo it right after."))
                 .setNegativeButton(I18n.t("Cancelar", "Cancel"), null)
                 .setPositiveButton(I18n.t("Aplicar", "Apply"), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
+                        // Foto de lo que había en las claves que toca el perfil, para «Deshacer».
+                        final android.content.SharedPreferences prefs = getSharedPreferences(PrefsProvider.PREFS, 0);
+                        final String[] keys = Presets.keys(preset);
+                        final String[] before = new String[keys.length];
+                        for (int i = 0; i < keys.length; i++) {
+                            Object v = prefs.getAll().get(keys[i]);
+                            before[i] = v == null ? null : String.valueOf(v);
+                        }
                         Presets.apply(SettingsActivity.this, preset);
                         settingsReplaced();
-                        toast(I18n.t("Perfil aplicado: ", "Preset applied: ") + Presets.name(preset));
+                        showPill(I18n.t("«" + Presets.name(preset) + "» aplicado · Deshacer",
+                                "“" + Presets.name(preset) + "” applied · Undo"), false, new Runnable() {
+                            @Override
+                            public void run() {
+                                android.content.SharedPreferences.Editor e = prefs.edit();
+                                for (int i = 0; i < keys.length; i++) {
+                                    if (before[i] == null) e.remove(keys[i]);
+                                    else e.putString(keys[i], before[i]);
+                                }
+                                e.commit();
+                                settingsReplaced();
+                                toast(I18n.t("Deshecho", "Undone"));
+                            }
+                        }, 6000);
                     }
                 })
                 .show();
@@ -3271,6 +3479,10 @@ public class SettingsActivity extends Activity {
                         @Override
                         public void accept(Integer result) {
                             // 2 = ya estaba; 0 o 1 = el usuario ha respondido; el resto, error.
+                            if (result == android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED
+                                    || result == android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED) {
+                                PauseTile.added(SettingsActivity.this, true);
+                            }
                             if (result == android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED) {
                                 toast(I18n.t("El tile ya está en tu panel", "The tile is already in your panel"));
                             } else if (result != android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED
@@ -3286,7 +3498,6 @@ public class SettingsActivity extends Activity {
 
     /** Tras cambiar muchos ajustes de golpe: avisa a los procesos enganchados y repinta la app. */
     void settingsReplaced() {
-        if (Migrate.needed(this)) Migrate.skip(this);       // ya no hay que importar los antiguos
         send(Remote.TUNE);
         for (Runnable rf : refreshers) rf.run();
     }
@@ -3295,9 +3506,9 @@ public class SettingsActivity extends Activity {
     private void shareSettings() {
         try {
             String msg = I18n.t("Mis ajustes de HyperSpring " + Version.NAME + ". Para usarlos, copia este mensaje "
-                            + "y en HyperSpring ve a Acerca de → Pegar ajustes compartidos.",
+                            + "y en HyperSpring ve a Acerca de → Cargar ajustes.",
                     "My HyperSpring " + Version.NAME + " settings. To use them, copy this message and in "
-                            + "HyperSpring go to About → Paste shared settings.")
+                            + "HyperSpring go to About → Load settings.")
                     + "\n\n" + Backup.shareCode(this);
             android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SEND);
             i.setType("text/plain");
@@ -3308,19 +3519,23 @@ public class SettingsActivity extends Activity {
         }
     }
 
-    /** Lee el portapapeles, busca un código HS1: y, si el usuario confirma, lo aplica. */
-    private void pasteSettings() {
-        String text = null;
+    /** El texto del portapapeles, o null. */
+    private String clipText() {
         try {
             android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             android.content.ClipData clip = cm.getPrimaryClip();
             if (clip != null && clip.getItemCount() > 0) {
                 CharSequence cs = clip.getItemAt(0).coerceToText(this);
-                if (cs != null) text = cs.toString();
+                if (cs != null) return cs.toString();
             }
         } catch (Throwable ignored) {
         }
-        final String json = Backup.fromCode(text);
+        return null;
+    }
+
+    /** Lee el portapapeles, busca un código HS1: y, si el usuario confirma, lo aplica. */
+    private void pasteSettings() {
+        final String json = Backup.fromCode(clipText());
         if (json == null) {
             toast(I18n.t("No hay ningún código de HyperSpring copiado (empieza por HS1:)",
                     "No HyperSpring code copied (it starts with HS1:)"));
@@ -3335,10 +3550,10 @@ public class SettingsActivity extends Activity {
                 .setTitle(I18n.t("¿Usar estos ajustes?", "Use these settings?"))
                 .setMessage(I18n.t("Sustituyen todos tus ajustes" + (from.isEmpty() ? "" : " (son de la " + from + ")")
                                 + ". Tu lista de apps sin genio se conserva. Si quieres poder volver atrás, exporta antes "
-                                + "los tuyos (Acerca de → Exportar ajustes).",
+                                + "los tuyos (Acerca de → Guardar o compartir ajustes).",
                         "They replace all your settings" + (from.isEmpty() ? "" : " (they come from " + from + ")")
                                 + ". Your list of apps without genie is kept. To be able to go back, export yours "
-                                + "first (About → Export settings)."))
+                                + "first (About → Save or share settings)."))
                 .setNegativeButton(I18n.t("Cancelar", "Cancel"), null)
                 .setPositiveButton(I18n.t("Usar", "Use"), new android.content.DialogInterface.OnClickListener() {
                     @Override
@@ -3410,22 +3625,6 @@ public class SettingsActivity extends Activity {
         }
     }
 
-    private void importOldPrefs() {
-        Migrate.listener = new Runnable() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        toast(I18n.t("Ajustes de la versión anterior importados", "Settings from the previous version imported"));
-                        if (!isFinishing() && !isDestroyed()) recreate();
-                    }
-                });
-            }
-        };
-        Migrate.start(this);
-    }
-
     private float stored(Object[] it) {
         float def = (Float) it[4];
         try {
@@ -3442,8 +3641,6 @@ public class SettingsActivity extends Activity {
         if (value == null) e.remove(key);
         else e.putString(key, value);
         e.commit();
-        // Si aún no se han importado los ajustes antiguos (sin root), ya no se hará: pisarían este.
-        if (Migrate.needed(this)) Migrate.skip(this);
         send(Remote.TUNE);
     }
 
@@ -3458,6 +3655,10 @@ public class SettingsActivity extends Activity {
      * al escritorio.
      */
     void restart(final boolean systemUi) {
+        // Reiniciado (desde la pastilla o desde Inicio): ese proceso ya no espera nada.
+        if (systemUi) pendSystemUi = false;
+        else pendLauncher = false;
+        if (pill != null) hidePill(true);
         final String name = systemUi ? I18n.t("la interfaz del sistema", "System UI") : I18n.t("el launcher", "the launcher");
         toast(I18n.t("Reiniciando ", "Restarting ") + name + "…");
         new Thread(new Runnable() {
@@ -3501,17 +3702,102 @@ public class SettingsActivity extends Activity {
         }, "reinicio").start();
     }
 
-    private android.widget.Toast restartToast;
+    // ---------------------------------------------------------------- pastilla flotante
+    /** La pastilla que flota sobre la barra de pestañas (deshacer un perfil, reiniciar), o null. */
+    private TextView pill;
+    /** Funciones cambiadas que esperan a que se reinicie su proceso. */
+    private boolean pendLauncher, pendSystemUi;
 
-    /** Aviso corto tras cambiar una función que necesita reiniciar su proceso. */
+    /** Tras cambiar una función que necesita reiniciar su proceso: la pastilla se queda hasta reiniciar. */
     private void pendingRestart(boolean systemUi) {
         if (ob != null) return;                 // en la presentación, el reinicio se ofrece al final
-        if (restartToast != null) restartToast.cancel();
-        restartToast = android.widget.Toast.makeText(this, systemUi
-                ? I18n.t("Se aplica al reiniciar la interfaz (Inicio → Reiniciar interfaz del sistema)", "Applies after restarting System UI (Home → Restart System UI)")
-                : I18n.t("Se aplica al reiniciar el launcher (Inicio → Reiniciar launcher)", "Applies after restarting the launcher (Home → Restart launcher)"),
-                android.widget.Toast.LENGTH_SHORT);
-        restartToast.show();
+        if (systemUi) pendSystemUi = true;
+        else pendLauncher = true;
+        showRestartPill();
+    }
+
+    private void showRestartPill() {
+        final boolean l = pendLauncher, s = pendSystemUi;
+        if (!l && !s) return;
+        String what = l && s ? I18n.t("el launcher y la interfaz", "the launcher and System UI")
+                : l ? I18n.t("el launcher", "the launcher") : I18n.t("la interfaz", "System UI");
+        // Mantener pulsado, como las filas de reiniciar: un toque sin querer no cierra nada.
+        showPill(I18n.t("Mantén pulsado para reiniciar " + what, "Hold to restart " + what), true, new Runnable() {
+            @Override
+            public void run() {
+                if (l) restart(false);
+                if (s) restart(true);
+            }
+        }, 0);
+    }
+
+    /**
+     * Enseña la pastilla con un mensaje y una acción: al tocarla o, si {@code hold}, al mantenerla
+     * pulsada. Con {@code hideMs} > 0 se va sola; después vuelve la de reiniciar si hace falta.
+     */
+    private void showPill(String msg, final boolean hold, final Runnable action, long hideMs) {
+        if (pill != null) root.removeView(pill);
+        final TextView p = text(msg, 13.5f, text);
+        p.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        p.setGravity(Gravity.CENTER);
+        p.setPadding(px(18), px(11), px(18), px(11));
+        GradientDrawable g = round(card, px(100));
+        g.setStroke(Math.max(1, px(1)), accent);
+        p.setBackground(g);
+        p.setElevation(px(6));
+        if (hold) {
+            p.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    toast(I18n.t("Mantenla pulsada", "Hold it down"));
+                }
+            });
+            p.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    hidePill(false);
+                    action.run();
+                    return true;
+                }
+            });
+        } else {
+            p.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hidePill(true);
+                    action.run();
+                }
+            });
+        }
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        lp.bottomMargin = barSpace + px(10);
+        lp.leftMargin = px(16);
+        lp.rightMargin = px(16);
+        root.addView(p, lp);
+        pill = p;
+        p.setAlpha(0f);
+        p.setTranslationY(px(16));
+        p.animate().alpha(1f).translationY(0f).setDuration(260).start();
+        if (hideMs > 0) p.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (pill == p) hidePill(true);
+            }
+        }, hideMs);
+    }
+
+    /** Quita la pastilla; con {@code thenRestart}, vuelve a avisar del reinicio pendiente. */
+    private void hidePill(boolean thenRestart) {
+        final TextView p = pill;
+        pill = null;
+        if (p != null) p.animate().alpha(0f).translationY(px(16)).setDuration(200).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                root.removeView(p);
+            }
+        }).start();
+        if (thenRestart) showRestartPill();
     }
 
     /** Lo último que se pulsó: si abre una página, la transición sale de ahí (ver push). */

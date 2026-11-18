@@ -34,8 +34,8 @@ import com.icehome.up.xp.XposedHelpers;
  * cada una más pequeña, transparente y desenfocada. Cada tarjeta tiene su propio contorno
  * redondeado y ningún contenedor recorta, así la baraja se ve también en reposo.
  *
- * ARRASTRE LIBRE en cualquier dirección: la tarjeta sigue al dedo 1:1 (goma logarítmica
- * pasado el radio), con escala, inclinación y estiramiento según distancia y velocidad.
+ * ARRASTRE LIBRE como HyperOS 4: goma con tope (arriba entera, abajo 20 %, lados 15 %;
+ * ver rubberHos4), con escala, inclinación y estiramiento según distancia y velocidad.
  *
  * AL SOLTAR, física por fotograma que conserva la velocidad del dedo:
  *  - si supera el 50 % del radio o hay fling hacia fuera, la tarjeta sigue su inercia, hace un
@@ -50,7 +50,6 @@ final class StackSwipe {
     // ---------------------------------------------------------------- ajustes
     // Arrastre
     static final float RADIUS_DP = 120f;          // radio antes de la goma
-    static final float RUBBER_K = 0.35f;          // fuerza de la goma logarítmica (× radio)
     static final float DRAG_SCALE = 0.95f;        // escala al arrastrar
     static final float TILT_MAX = 6f;             // inclinación máxima (grados)
     static final float TILT_PER_1000DP = 3.5f;    // grados por 1000 dp/s de velocidad horizontal
@@ -61,25 +60,37 @@ final class StackSwipe {
     static final float VEL_STRETCH_DP = 4000f;    // …máximo a esta velocidad (dp/s)
     static final float REVEAL_WHILE_DRAG = 0.35f; // cuánto avanza la baraja al arrastrar
     static final float COMMIT_REVEAL_BOOST = 0.15f;
-    static final float PARALLAX = 0.08f;          // las de detrás siguen al dedo (÷ nivel)
+    static final float PARALLAX = 0.10f;          // las de detrás siguen a la de arriba (÷ nivel), HyperOS 4
+    static final float SIDE_FOLLOW = 0.15f;       // hacia los lados la tarjeta sigue el 15 % (HyperOS 4)
     // Decisión al soltar
     static final float COMMIT_FRACTION = 0.5f;    // 50 % del radio
     static final float FLING_DP = 900f;           // dp/s
     // Física al soltar
-    static final float THROW_RESPONSE = 0.46f, THROW_DAMPING = 0.70f;   // arco + micro-rebote ≈ 5 dp
-    static final float RETURN_RESPONSE = 0.36f, RETURN_DAMPING = 0.66f; // vuelta con sobreimpulso
-    static final float SCALE_RESPONSE = 0.40f, SCALE_DAMPING = 0.80f;
-    static final float REVEAL_RESPONSE = 0.38f, REVEAL_DAMPING = 0.72f;
+    // Muelles sacados del launcher de HyperOS 4 (Flutter, _onFlipAnimationCompleted): el mismo
+    // modelo (amortiguación, respuesta) que usamos aquí. Posición 0,8/0,32 (un rebote leve);
+    // escala y baraja 1,0/0,3 (sin rebote).
+    static final float THROW_RESPONSE = 0.32f, THROW_DAMPING = 0.80f;
+    static final float RETURN_RESPONSE = 0.32f, RETURN_DAMPING = 0.80f;
+    static final float SCALE_RESPONSE = 0.30f, SCALE_DAMPING = 1.0f;
+    static final float REVEAL_RESPONSE = 0.30f, REVEAL_DAMPING = 1.0f;
     static final float THROW_MIN_DP = 1400f;      // impulso mínimo hacia fuera si se suelta sin velocidad
     static final float SWAP_MIN_S = 0.12f, SWAP_MAX_S = 0.35f;
     static final float FADE_S = 0.28f;
     static final float SEND_BLUR_DP = 12f;
     // Baraja
-    static final int DECK_VISIBLE = 2;
-    static final float DECK_DX_DP = 8f, DECK_DY_DP = 10f;   // por nivel: derecha y arriba
-    static final float DECK_SCALE = 0.03f, DECK_ALPHA = 0.18f, DECK_BLUR_DP = 7f;
+    static final int DECK_VISIBLE = 2;        // dos tarjetas asoman detrás, en abanico
+    static final float DECK_ROT = 4f;         // grados: la 2.ª gira a un lado y la 3.ª al otro
+    static final float DECK_DX_DP = 6f, DECK_DY_DP = 7f;    // cuánto asoma por nivel: derecha y arriba
+    static final float DECK_SCALE = 0.10f, DECK_ALPHA = 0.18f, DECK_BLUR_DP = 7f;   // 0,9 como HyperOS 4
+    // Arrastre hacia abajo (vídeo y código de HyperOS 4)
+    static final float PULL_COMMIT = 0.4f;        // cambia al bajar el 40 % del alto
+    static final float PULL_RISE = 0.3f;          // la siguiente sube un 30 % del alto por detrás
+    static final float PULL_FRONT_SCALE = 0.95f;  // la de delante se encoge un poco
+    static final float PULL_FRONT_BLUR_DP = 6f;
+    static final float DROP_RESPONSE = 0.32f, DROP_DAMPING = 0.80f;   // caída delante, rebote leve
+    static final float BACK_RESPONSE = 0.30f, BACK_DAMPING = 1.0f;    // la vieja a la baraja
     static final float DECK_SPREAD = 0.5f;        // cuánto se abre al tocar
-    static final float SPREAD_RESPONSE = 0.30f, SPREAD_DAMPING = 0.80f;
+    static final float SPREAD_RESPONSE = 0.35f, SPREAD_DAMPING = 0.95f;   // baraja de HyperOS 4
     static final long SPREAD_DELAY_MS = 60;
 
     // ------------------------------------------------------------ reflexión
@@ -89,12 +100,14 @@ final class StackSwipe {
     // ---------------------------------------------------------------- estado
     static final class St {
         VelocityTracker vt;
-        float downRawX, downRawY, anchorX, rawDx;
+        float downRawX, downRawY, anchorX, rawDx, rawDy;
         float curVx, curVy;
         boolean active;           // nuestro arrastre/física controla las transformaciones
         boolean beyond;           // pasado el umbral de envío
         boolean renderedOnce;     // ya se pidió a Kashi un render en este gesto
         float dx, dy, scale = 1f, stx = 1f, sty = 1f, tilt, alpha = 1f, blur, reveal;
+        boolean pullMode;         // arrastre hacia abajo: la siguiente entra desde arriba (HyperOS 4)
+        float pull, drop;         // 0..1: cuánto ha subido la siguiente / cuánto ha caído delante
         int frontPage = -1;
         float frontZ;
         float spread;
@@ -231,7 +244,8 @@ final class StackSwipe {
         float R = dp(layer, RADIUS_DP);
         float rawDx = st.rawDx;
 
-        float[] v = rubberVec(rawDx, dy, R);
+        float[] v = rubberHos4(layer, rawDx, dy);
+        st.rawDy = dy;
         st.dx = v[0];
         st.dy = v[1];
         float mm = (float) Math.hypot(v[0], v[1]);
@@ -247,6 +261,20 @@ final class StackSwipe {
         st.beyond = beyond;
         float targetReveal = REVEAL_WHILE_DRAG * k + (beyond ? COMMIT_REVEAL_BOOST : 0f);
         st.reveal += (targetReveal - st.reveal) * 0.35f;
+        // Hacia abajo (vídeo de HyperOS 4): la de delante casi no baja y se encoge; la siguiente
+        // sube por detrás asomando por arriba, lista para caer delante al soltar.
+        st.pullMode = dy > 0f && n >= 2;
+        if (st.pullMode) {
+            float pull = clamp01(dy / (PULL_COMMIT * Math.max(1f, layer.getHeight())));
+            if (pull >= 1f && st.pull < 1f) layer.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            st.pull = pull;
+            st.reveal = 0f;
+            st.scale = lerp(1f, PULL_FRONT_SCALE, pull);
+            st.stx = st.sty = 1f;
+            st.blur = PULL_FRONT_BLUR_DP * layer.getResources().getDisplayMetrics().density * pull;
+        } else {
+            st.pull = 0f;
+        }
         st.frontPage = cur;
         st.active = true;
         if (!st.renderedOnce) {
@@ -257,14 +285,24 @@ final class StackSwipe {
         }
     }
 
-    /** Goma: lineal hasta R, logarítmica a partir de ahí. */
-    static float[] rubberVec(float x, float y, float R) {
-        float m = (float) Math.hypot(x, y);
-        if (m <= R || m == 0f) return new float[]{x, y};
-        float c = RUBBER_K * R;
-        float f = (R + c * (float) Math.log(1.0 + (m - R) / c)) / m;
-        return new float[]{x * f, y * f};
+    /**
+     * Seguimiento del dedo como el launcher de HyperOS 4 (Flutter, _updatePointerTracking):
+     * goma con tope L·(t − t² + t³/3), t = |d|/L (máximo L/3), con L = ancho o alto de la pila.
+     * Hacia arriba sigue la goma entera, hacia abajo solo el 20 % (mezcla en ±5 dp) y hacia
+     * los lados el 15 %.
+     */
+    static float[] rubberHos4(View layer, float x, float y) {
+        float lx = Math.max(1f, layer.getWidth()), ly = Math.max(1f, layer.getHeight());
+        float five = dp(layer, 5f);
+        float a = y >= five ? 0f : y <= -five ? 1f : (1f - y / five) / 2f;
+        return new float[]{rubberAxis(x, lx) * SIDE_FOLLOW, rubberAxis(y, ly) * (0.8f * a + 0.2f)};
     }
+
+    static float rubberAxis(float d, float l) {
+        float t = Math.min(1f, Math.abs(d) / l);
+        return Math.signum(d) * l * (t - t * t + t * t * t / 3f);
+    }
+
 
     /** Estirar y aplastar: a = max(por distancia, por velocidad), en la dirección del movimiento. */
     static void stretch(St st, View v, float aDisp, float dirX, float dirY, float vx, float vy) {
@@ -348,6 +386,18 @@ final class StackSwipe {
             int page = (cur + d) % n;
             float depth = d - reveal;
             float[] p = pose(layer, depth, spreadMul);
+            if (d == 1 && st.active && (st.pull > 0f || st.drop > 0f)) {
+                p = incoming(layer, p, st);
+                boolean base = isBase(pages, page);
+                for (View v : viewsOf(layer, page)) {
+                    if (!base && v.getVisibility() != View.VISIBLE) v.setVisibility(View.VISIBLE);
+                    set(v, p[0], p[1], p[2], p[2], p[3], p[4], p[5]);
+                    v.setTranslationZ(st.drop > 0f ? 0.02f : -0.01f);   // al caer, por delante
+                    roundCard(v, radius);
+                    hwLayer(v, true);
+                }
+                continue;
+            }
             if (st.active && dragging && depth > 0.05f) {
                 p[0] += st.dx * PARALLAX / depth;
                 p[1] += st.dy * PARALLAX / depth;
@@ -355,7 +405,7 @@ final class StackSwipe {
             boolean base = isBase(pages, page);
             for (View v : viewsOf(layer, page)) {
                 if (!base && v.getVisibility() != View.VISIBLE && p[3] > 0.003f) v.setVisibility(View.VISIBLE);
-                set(v, p[0], p[1], p[2], p[2], p[3], p[4], 0f);
+                set(v, p[0], p[1], p[2], p[2], p[3], p[4], p[5]);
                 v.setTranslationZ(-0.01f * Math.max(0f, depth));
                 roundCard(v, radius);
                 if (st.active) hwLayer(v, true);
@@ -364,15 +414,37 @@ final class StackSwipe {
         for (View v : viewsOf(layer, cur)) roundCard(v, radius);
     }
 
-    /** Pose de un nivel: {tx, ty, escala, opacidad, blur}. Profundidad < 0 = se pasa hacia delante. */
+    /**
+     * La siguiente tarjeta al arrastrar hacia abajo: desde su sitio en la baraja sube
+     * (PULL_RISE del alto) y se aclara; al soltar cae delante hasta su sitio (drop = 1).
+     */
+    static float[] incoming(View layer, float[] b, St st) {
+        float h = layer.getHeight();
+        float risenY = b[1] - PULL_RISE * h * st.pull;
+        float s = lerp(b[2], PULL_FRONT_SCALE, st.pull);
+        float a = lerp(b[3], 1f, st.pull);
+        float bl = b[4] * (1f - 0.5f * st.pull);
+        float w = st.drop;
+        float r = b[5] * (1f - st.pull) * (1f - clamp01(w));   // se endereza al subir
+        return new float[]{lerp(b[0], 0f, w), lerp(risenY, 0f, w), lerp(s, 1f, w), lerp(a, 1f, w), lerp(bl, 0f, clamp01(w)), r};
+    }
+
+    /** Pose de un nivel: {tx, ty, escala, opacidad, blur, giro}. Profundidad < 0 = se pasa hacia delante. */
     static float[] pose(View v, float depth, float spreadMul) {
         float dens = v.getResources().getDisplayMetrics().density;
         float dd = Math.max(-0.4f, depth);
         float pos = Math.max(0f, dd);
         float alpha = 1f - DECK_ALPHA * pos;
         if (pos > DECK_VISIBLE) alpha *= clamp01(DECK_VISIBLE + 1f - pos);
-        return new float[]{DECK_DX_DP * dens * dd * spreadMul, -DECK_DY_DP * dens * dd * spreadMul,
-                1f - DECK_SCALE * dd, clamp01(alpha), DECK_BLUR_DP * dens * pos};
+        // Más pequeña (escala desde el centro) y desplazada para que asome su esquina de arriba a
+        // la derecha unos dp por fuera de la de delante, como en el vídeo de HyperOS 4.
+        float s = 1f - DECK_SCALE * dd;
+        // Abanico: el giro y el lado van de 0 (delante) a +1 (2.ª, a la derecha) y a -1 (3.ª, a
+        // la izquierda), así la 3.ª es la 2.ª en espejo y al subir un nivel gira al otro lado.
+        float side = pos <= 1f ? pos : 3f - 2f * Math.min(pos, 2f);
+        float tx = ((1f - s) / 2f * v.getWidth() + DECK_DX_DP * dens * side) * spreadMul;
+        float ty = -((1f - s) / 2f * v.getHeight() + DECK_DY_DP * dens * dd) * spreadMul;
+        return new float[]{tx, ty, s, clamp01(alpha), DECK_BLUR_DP * dens * pos, DECK_ROT * side * spreadMul};
     }
 
     static void set(View v, float tx, float ty, float sx, float sy, float a, float blurPx, float rot) {
@@ -560,7 +632,7 @@ final class StackSwipe {
         if (a == MotionEvent.ACTION_DOWN) {
             if (st.vt == null) st.vt = VelocityTracker.obtain();
             else st.vt.clear();
-            st.rawDx = 0f;
+            st.rawDx = st.rawDy = 0f;
             st.tilt = 0f;
             st.curVx = st.curVy = 0f;
             st.beyond = false;
@@ -691,15 +763,23 @@ final class StackSwipe {
             vx = st.vt.getXVelocity();
             vy = st.vt.getYVelocity();
         }
+        // HyperOS 4 al soltar: velocidad vertical × 1,2, entre −12000 y +10000 (px lógicos/s).
+        vy = Math.max(-dp(layer, 12000f), Math.min(dp(layer, 10000f), vy * 1.2f));
         float R = dp(layer, RADIUS_DP);
-        float m0 = (float) Math.hypot(st.dx, st.dy);
+        // La goma de HyperOS 4 frena mucho la tarjeta: se decide con el recorrido del dedo.
+        float m0 = (float) Math.hypot(st.rawDx, st.rawDy);
         boolean outward = m0 < 1f || (vx * st.dx + vy * st.dy) > 0f;
         boolean fling = Math.hypot(vx, vy) > dp(layer, FLING_DP) && outward;
         boolean commit = nb >= 0 && (m0 >= COMMIT_FRACTION * R || fling);
 
         ValueAnimator old = (ValueAnimator) fSettle.get(layer);
         if (old != null) old.cancel();
-        physics(layer, pages, cur, nb, commit, vx, vy);
+        if (st.pullMode && nb >= 0) {
+            // Hacia abajo: cambia si se pasó el 40 % del alto o se lanzó hacia abajo.
+            pullPhysics(layer, pages, cur, nb, st.pull >= 1f || vy > dp(layer, FLING_DP), vy);
+        } else {
+            physics(layer, pages, cur, nb, commit, vx, vy);
+        }
         mHideDotsLater.invoke(layer);
     }
 
@@ -772,6 +852,7 @@ final class StackSwipe {
                 }
                 st.blur = endBlur * q;
                 st.alpha = lerp(1f, endAlpha, q);
+                if (commit) st.tilt = lerp(st.tilt, endPose[5], q);
                 fastFrame(layer);
 
                 boolean settled = Math.abs(x[0] - tx) < 0.5f && Math.abs(y[0] - ty) < 0.5f
@@ -820,6 +901,109 @@ final class StackSwipe {
         va.start();
     }
 
+    /**
+     * Soltar tras arrastrar hacia abajo. Con cambio: la siguiente cae delante (muelle 0,8/0,32,
+     * rebote leve) y la vieja se va a su sitio en la baraja (1,0/0,3). Sin cambio: todo vuelve.
+     */
+    private static void pullPhysics(final View layer, final List<Integer> pages, final int cur, final int nb,
+                                    final boolean commit, float vy) {
+        final St st = st(layer);
+        final int dEnd = Math.min(pages.size() - 1, DECK_VISIBLE + 1);
+        final float[] back = pose(layer, dEnd, 1f);
+        // La caída hereda la velocidad del dedo (en fracción del recorrido por segundo): así rebota
+        // como en HyperOS 4 cuando se lanza, en vez de arrancar parada.
+        float travel = Math.max(1f, PULL_RISE * layer.getHeight() * st.pull);
+        final float[] dr = {0f, Math.max(0f, Math.min(8f, vy / travel))}, pl = {st.pull, 0f};
+        final float[] x = {st.dx, 0f}, y = {st.dy, 0f}, sc = {st.scale, 0f}, al = {st.alpha, 0f}, bl = {st.blur, 0f};
+        final float[] ro = {st.tilt, 0f};
+        if (commit) {
+            layer.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            st.frontPage = nb;
+            st.frontZ = -0.01f * (pages.size() + 1);
+        }
+        final ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);   // solo como reloj cancelable por Kashi
+        va.setDuration(4000);
+        va.setInterpolator(null);
+        final long[] last = {0L};
+        final float[] clock = {0f};
+        final boolean[] finished = {false};
+        va.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator a) {
+                if (finished[0]) return;
+                long now = System.nanoTime();
+                float dt = last[0] == 0L ? 1f / 120f : Math.min(1f / 30f, (now - last[0]) / 1e9f);
+                last[0] = now;
+                clock[0] += dt;
+                if (commit) {
+                    springStep(dr, 1f, DROP_RESPONSE, DROP_DAMPING, dt);
+                    springStep(x, back[0], BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(y, back[1], BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(sc, back[2], BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(al, back[3], BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(bl, back[4], BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(ro, back[5], BACK_RESPONSE, BACK_DAMPING, dt);
+                } else {
+                    springStep(pl, 0f, BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(x, 0f, RETURN_RESPONSE, RETURN_DAMPING, dt);
+                    springStep(y, 0f, RETURN_RESPONSE, RETURN_DAMPING, dt);
+                    springStep(sc, 1f, BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(bl, 0f, BACK_RESPONSE, BACK_DAMPING, dt);
+                    springStep(ro, 0f, BACK_RESPONSE, BACK_DAMPING, dt);
+                }
+                st.drop = dr[0];
+                st.pull = Math.max(0f, pl[0]);
+                st.dx = x[0];
+                st.dy = y[0];
+                st.scale = sc[0];
+                st.alpha = clamp01(al[0]);
+                st.blur = Math.max(0f, bl[0]);
+                st.tilt = ro[0];
+                fastFrame(layer);
+                boolean settled = commit
+                        ? Math.abs(dr[0] - 1f) < 0.002f && Math.abs(dr[1]) < 0.02f && Math.abs(y[0] - back[1]) < 0.5f
+                        : Math.abs(pl[0]) < 0.003f && Math.abs(y[0]) < 0.5f && Math.abs(x[0]) < 0.5f;
+                if (settled || clock[0] > 2.5f) {
+                    finished[0] = true;
+                    final ValueAnimator self = a;
+                    layer.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (self.isRunning()) self.end();
+                        }
+                    });
+                }
+            }
+        });
+        va.addListener(new AnimatorListenerAdapter() {
+            boolean done;
+
+            @Override
+            public void onAnimationCancel(Animator a) {
+                end();
+            }
+
+            @Override
+            public void onAnimationEnd(Animator a) {
+                end();
+            }
+
+            private void end() {
+                if (done) return;
+                done = true;
+                finished[0] = true;
+                if (commit) settle(layer, pages, nb);
+                reset(layer, cur, nb);
+                render(layer, commit ? nb : cur, -1, 0f, false, 0f);
+            }
+        });
+        try {
+            fSettle.set(layer, va);
+        } catch (Throwable ignored) {
+        }
+        va.start();
+    }
+
     /** Duración de un fotograma de la pantalla (s). */
     private static float frameSeconds(View v) {
         android.view.Display d = v.getDisplay();
@@ -845,6 +1029,8 @@ final class StackSwipe {
         st.beyond = false;
         st.renderedOnce = false;
         st.dx = st.dy = st.tilt = st.blur = st.reveal = st.frontZ = 0f;
+        st.pull = st.drop = 0f;
+        st.pullMode = false;
         st.scale = st.alpha = st.stx = st.sty = 1f;
         st.frontPage = -1;
         try {

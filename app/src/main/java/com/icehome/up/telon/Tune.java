@@ -24,7 +24,6 @@ public final class Tune {
             {"telon_curve", "Forma", 0f, 1f, 0f, 2, "0 = se inclina recta, como un paralelogramo. 1 = se curva como un telón, con la parte de abajo más doblada."},
             {"telon_blur", "Estela de movimiento", 0f, 1.5f, 0.6f, 2, "Desenfoque en la dirección del movimiento cuando la ventana va rápida. 0 la quita."},
             {"telon_bg_blur", "Desenfoque de la pantalla de debajo", 0f, 1.5f, 1f, 2, "La pantalla que queda detrás se desenfoca mientras entra la nueva y se enfoca al volver. 0 lo quita."},
-            {"telon_fps", "Fotogramas por segundo", 30f, 120f, 60f, 0, "Máximo de fotogramas del telón. Ponlo igual al refresco de tu pantalla."},
             {"telon_quality", "Resolución", 30f, 100f, 50f, 0, "Nitidez de la ventana durante el telón. Más alta se ve más nítida pero gasta más."},
             {"#", "Captura que encoge"},
             {"telon_squeeze_size", "Tamaño", 50f, 98f, 75f, 0, "Tamaño de la pantalla, en %, en el punto más hundido. Los Pixel se quedan en un 97 %, un empujón suave."},
@@ -60,7 +59,7 @@ public final class Tune {
         Telon.strength = paused ? 0f : f(c, "telon_strength");
         // Las apps de «Apps sin genio» tampoco llevan telón.
         Telon.exclude = com.icehome.up.Exclude.parse(m == null ? null : m.get(com.icehome.up.Exclude.KEY));
-        Telon.maxFps = f(c, "telon_fps");
+        Telon.maxFps = Math.min(60f, com.icehome.up.Tune.maxRefresh(c));  // tope de 60, como el genio: a 120 Hz era el doble de GPU
         Telon.captureScale = f(c, "telon_quality") / 100f;
         Telon.motionBlur = f(c, "telon_blur");
         Telon.belowBlur = f(c, "telon_bg_blur");

@@ -1344,7 +1344,22 @@ public final class CcGlass {
         private final int[] loc = new int[2];
         private final int[] last = {Integer.MIN_VALUE, 0};
         private float lastSx = -1, lastSy = -1;
+        private final float[] sc = new float[2];
+        private long placedAt = -1;
         private boolean tracking;
+
+        /**
+         * Rellena {@code loc} y {@code sc} (posición y escala en pantalla). drawUnder y draw del
+         * mismo fotograma comparten la cuenta (mismo getDrawingTime): antes se hacía tres veces
+         * por pieza y fotograma, y con 20-30 piezas pesaba en el hilo principal.
+         */
+        private void place(boolean fresh) {
+            long t = host.getDrawingTime();
+            if (!fresh && t == placedAt) return;
+            placedAt = t;
+            host.getLocationOnScreen(loc);
+            chainScale(host, sc);
+        }
 
         Skin(View host) {
             this.host = host;
@@ -1384,8 +1399,7 @@ public final class CcGlass {
                     // mirar antes de cada fotograma; layout() no hace nada si no ha cambiado.
                     if (host.isAttachedToWindow() && radius >= 0 && radiusOf(host) != radius) layout();
                     if (backdrop == null || !on || !eligible || !host.isAttachedToWindow()) return true;
-                    host.getLocationOnScreen(loc);
-                    float[] sc = chainScale(host);
+                    place(true);
                     if (loc[0] != last[0] || loc[1] != last[1] || sc[0] != lastSx || sc[1] != lastSy) {
                         invalidateSelf();
                         if (underDrawn) host.invalidate();
@@ -1536,8 +1550,7 @@ public final class CcGlass {
                 rs.setInputShader("wall", GlassShader.linear(b));
                 boundBackdrop = b;
             }
-            host.getLocationOnScreen(loc);
-            float[] sc = chainScale(host);
+            place(false);
             last[0] = loc[0];
             last[1] = loc[1];
             lastSx = sc[0];
@@ -1612,8 +1625,7 @@ public final class CcGlass {
                     u.setInputShader("wall", GlassShader.linear(b));
                     underBackdrop = b;
                 }
-                host.getLocationOnScreen(loc);
-                float[] sc = chainScale(host);
+                place(false);
                 last[0] = loc[0];
                 last[1] = loc[1];
                 lastSx = sc[0];
@@ -1762,13 +1774,15 @@ public final class CcGlass {
         return Math.min(22 * d, half);
     }
 
-    private static float[] chainScale(View v) {
+    /** Escala acumulada de la vista y sus padres, escrita en {@code out} (sin crear objetos). */
+    private static void chainScale(View v, float[] out) {
         float sx = 1f, sy = 1f;
         for (View c = v; c != null; c = c.getParent() instanceof View ? (View) c.getParent() : null) {
             sx *= c.getScaleX();
             sy *= c.getScaleY();
         }
-        return new float[]{sx, sy};
+        out[0] = sx;
+        out[1] = sy;
     }
 
     private static int hookAll(Class<?> c, XC_MethodHook h, String... names) {

@@ -89,70 +89,103 @@ public class MainHook {
                 + ", cristal carpetas " + onOff(Tune.on(c, "icehome_folder_glass_on"))
                 + ", menú de atajos " + onOff(Tune.on(c, "icehome_menu_on")));
         if (Tune.on(c, "icehome_genie_on")) {
+            fxTotal++;
             try {
                 WindowAnim.install(cl);
                 Genie.enabled = true;
                 Genie.startThreads();
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_genie_on");
                 Log.e("no se pudo instalar el genio (¿otra versión del launcher?)", t);
             }
         }
+        fxTotal++;
         try {
             WallpaperZoom.install(cl);
+            fxOk++;
         } catch (Throwable t) {
+            fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_wallpaper_zoom");
             Log.e("no se pudo instalar el zoom del fondo", t);
         }
+        fxTotal++;
         try {
             IconPress.install(cl);
+            fxOk++;
         } catch (Throwable t) {
+            fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_press_on");
             Log.e("no se pudo instalar el icono que se hunde", t);
         }
         if (Tune.on(c, "icehome_curtain_on")) {
+            fxTotal++;
             try {
                 RecentsCurtain.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_curtain_on");
                 Log.e("no se pudo instalar la cortina de recientes", t);
             }
         }
         if (Tune.on(c, "icehome_stack_on")) {
+            fxTotal++;
             try {
                 StackSwipe.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_stack_on");
                 XposedBridge.log("IceHome: error instalando StackSwipe");
                 XposedBridge.log(t);
             }
         }
         if (Tune.on(c, "icehome_folder_glass_on")) {
+            fxTotal++;
             try {
                 GlassFolder.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_folder_glass_on");
                 XposedBridge.log("IceHome: error instalando GlassFolder");
                 XposedBridge.log(t);
             }
         }
         if (Tune.on(c, "icehome_folder_morph_on")) {
+            fxTotal++;
             try {
                 FolderMorph.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_folder_morph_on");
                 XposedBridge.log("IceHome: error instalando FolderMorph");
                 XposedBridge.log(t);
             }
         }
         if (Tune.on(c, "icehome_dock_glass_on")) {
+            fxTotal++;
             try {
                 GlassDock.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_dock_glass_on");
                 Log.e("no se pudo instalar el dock de cristal (¿otra versión del launcher?)", t);
             }
         }
         if (Tune.on(c, "icehome_menu_on")) {
+            fxTotal++;
             try {
                 ShortcutMenuFx.install(cl);
+                fxOk++;
             } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_menu_on");
                 Log.e("no se pudo instalar el menú de atajos (¿otra versión del launcher?)", t);
             }
         }
-        }
+        // Para «Compatibilidad» en la app: cuántos efectos encendidos se engancharon y cuáles no.
+        Remote.state(c, "launcher_fx", fxOk + "/" + fxTotal + "|" + fxFailed);
+    }
+
+    /** Efectos del launcher encendidos, los que se instalaron bien y las claves de los que fallaron. */
+    private static int fxTotal, fxOk;
+    private static final StringBuilder fxFailed = new StringBuilder();
 
     /** Para el registro: con qué API se ha cargado el módulo aquí. */
     static String engineName() {

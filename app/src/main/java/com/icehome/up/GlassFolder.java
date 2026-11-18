@@ -379,6 +379,7 @@ final class GlassFolder {
         private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path clip = new Path();
         private final RectF box = new RectF();
+        private final RectF tmp = new RectF();   // rectángulo de trabajo: sin crear uno en cada fotograma
         private boolean blur;
         private float radius;
         private int alpha = 255;
@@ -439,9 +440,9 @@ final class GlassFolder {
             glowRim.setShader(new RadialGradient(x, y, Math.max(1f, Math.min(reach * 0.7f, 160f * density)),
                     new int[]{white(Math.round(0xE6 * Math.min(1f, k) * alpha / 255f)), white(0)},
                     null, Shader.TileMode.CLAMP));
-            RectF edge = new RectF(box.left + sw / 2f, box.top + sw / 2f, box.right - sw / 2f, box.bottom - sw / 2f);
+            tmp.set(box.left + sw / 2f, box.top + sw / 2f, box.right - sw / 2f, box.bottom - sw / 2f);
             float er = Math.max(0f, r - sw / 2f);
-            canvas.drawRoundRect(edge, er, er, glowRim);
+            canvas.drawRoundRect(tmp, er, er, glowRim);
         }
 
         Glass(View host) {
@@ -555,19 +556,19 @@ final class GlassFolder {
             canvas.drawRoundRect(box, r, r, sheen);
             if (!lens) {
                 float iw = inner.getStrokeWidth();
-                RectF in = new RectF(box.left + iw * 1.2f, box.top + iw * 1.2f, box.right - iw * 1.2f, box.bottom - iw * 1.2f);
+                tmp.set(box.left + iw * 1.2f, box.top + iw * 1.2f, box.right - iw * 1.2f, box.bottom - iw * 1.2f);
                 float ir = Math.max(0f, r - iw * 1.2f);
                 inner.setAlpha(alpha);
-                canvas.drawRoundRect(in, ir, ir, inner);
+                canvas.drawRoundRect(tmp, ir, ir, inner);
             }
             canvas.restoreToCount(save);
 
             // Con lente, el canto ya sale iluminado del color de detrás: el blanco solo lo afina.
             float rw = rim.getStrokeWidth();
-            RectF edge = new RectF(box.left + rw / 2f, box.top + rw / 2f, box.right - rw / 2f, box.bottom - rw / 2f);
+            tmp.set(box.left + rw / 2f, box.top + rw / 2f, box.right - rw / 2f, box.bottom - rw / 2f);
             float er = Math.max(0f, r - rw / 2f);
             rim.setAlpha(lens ? 0 : alpha);
-            canvas.drawRoundRect(edge, er, er, rim);
+            canvas.drawRoundRect(tmp, er, er, rim);
             drawGlow(canvas, r);
         }
 
