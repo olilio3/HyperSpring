@@ -58,6 +58,7 @@ public final class Tune {
             {"icehome_folder_chroma", "Dispersión de color", 0f, 3f, 1.2f, 1, "Separación de colores tipo arcoíris en las esquinas, como en un prisma. 0 la quita."},
             {"icehome_folder_light", "Brillo del borde", 0f, 0.3f, 0.1f, 2, "Luz que recoge el borde de la lente desde arriba a la izquierda."},
             {"icehome_folder_glow", "Brillo al tocar", 0f, 1.5f, 1f, 2, "Al tocar una carpeta, una luz suave sigue al dedo y el canto se enciende cerca de él. 0 lo quita."},
+            {"icehome_folder_haptic", "Vibración al redimensionar", 0f, 1f, 0.3f, 2, "Un tic cada vez que la carpeta salta a otro tamaño mientras la estiras. 0 lo quita. Respeta el ajuste de vibración del sistema."},
     };
 
     private static volatile Map<String, String> cache;
@@ -75,6 +76,7 @@ public final class Tune {
         Genie.physics = f(c, "icehome_genie_physics");
         Genie.maxFps = fpsCap(c, cache);
         Haptics.strength = f(c, "icehome_haptic");
+        Haptics.folder = f(c, "icehome_folder_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
         RecentsCurtain.strength = f(c, "icehome_curtain_strength");

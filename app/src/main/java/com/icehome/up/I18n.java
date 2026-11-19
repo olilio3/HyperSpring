@@ -149,6 +149,8 @@ final class I18n {
                 "Light the lens edge catches from the top left.");
         i("icehome_folder_glow", "Touch glow",
                 "When you touch a folder, a soft light follows your finger and the rim lights up near it. 0 turns it off.");
+        i("icehome_folder_haptic", "Haptic on resize",
+                "A tick each time the folder jumps to another size while you stretch it. 0 turns it off. Follows the system haptics setting.");
 
         i("telon_on", "Curtain when switching screens",
                 "Inside an app, the window coming in or going out tilts with its speed and the one below blurs. Applies after restarting System UI.");

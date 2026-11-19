@@ -95,8 +95,15 @@ final class GlassFolder {
     static final int VEIL_TOP_GLASS = 0x0C, VEIL_BOTTOM_GLASS = 0x00;
 
     private static boolean shaderBroken;
-    private static android.graphics.Bitmap wall;
-    private static int wallId = Integer.MIN_VALUE;
+    /** volatile: lo escribe el hilo del fondo y lo lee el dibujo. */
+    private static volatile android.graphics.Bitmap wall;
+    private static volatile int wallId = Integer.MIN_VALUE;
+    /** Hilo para leer y desenfocar el fondo (pesado: no puede ir en el hilo principal). */
+    private static android.os.Handler wallHandler;
+    /** Todos los cristales (carpetas, dock, menú), para redibujarlos cuando llega un fondo nuevo. */
+    private static final Map<Glass, Boolean> ALL = new WeakHashMap<>();
+    private static java.lang.reflect.Field fConfigBlur;
+    private static boolean configBlurMissing;
     /** Última vez que se preguntó qué fondo hay (uptime) y cada cuánto se vuelve a preguntar. */
     private static long wallCheckedMs;
     private static final long WALL_CHECK_MS = 2000;
@@ -239,9 +246,25 @@ final class GlassFolder {
                 g.track();
             }
             if (REFRACTION) loadWallpaper(bg.getContext());
-            g.configure(blur, radius(bg));
-            g.setBounds(0, 0, bg.getWidth(), bg.getHeight());
-            g.invalidateSelf();
+            // Esto corre en cada onLayout (muchas veces al redimensionar una carpeta): el radio solo
+            // se vuelve a calcular si cambia el tamaño, y solo se redibuja si algo cambió.
+            int bw = bg.getWidth(), bh = bg.getHeight();
+            if (bw != g.radiusW || bh != g.radiusH) {
+                g.radiusW = bw;
+                g.radiusH = bh;
+                g.radiusPx = radius(bg);
+            }
+            boolean changed = g.configure(blur, g.radiusPx);
+            if (g.plain == blur) {
+                g.plain = !blur;
+                changed = true;
+            }
+            Rect cur = g.getBounds();
+            if (cur.right != bw || cur.bottom != bh || cur.left != 0 || cur.top != 0) {
+                g.setBounds(0, 0, bw, bh);
+                changed = true;
+            }
+            if (changed) g.invalidateSelf();
         } catch (Throwable t) {
             XposedBridge.log(t);
         }
@@ -258,7 +281,7 @@ final class GlassFolder {
             // por el hundido del icono: por eso se divide por la escala acumulada).
             int[] at = new int[2];
             bg.getLocationOnScreen(at);
-            float[] sc = chainScale(bg);
+            float[] sc = chainScale(bg, new float[2]);
             float x = (e.getRawX() - at[0]) / Math.max(sc[0], 0.01f);
             float y = (e.getRawY() - at[1]) / Math.max(sc[1], 0.01f);
             switch (e.getActionMasked()) {
@@ -282,11 +305,15 @@ final class GlassFolder {
 
     /** Texturas avanzadas activas: campo Configuration.blur de MIUI (1 = activado). */
     private static boolean texturesOn(android.content.Context ctx) {
+        if (configBlurMissing) return false;
         try {
-            java.lang.reflect.Field f = android.content.res.Configuration.class.getDeclaredField("blur");
-            f.setAccessible(true);
-            return f.getInt(ctx.getResources().getConfiguration()) == 1;
+            if (fConfigBlur == null) {          // se busca una vez: va en cada onLayout
+                fConfigBlur = android.content.res.Configuration.class.getDeclaredField("blur");
+                fConfigBlur.setAccessible(true);
+            }
+            return fConfigBlur.getInt(ctx.getResources().getConfiguration()) == 1;
         } catch (Throwable t) {
+            configBlurMissing = true;
             return false;
         }
     }
@@ -294,11 +321,17 @@ final class GlassFolder {
     /** Ajustes cambiados desde la app: se vuelve a desenfocar el fondo y se redibujan las carpetas. */
     static void retune(android.content.Context ctx) {
         wallId = Integer.MIN_VALUE;
-        loadWallpaper(ctx);
-        for (View v : new java.util.ArrayList<>(GLASS.keySet())) {
-            Glass g = GLASS.get(v);
-            if (g != null) g.invalidateSelf();
-            if (v != null) v.invalidate();
+        loadWallpaper(ctx);                     // en su hilo; al terminar redibuja todos los cristales
+        redrawAll();
+    }
+
+    /** Redibuja todos los cristales (hilo principal). */
+    private static void redrawAll() {
+        for (Glass g : new java.util.ArrayList<>(ALL.keySet())) {
+            if (g == null) continue;
+            g.invalidateSelf();
+            View h = g.hostRef.get();
+            if (h != null) h.invalidate();
         }
     }
 
@@ -312,26 +345,48 @@ final class GlassFolder {
         long now = android.os.SystemClock.uptimeMillis();
         if (wallId != Integer.MIN_VALUE && now - wallCheckedMs < WALL_CHECK_MS) return;
         wallCheckedMs = now;
-        try {
-            android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(ctx);
-            int id = wm.getWallpaperId(android.app.WallpaperManager.FLAG_SYSTEM);
-            if (id == wallId) return;
-            wallId = id;
-            wall = null;
-            if (wm.getWallpaperInfo() != null) return;      // fondo animado: sin refracción
-            Drawable d = wm.getDrawable();
-            if (!(d instanceof android.graphics.drawable.BitmapDrawable)) return;
-            android.graphics.Bitmap b = ((android.graphics.drawable.BitmapDrawable) d).getBitmap();
-            if (b == null) return;
-            android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
-            int sw = Math.max(dm.widthPixels, 1), sh = Math.max(dm.heightPixels, 1);
-            float screenPerSrc = Math.max((float) sw / b.getWidth(), (float) sh / b.getHeight());
-            float blurDp = Tune.get(ctx, "icehome_folder_blur");
-            wall = GlassShader.shrinkBlur(b, screenPerSrc, sampleDp() * dm.density, blurDp * dm.density);
-        } catch (Throwable t) {
-            wall = null;
+        final android.content.Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+        // Todo lo demás en otro hilo: leer el fondo entero y desenfocarlo tarda decenas de ms y,
+        // en el hilo principal, daba tirones al tocar un ajuste desde la app.
+        synchronized (GlassFolder.class) {
+            if (wallHandler == null) wallHandler = Threads.start("HyperSpring-wall", android.os.Process.THREAD_PRIORITY_BACKGROUND);
         }
+        wallHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(app);
+                    int id = wm.getWallpaperId(android.app.WallpaperManager.FLAG_SYSTEM);
+                    if (id == wallId) return;
+                    android.graphics.Bitmap next = null;
+                    if (wm.getWallpaperInfo() == null) {          // fondo animado: sin refracción
+                        Drawable d = wm.getDrawable();
+                        android.graphics.Bitmap b = d instanceof android.graphics.drawable.BitmapDrawable
+                                ? ((android.graphics.drawable.BitmapDrawable) d).getBitmap() : null;
+                        if (b != null) {
+                            android.util.DisplayMetrics dm = app.getResources().getDisplayMetrics();
+                            int sw = Math.max(dm.widthPixels, 1), sh = Math.max(dm.heightPixels, 1);
+                            float screenPerSrc = Math.max((float) sw / b.getWidth(), (float) sh / b.getHeight());
+                            float blurDp = Tune.get(app, "icehome_folder_blur");
+                            next = GlassShader.shrinkBlur(b, screenPerSrc, sampleDp() * dm.density, blurDp * dm.density);
+                        }
+                    }
+                    wall = next;
+                    wallId = id;
+                } catch (Throwable t) {
+                    wall = null;
+                }
+                MAIN.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        redrawAll();
+                    }
+                });
+            }
+        });
     }
+
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
 
     /** Radio de las esquinas del fondo: el de su contorno, o el de icono / widget de MIUI. */
     private static float radius(View bg) {
@@ -358,6 +413,34 @@ final class GlassFolder {
         return small ? w * 0.24f : 20f * bg.getResources().getDisplayMetrics().density;
     }
 
+    /** Fondo real de la carpeta (la vista que lleva el cristal), o null. */
+    static View background(View folder) {
+        try {
+            return mIconImageView == null ? null : (View) mIconImageView.invoke(folder);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
+     * Cristal suelto, en coordenadas de la ventana, igual que el de esta carpeta: para dibujar la
+     * tarjeta a cualquier tamaño mientras se redimensiona. Null si la carpeta no lleva cristal.
+     */
+    static Glass cardFor(View folder, float scale) {
+        View bg = background(folder);
+        Glass real = bg == null ? null : GLASS.get(bg);
+        if (real == null) return null;
+        Glass c = new Glass(folder.getRootView());
+        c.configure(real.blur, real.radiusPx * scale);
+        c.plain = real.plain;
+        return c;
+    }
+
+    /** El cristal se rellena él solo con el fondo desenfocado (no hace falta el fondo de MIUI debajo). */
+    static boolean opaque(Glass g) {
+        return REFRACTION && g.blur && wall != null && !shaderBroken && android.os.Build.VERSION.SDK_INT >= 33;
+    }
+
     /** Dibujo del cristal (en coordenadas del fondo de la carpeta). */
     static final class Glass extends Drawable {
         /**
@@ -372,6 +455,17 @@ final class GlassFolder {
         private android.graphics.Bitmap shaderWall;
         private final int[] loc = new int[2], lastLoc = {Integer.MIN_VALUE, 0};
         private float lastSx = -1f, lastSy = -1f;
+        private final float[] sc = new float[2], preSc = new float[2];   // escala acumulada, sin crear arrays
+        /** Radio de las esquinas, calculado para este tamaño del fondo (apply lo reutiliza). */
+        int radiusW = -1, radiusH = -1;
+        float radiusPx;
+        /** Valores fijos que ya tiene el shader: solo se vuelven a poner si cambian. */
+        private final float[] shaderCfg = new float[9];
+        private boolean shaderCfgSet;
+        /** Degradados del brillo, centrados en 0,0: se mueven con una matriz en vez de crearlos. */
+        private RadialGradient glowFillGrad, glowRimGrad;
+        private float glowFillR = -1f, glowRimR = -1f;
+        private final android.graphics.Matrix glowM = new android.graphics.Matrix();
         private final Paint veil = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glassVeil = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -380,6 +474,10 @@ final class GlassFolder {
         private final Path clip = new Path();
         private final RectF box = new RectF();
         private final RectF tmp = new RectF();   // rectángulo de trabajo: sin crear uno en cada fotograma
+        private LinearGradient veilG, glassVeilG, innerG, rimG;
+        private RadialGradient sheenG;
+        private boolean veilBlur;
+        private final android.graphics.Matrix gm = new android.graphics.Matrix();
         private boolean blur;
         private float radius;
         private int alpha = 255;
@@ -388,6 +486,8 @@ final class GlassFolder {
          * propio fondo (claro u oscuro según el tema) y con el velo entero se vería lechoso.
          */
         float veilScale = 1f;
+        /** Carpeta sin texturas avanzadas: no se dibuja nada, queda el fondo gris de MIUI tal cual. */
+        boolean plain;
         // Brillo al tocar: posición del dedo, intensidad actual (0..1) y a la que va.
         private final Paint glowFill = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glowRim = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -429,17 +529,30 @@ final class GlassFolder {
             float reach = Math.max(w, h);
             float x = Math.max(box.left, Math.min(box.right, box.left + glowX));
             float y = Math.max(box.top, Math.min(box.bottom, box.top + glowY));
-            int core = white(Math.round(0x3A * k * alpha / 255f));
-            glowFill.setShader(new RadialGradient(x, y, Math.max(1f, Math.min(reach * 0.55f, 120f * density)),
-                    new int[]{core, white(Math.round(0x14 * k * alpha / 255f)), white(0)},
-                    new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+            // Los degradados se crean una vez por tamaño (con el brillo máximo, k = 1,5) y la
+            // intensidad va en el alfa del pincel: antes eran dos objetos nuevos por fotograma.
+            float fr = Math.max(1f, Math.min(reach * 0.55f, 120f * density));
+            if (glowFillGrad == null || fr != glowFillR) {
+                glowFillR = fr;
+                glowFillGrad = new RadialGradient(0f, 0f, fr,
+                        new int[]{white(0x57), white(0x1E), white(0)}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP);
+                glowFill.setShader(glowFillGrad);
+            }
+            glowM.setTranslate(x, y);
+            glowFillGrad.setLocalMatrix(glowM);
+            glowFill.setAlpha(Math.round(255f * (k / 1.5f) * alpha / 255f));
             canvas.drawRoundRect(box, r, r, glowFill);
             float sw = 1.4f * density;
             glowRim.setStyle(Paint.Style.STROKE);
             glowRim.setStrokeWidth(sw);
-            glowRim.setShader(new RadialGradient(x, y, Math.max(1f, Math.min(reach * 0.7f, 160f * density)),
-                    new int[]{white(Math.round(0xE6 * Math.min(1f, k) * alpha / 255f)), white(0)},
-                    null, Shader.TileMode.CLAMP));
+            float rr = Math.max(1f, Math.min(reach * 0.7f, 160f * density));
+            if (glowRimGrad == null || rr != glowRimR) {
+                glowRimR = rr;
+                glowRimGrad = new RadialGradient(0f, 0f, rr, new int[]{white(0xE6), white(0)}, null, Shader.TileMode.CLAMP);
+                glowRim.setShader(glowRimGrad);
+            }
+            glowRimGrad.setLocalMatrix(glowM);
+            glowRim.setAlpha(Math.round(255f * Math.min(1f, k) * alpha / 255f));
             tmp.set(box.left + sw / 2f, box.top + sw / 2f, box.right - sw / 2f, box.bottom - sw / 2f);
             float er = Math.max(0f, r - sw / 2f);
             canvas.drawRoundRect(tmp, er, er, glowRim);
@@ -450,6 +563,7 @@ final class GlassFolder {
             this.density = host.getResources().getDisplayMetrics().density;
             inner.setStyle(Paint.Style.STROKE);
             rim.setStyle(Paint.Style.STROKE);
+            ALL.put(this, Boolean.TRUE);
         }
 
         /** Si la carpeta se mueve o cambia de escala, el fondo de debajo cambia: redibujar. */
@@ -463,7 +577,7 @@ final class GlassFolder {
                     View h = hostRef.get();
                     if (wall == null || h == null || !h.isAttachedToWindow()) return true;
                     h.getLocationOnScreen(loc);
-                    float[] sc = chainScale(h);
+                    float[] sc = chainScale(h, preSc);
                     if (loc[0] != lastLoc[0] || loc[1] != lastLoc[1] || sc[0] != lastSx || sc[1] != lastSy) {
                         invalidateSelf();
                     }
@@ -485,16 +599,26 @@ final class GlassFolder {
                 @Override
                 public void onViewDetachedFromWindow(View v) {
                     v.getViewTreeObserver().removeOnPreDrawListener(pre);
+                    // Si el padre se quedó el toque (arrastre del icono), no llega el UP: que no se
+                    // quede el brillo encendido.
+                    if (glowAnim != null) glowAnim.cancel();
+                    glow = glowTarget = 0f;
                 }
             });
             if (host.isAttachedToWindow()) host.getViewTreeObserver().addOnPreDrawListener(pre);
         }
 
-        void configure(boolean blur, float radius) {
-            if (blur == this.blur && radius == this.radius) return;
+        float getRadius() {
+            return radius;
+        }
+
+        /** Devuelve si cambió algo (para no redibujar en cada onLayout). */
+        boolean configure(boolean blur, float radius) {
+            if (blur == this.blur && radius == this.radius) return false;
             this.blur = blur;
             this.radius = radius;
             rebuild(getBounds());
+            return true;
         }
 
         @Override
@@ -510,26 +634,47 @@ final class GlassFolder {
             clip.reset();
             clip.addRoundRect(box, r, r, Path.Direction.CW);
 
-            int top = blur ? VEIL_TOP_BLUR : VEIL_TOP_FLAT, bottom = blur ? VEIL_BOTTOM_BLUR : VEIL_BOTTOM_FLAT;
-            veil.setShader(new LinearGradient(0, box.top, 0, box.bottom,
-                    white(top), white(bottom), Shader.TileMode.CLAMP));
-            glassVeil.setShader(new LinearGradient(0, box.top, 0, box.bottom,
-                    white(VEIL_TOP_GLASS), white(VEIL_BOTTOM_GLASS), Shader.TileMode.CLAMP));
-
-            sheen.setShader(new RadialGradient(box.left + w * 0.22f, box.top, Math.max(w, h) * 0.85f,
-                    new int[]{white(SHEEN_ALPHA), white(SHEEN_ALPHA / 3), white(0)},
-                    new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
-
-            float iw = INNER_DP * density;
-            inner.setStrokeWidth(iw);
-            inner.setShader(new LinearGradient(0, box.top, 0, box.top + Math.min(h, 48f * density),
-                    white(INNER_ALPHA), white(0), Shader.TileMode.CLAMP));
-
-            float rw = RIM_DP * density;
-            rim.setStrokeWidth(rw);
-            rim.setShader(new LinearGradient(box.left, box.top, box.right, box.bottom,
-                    new int[]{white(RIM_TOP), white(RIM_SIDE), white(RIM_SIDE), white(RIM_BOTTOM)},
-                    new float[]{0f, 0.38f, 0.66f, 1f}, Shader.TileMode.CLAMP));
+            // Degradados de tamaño 1, creados una sola vez y colocados con una matriz: al
+            // redimensionar una carpeta el tamaño cambia en cada fotograma y antes se creaban
+            // cinco degradados nuevos cada vez.
+            if (veilG == null || veilBlur != blur) {
+                veilBlur = blur;
+                int top = blur ? VEIL_TOP_BLUR : VEIL_TOP_FLAT, bottom = blur ? VEIL_BOTTOM_BLUR : VEIL_BOTTOM_FLAT;
+                veilG = new LinearGradient(0, 0, 0, 1, white(top), white(bottom), Shader.TileMode.CLAMP);
+                veil.setShader(veilG);
+            }
+            if (sheenG == null) {
+                glassVeilG = new LinearGradient(0, 0, 0, 1,
+                        white(VEIL_TOP_GLASS), white(VEIL_BOTTOM_GLASS), Shader.TileMode.CLAMP);
+                glassVeil.setShader(glassVeilG);
+                sheenG = new RadialGradient(0, 0, 1, new int[]{white(SHEEN_ALPHA), white(SHEEN_ALPHA / 3), white(0)},
+                        new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP);
+                sheen.setShader(sheenG);
+                innerG = new LinearGradient(0, 0, 0, 1, white(INNER_ALPHA), white(0), Shader.TileMode.CLAMP);
+                inner.setShader(innerG);
+                inner.setStrokeWidth(INNER_DP * density);
+                // A lo largo del eje x (0..1); la matriz lo gira hacia la diagonal de la caja.
+                rimG = new LinearGradient(0, 0, 1, 0,
+                        new int[]{white(RIM_TOP), white(RIM_SIDE), white(RIM_SIDE), white(RIM_BOTTOM)},
+                        new float[]{0f, 0.38f, 0.66f, 1f}, Shader.TileMode.CLAMP);
+                rim.setShader(rimG);
+                rim.setStrokeWidth(RIM_DP * density);
+            }
+            gm.setScale(1f, h);
+            gm.postTranslate(0f, box.top);
+            veilG.setLocalMatrix(gm);
+            glassVeilG.setLocalMatrix(gm);
+            float sr = Math.max(w, h) * 0.85f;
+            gm.setScale(sr, sr);
+            gm.postTranslate(box.left + w * 0.22f, box.top);
+            sheenG.setLocalMatrix(gm);
+            gm.setScale(1f, Math.min(h, 48f * density));
+            gm.postTranslate(0f, box.top);
+            innerG.setLocalMatrix(gm);
+            gm.setScale((float) Math.hypot(w, h), 1f);
+            gm.postRotate((float) Math.toDegrees(Math.atan2(h, w)));
+            gm.postTranslate(box.left, box.top);
+            rimG.setLocalMatrix(gm);
         }
 
         private static int white(int a) {
@@ -538,7 +683,7 @@ final class GlassFolder {
 
         @Override
         public void draw(Canvas canvas) {
-            if (box.isEmpty()) return;
+            if (plain || box.isEmpty()) return;
             float w = box.width(), h = box.height();
             float r = Math.min(radius, Math.min(w, h) / 2f);
             boolean lens = REFRACTION && drawRefraction(canvas, w, h, r);
@@ -579,7 +724,11 @@ final class GlassFolder {
                     || !canvas.isHardwareAccelerated()) return false;
             try {
                 android.graphics.RuntimeShader rs;
-                if (runtimeShader == null) runtimeShader = GlassShader.create();
+                if (runtimeShader == null) {
+                    runtimeShader = GlassShader.create();
+                    shaderCfgSet = false;
+                    shaderWall = null;
+                }
                 rs = (android.graphics.RuntimeShader) runtimeShader;
                 if (shaderWall != bmp) {
                     rs.setInputShader("wall", GlassShader.linear(bmp));
@@ -596,20 +745,68 @@ final class GlassFolder {
                 float s = Math.max(sw / bw, sh / bh);
                 float left = (bw * s - sw) * wallOffsetX, top = (bh * s - sh) * wallOffsetY;
                 host.getLocationOnScreen(loc);
-                float[] sc = chainScale(host);
+                float[] sc = chainScale(host, this.sc);
                 lastLoc[0] = loc[0];
                 lastLoc[1] = loc[1];
                 lastSx = sc[0];
                 lastSy = sc[1];
-                float band = Math.min(BAND_DP * density, Math.min(w, h) * BAND_MAX_FRACTION);
-                rs.setFloatUniform("size", w, h);
-                rs.setFloatUniform("radius", r);
-                rs.setFloatUniform("band", band);
-                rs.setFloatUniform("disp", STRENGTH_DP * density);
-                rs.setFloatUniform("dispersion", DISPERSION);
                 // box.left/top: la caja puede ir con margen dentro de la vista (el dock).
+                // Solo esto cambia en cada fotograma; cada uniform que se pone rehace el búfer del shader.
                 rs.setFloatUniform("origin", (loc[0] + box.left * sc[0] + left) / s, (loc[1] + box.top * sc[1] + top) / s);
                 rs.setFloatUniform("scale", sc[0] / s, sc[1] / s);
+                boolean cfg = !shaderCfgSet || shaderCfg[3] != (blur ? 1f : 0f) || shaderCfg[4] != liquidH
+                        || shaderCfg[5] != liquidAmt || shaderCfg[6] != liquidChroma || shaderCfg[7] != liquidLight;
+                if (cfg) {
+                    shaderCfgSet = true;
+                    shaderCfg[3] = blur ? 1f : 0f;
+                    shaderCfg[4] = liquidH;
+                    shaderCfg[5] = liquidAmt;
+                    shaderCfg[6] = liquidChroma;
+                    shaderCfg[7] = liquidLight;
+                    setConfigUniforms(rs);
+                }
+                // Al redimensionar una carpeta el tamaño cambia en cada fotograma: solo estos cinco.
+                if (cfg || shaderCfg[0] != w || shaderCfg[1] != h || shaderCfg[2] != r) {
+                    shaderCfg[0] = w;
+                    shaderCfg[1] = h;
+                    shaderCfg[2] = r;
+                    setSizeUniforms(rs, w, h, r);
+                }
+                refract.setShader(rs);
+                refract.setAlpha(alpha);
+                int save = canvas.save();
+                try {
+                    canvas.translate(box.left, box.top);
+                    canvas.drawRect(0, 0, w, h, refract);
+                } finally {
+                    canvas.restoreToCount(save);      // aunque falle, el lienzo queda como estaba
+                }
+                return true;
+            } catch (Throwable t) {
+                runtimeShader = null;
+                shaderBroken = true;          // no reintentar en cada fotograma
+                XposedBridge.log("IceHome: refracción desactivada");
+                XposedBridge.log(t);
+                return false;
+            }
+        }
+
+        /** Los uniforms que dependen del tamaño y el radio. */
+        private void setSizeUniforms(android.graphics.RuntimeShader rs, float w, float h, float r) {
+            rs.setFloatUniform("size", w, h);
+            rs.setFloatUniform("radius", r);
+            rs.setFloatUniform("band", Math.min(BAND_DP * density, Math.min(w, h) * BAND_MAX_FRACTION));
+            float want = liquidH * density;
+            float lensH = Math.min(want, Math.min(w, h) / 3f);
+            rs.setFloatUniform("refrH", lensH);
+            rs.setFloatUniform("refrAmt", want > 0f ? liquidAmt * density * lensH / want : 0f);
+        }
+
+        /** Los uniforms de los ajustes (no cambian de un fotograma a otro). */
+        private void setConfigUniforms(android.graphics.RuntimeShader rs) {
+            {
+                rs.setFloatUniform("disp", STRENGTH_DP * density);
+                rs.setFloatUniform("dispersion", DISPERSION);
                 rs.setFloatUniform("hasWall", 1f);
                 rs.setFloatUniform("fill", blur ? 1f : 0f);       // sin texturas avanzadas: solo el canto
                 rs.setFloatUniform("bandAlpha", REFRACT_ALPHA);
@@ -625,26 +822,9 @@ final class GlassFolder {
                 rs.setFloatUniform("glow", GLOW_DP * density);
                 rs.setFloatUniform("sat", GLASS_SAT);
                 rs.setFloatUniform("rimGain", TINT_RIM_GAIN);
-                float want = liquidH * density;
-                float lensH = Math.min(want, Math.min(w, h) / 3f);
-                rs.setFloatUniform("refrH", lensH);
-                rs.setFloatUniform("refrAmt", want > 0f ? liquidAmt * density * lensH / want : 0f);
                 rs.setFloatUniform("chroma", liquidChroma);
                 rs.setFloatUniform("light", liquidLight);
                 rs.setFloatUniform("active", 0f);
-                refract.setShader(rs);
-                refract.setAlpha(alpha);
-                int save = canvas.save();
-                canvas.translate(box.left, box.top);
-                canvas.drawRect(0, 0, w, h, refract);
-                canvas.restoreToCount(save);
-                return true;
-            } catch (Throwable t) {
-                runtimeShader = null;
-                shaderBroken = true;          // no reintentar en cada fotograma
-                XposedBridge.log("IceHome: refracción desactivada");
-                XposedBridge.log(t);
-                return false;
             }
         }
 
@@ -664,13 +844,15 @@ final class GlassFolder {
         }
     }
 
-    private static float[] chainScale(View v) {
+    private static float[] chainScale(View v, float[] out) {
         float sx = 1f, sy = 1f;
         for (View c = v; c != null; c = c.getParent() instanceof View ? (View) c.getParent() : null) {
             sx *= c.getScaleX();
             sy *= c.getScaleY();
         }
-        return new float[]{sx, sy};
+        out[0] = sx;
+        out[1] = sy;
+        return out;
     }
 
     private GlassFolder() {

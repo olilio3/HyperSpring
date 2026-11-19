@@ -6,6 +6,8 @@ import android.animation.ValueAnimator;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Choreographer;
 import android.view.MotionEvent;
@@ -49,8 +51,12 @@ import com.icehome.up.xp.XposedHelpers;
 final class FolderMorph {
 
     // ---------------------------------------------------------------- ajustes
-    /** Muelle universal: rigidez 400, amortiguación 0,8 (periodo = 2π/√400 ≈ 0,314 s). */
-    static final float SPRING_RESPONSE = (float) (2 * Math.PI / Math.sqrt(400.0)), SPRING_DAMPING = 0.8f;
+    /**
+     * Muelle del tamaño de la carpeta, el mismo que HyperOS 4 en CornerDraggableWrapper (su
+     * animación del fondo al cambiar de tamaño, sacada de libapp.so): amortiguación 0,75 y
+     * respuesta 0,4 s. Algo más lento y con un rebote leve; antes era 0,8 / 0,314.
+     */
+    static final float SPRING_RESPONSE = 0.4f, SPRING_DAMPING = 0.75f;
     /** Tirón elástico del contenedor hacia el dedo (máximo, en celdas). */
     static final float PULL_L_CELLS = 0.18f;
     /** Histéresis: otro tamaño debe estar esta distancia (celdas) más cerca para cambiar. */
@@ -59,9 +65,18 @@ final class FolderMorph {
     static final long APPLY_MIN_INTERVAL_MS = 140;
     /** Margen de seguridad de los iconos dentro de la tarjeta (fracción del icono). */
     static final float SAFE_PADDING = 0.04f;
-    /** Iconos de la capa: movimiento y aparición (amortiguación baja = zoom con rebote). */
-    static final float ICON_MOVE_RESPONSE = 0.26f, ICON_MOVE_DAMPING = 0.84f;
-    static final float ICON_POP_RESPONSE = 0.32f, ICON_POP_DAMPING = 0.55f;
+    /**
+     * Iconos de la capa, con los muelles de los iconos de carpeta de HyperOS 4
+     * (FolderPreviewIconAnimController): se mueven con 0,95 / 0,35 y aparecen con 0,95 / 0,4,
+     * casi sin rebote. Antes: 0,84 / 0,26 y un zoom con rebote (0,55).
+     */
+    static final float ICON_MOVE_RESPONSE = 0.35f, ICON_MOVE_DAMPING = 0.95f;
+    static final float ICON_STAGGER = 0.012f;    // cascada: lo que se retrasa cada icono (hasta el 9.º)
+    static final float LIMIT_ON_CELLS = 0.5f, LIMIT_OFF_CELLS = 0.3f;   // tope: tic al pasar, rearme al volver
+    // Soltar lanzando: a partir de qué velocidad (px/s), cuánto se adelanta (s) y tope de velocidad.
+    static final float FLING_MIN_PX_S = 700f, FLING_LOOKAHEAD_S = 0.12f, FLING_MAX_PX_S = 4000f;
+    private static final android.view.VelocityTracker VT = android.view.VelocityTracker.obtain();
+    static final float ICON_POP_RESPONSE = 0.4f, ICON_POP_DAMPING = 0.95f;
     static final long SWAP_WAIT_MAX_MS = 600;   // espera a que los iconos reales estén cargados
     static final float MIN_SIZE_DP = 40f;
     static final long WATCH_TIMEOUT_MS = 1200;
@@ -80,6 +95,11 @@ final class FolderMorph {
     private static final Map<View, RectF> LIVE_D = new WeakHashMap<>();      // rectángulo dibujado
     private static final Map<View, boolean[]> LIVE_SAVED = new WeakHashMap<>();
     private static Session session;
+    /** Para esperas y reintentos: un post sobre una vista desenganchada no se ejecuta nunca. */
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /** Temporales del hilo principal, para no crear objetos en cada fotograma. */
+    private static final int[] TMP_LOC = new int[2];
+    private static final RectF TMP_RECT = new RectF();
     private static boolean wasResizing;
     private static long lastEvtTime = -1;
     private static int lastEvtAction = -1;
@@ -97,7 +117,8 @@ final class FolderMorph {
         final RectF d = new RectF();     // rectángulo dibujado
         final RectF target = new RectF();
         boolean releasing;
-        ValueAnimator settle;
+        boolean settling;                // el Follow lleva la carpeta a su tamaño real y termina
+        boolean atLimit;                 // el dedo pide más allá del tamaño máximo o mínimo
         Follow follow;
         IconLayer layer;
     }
@@ -281,14 +302,33 @@ final class FolderMorph {
             lastEvtTime = e.getEventTime();
             lastEvtAction = a;
             if (a == MotionEvent.ACTION_MOVE && resizing) {
+                Session cur = session;
+                if (cur == null || cur.overlay != overlay || cur.releasing) VT.clear();   // arrastre nuevo
+                VT.addMovement(e);
                 drag(overlay, e.getRawX(), e.getRawY());
             } else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) {
                 Session s = session;
-                if (s != null && s.overlay == overlay && !s.releasing) release();
+                if (s != null && s.overlay == overlay && !s.releasing) {
+                    if (a == MotionEvent.ACTION_UP && resizing) fling(overlay, e);
+                    release();
+                }
             }
         } catch (Throwable t) {
             XposedBridge.log(t);
         }
+    }
+
+    /**
+     * Soltar "lanzando": con un gesto rápido, el tamaño se elige donde iría a parar el dedo un
+     * instante después (como en iOS), no donde se levantó. Con un gesto lento no cambia nada.
+     */
+    private static void fling(Object overlay, MotionEvent e) throws Throwable {
+        VT.addMovement(e);
+        VT.computeCurrentVelocity(1000, FLING_MAX_PX_S);
+        float vx = VT.getXVelocity(), vy = VT.getYVelocity();
+        VT.clear();
+        if (Math.hypot(vx, vy) < FLING_MIN_PX_S) return;
+        drag(overlay, e.getRawX() + vx * FLING_LOOKAHEAD_S, e.getRawY() + vy * FLING_LOOKAHEAD_S);
     }
 
     private static void drag(Object overlay, float x, float y) throws Throwable {
@@ -296,8 +336,7 @@ final class FolderMorph {
         if (t == null) return;
         Session s = session;
         if (s == null || s.overlay != overlay || s.releasing) {
-            if (s != null && s.settle != null) s.settle.cancel();
-            if (s != null && s.follow != null) s.follow.stop();
+            if (s != null) abandon(s);
             s = new Session();
             s.overlay = overlay;
             RectF b = naturalBox(t);
@@ -315,9 +354,12 @@ final class FolderMorph {
             s.view = t;
             session = s;
             applyLive(t, s.d);
-            s.layer = IconLayer.fromView(t, contentsOfOverlay(overlay));
-            hideIcons(t);
+            // El Follow antes que la capa: así, en cada fotograma, los iconos van detrás del
+            // contenedor del mismo fotograma y no del anterior (Choreographer respeta el orden).
             s.follow = new Follow(s);
+            s.layer = IconLayer.fromView(t, s.d, contentsOfOverlay(overlay));
+            s.layer.card(t, s.d);
+            hideIcons(t);
         }
         s.view = t;
 
@@ -329,6 +371,15 @@ final class FolderMorph {
             float fw = s.sw0 + (cx - (s.left + s.box0W)) / g.px;
             float fh = s.sh0 + (cy - (s.top + s.box0H)) / g.py;
             float[] pr = project(fw, fh, g.valid);
+            // Tope: el dedo pide un tamaño que no existe (más grande o más pequeño que los válidos).
+            // Un tic más suave al llegar, una vez (con margen para no repetirlo al temblar el dedo).
+            float over = (float) Math.hypot(fw - pr[0], fh - pr[1]);
+            if (!s.atLimit && over > LIMIT_ON_CELLS) {
+                s.atLimit = true;
+                Haptics.tick(Haptics.folder * 0.6f);
+            } else if (s.atLimit && over < LIMIT_OFF_CELLS) {
+                s.atLimit = false;
+            }
             int[] cand = nearest(pr[0], pr[1], g.valid);
             if (s.want == null || !has(g.valid, s.want[0], s.want[1])) {
                 s.want = cand;
@@ -337,8 +388,8 @@ final class FolderMorph {
                 float dw = (float) Math.sqrt(dist2(pr[0], pr[1], s.want[0], s.want[1]));
                 if (dw - dc > HYSTERESIS_CELLS) {                  // histéresis: sin alternar
                     s.want = cand;
-                    // Un tic al saltar la carpeta a otro tamaño (si la vibración no está a 0).
-                    if (Haptics.strength > 0f) t.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    // Un tic al saltar la carpeta a otro tamaño (con su propio ajuste de intensidad).
+                    Haptics.tick(Haptics.folder);
                 }
             }
             setWant(overlay, s.want);
@@ -362,6 +413,7 @@ final class FolderMorph {
         }
         float min = StackSwipe.dp(t, MIN_SIZE_DP);
         s.target.set(s.left, s.top, Math.max(s.left + min, right), Math.max(s.top + min, bottom));
+        if (s.layer != null) s.layer.glow(cx, cy, true);   // el canto se enciende junto al dedo
         ((RectF) fGhost.get(overlay)).setEmpty();
     }
 
@@ -376,12 +428,17 @@ final class FolderMorph {
         }
     }
 
-    /** El contenedor persigue su objetivo con el muelle universal, fotograma a fotograma. */
+    /**
+     * El contenedor persigue su objetivo con el muelle universal, fotograma a fotograma. Al
+     * soltar sigue el mismo muelle hacia el tamaño real (settling): conserva la velocidad que
+     * llevaba, en vez de frenar en seco y arrancar otra animación desde parado.
+     */
     static final class Follow implements Choreographer.FrameCallback {
         final Session s;
         final float[] l = new float[2], t = new float[2], r = new float[2], b = new float[2];
         long last;
         boolean stopped;
+        View applied;                    // última carpeta a la que se aplicó la forma
 
         Follow(Session s) {
             this.s = s;
@@ -400,83 +457,53 @@ final class FolderMorph {
         @Override
         public void doFrame(long nanos) {
             if (stopped) return;
-            // Salida segura: si esta sesión ya no es la actual (otra la sustituyó) o el redimensionado
-            // se quedó sin su "levantar el dedo" (el launcher se fue a segundo plano a mitad), se
-            // para. Si no, pediría un fotograma tras otro para siempre y gastaría batería.
-            View ov = s.overlay instanceof View ? (View) s.overlay : null;
-            if (session != s || (ov != null && !ov.isAttachedToWindow())) {
+            // Salida segura: si esta sesión ya no es la actual (otra la sustituyó), se para.
+            if (session != s) {
                 stop();
-                if (session == s && !s.releasing) release();
                 return;
             }
+            // El redimensionado se quedó sin su "levantar el dedo" (el launcher se fue a segundo
+            // plano a mitad): se suelta aquí, o pediría fotogramas para siempre.
+            View ov = s.overlay instanceof View ? (View) s.overlay : null;
+            if (!s.releasing && ov != null && !ov.isAttachedToWindow()) release();
+            if (stopped) return;
+            View v = s.view;
+            if (s.releasing && (v == null || !v.isAttachedToWindow())) {
+                finishDetached(v, s);
+                return;
+            }
+            if (s.settling) s.target.set(naturalBox(v));   // sigue a la carpeta real aunque Kashi la cambie
             float dt = last == 0 ? 1f / 120f : Math.min(1f / 30f, (nanos - last) / 1e9f);
             last = nanos;
             StackSwipe.springStep(l, s.target.left, SPRING_RESPONSE, SPRING_DAMPING, dt);
             StackSwipe.springStep(t, s.target.top, SPRING_RESPONSE, SPRING_DAMPING, dt);
             StackSwipe.springStep(r, s.target.right, SPRING_RESPONSE, SPRING_DAMPING, dt);
             StackSwipe.springStep(b, s.target.bottom, SPRING_RESPONSE, SPRING_DAMPING, dt);
-            s.d.set(l[0], t[0], r[0], b[0]);
-            View v = s.view;
+            boolean rest = atRest(l, s.target.left) && atRest(t, s.target.top)
+                    && atRest(r, s.target.right) && atRest(b, s.target.bottom);
+            if (rest && v == applied && !s.settling) {
+                // Dedo quieto y carpeta en su sitio: nada que recolocar ni redibujar.
+                Choreographer.getInstance().postFrameCallback(this);
+                return;
+            }
+            if (rest && s.settling) s.d.set(s.target);
+            else s.d.set(l[0], t[0], r[0], b[0]);
             if (v != null && v.isAttachedToWindow()) {
                 applyLive(v, s.d);
-                if (s.layer != null) s.layer.retarget(v);
+                applied = v;
+                if (s.layer != null) {
+                    s.layer.card(v, s.d);
+                    s.layer.retarget(v);
+                }
             }
             try {
                 ((RectF) fItem.get(s.overlay)).set(s.d);
                 ((View) s.overlay).invalidate();
             } catch (Throwable ignored) {
             }
-            Choreographer.getInstance().postFrameCallback(this);
-        }
-    }
-
-    private static void release() {
-        final Session s = session;
-        if (s == null) return;
-        s.releasing = true;
-        if (s.follow != null) s.follow.stop();
-        final View target = s.view;
-        if (!WATCH.isEmpty()) {
-            // Hay un cambio de tamaño en camino: begin() hará el asentamiento al llegar.
-            if (target != null) {
-                target.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (session == s && s.settle == null) settle(s.view, s);
-                    }
-                }, RELEASE_WAIT_MS);
-            }
-            return;
-        }
-        if (target != null) settle(target, s);
-        else session = null;
-    }
-
-    /** Del rectángulo dibujado al tamaño real, con el muelle universal; luego, iconos reales. */
-    private static void settle(final View v, final Session s) {
-        if (v == null || !v.isAttachedToWindow()) {
-            if (v != null) {
-                clearLive(v);
-                showIcons(v);
-            }
-            if (s.layer != null) s.layer.remove();
-            if (session == s) session = null;
-            return;
-        }
-        final RectF from = new RectF(s.d), to = naturalBox(v);
-        final ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);
-        Spring.apply(va, 0f, 1f, 0f, SPRING_RESPONSE, SPRING_DAMPING);
-        va.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator a) {
-                lerpRect(s.d, from, to, (Float) a.getAnimatedValue());
-                applyLive(v, s.d);
-                if (s.layer != null) s.layer.retarget(v);
-            }
-        });
-        va.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator a) {
+            if (rest && s.settling) {
+                stop();
+                if (s.layer != null) s.layer.cardOff();
                 clearLive(v);
                 finishWithLayer(v, s.layer, new Runnable() {
                     @Override
@@ -484,10 +511,71 @@ final class FolderMorph {
                         if (session == s) session = null;
                     }
                 });
+                return;
             }
-        });
-        s.settle = va;
-        va.start();
+            Choreographer.getInstance().postFrameCallback(this);
+        }
+    }
+
+    /** Medio píxel de su sitio y casi sin velocidad (px/s). */
+    private static boolean atRest(float[] x, float target) {
+        return Math.abs(x[0] - target) < 0.5f && Math.abs(x[1]) < 8f;
+    }
+
+    private static void release() {
+        final Session s = session;
+        if (s == null) return;
+        s.releasing = true;
+        if (s.layer != null) s.layer.glow(0f, 0f, false);   // se apaga despacio
+        if (!WATCH.isEmpty()) {
+            // Hay un cambio de tamaño en camino: begin() hará el asentamiento al llegar. Mientras,
+            // el Follow sigue con el último objetivo.
+            MAIN.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (session == s && !s.settling) settle(s.view, s);
+                }
+            }, RELEASE_WAIT_MS);
+            return;
+        }
+        settle(s.view, s);
+    }
+
+    /** Del rectángulo dibujado al tamaño real con el mismo muelle (lo hace el Follow); luego, iconos reales. */
+    private static void settle(View v, Session s) {
+        if (v == null || !v.isAttachedToWindow()) {
+            finishDetached(v, s);
+            return;
+        }
+        s.view = v;
+        s.settling = true;
+        if (s.layer != null) s.layer.whenSettled(null);   // el cierre pendiente era de la carpeta anterior
+        if (s.follow == null || s.follow.stopped) s.follow = new Follow(s);
+    }
+
+    /** La carpeta ya no está en pantalla: se deja todo como estaba, sin animar. */
+    private static void finishDetached(View v, Session s) {
+        if (s.follow != null) s.follow.stop();
+        if (v != null) {
+            clearLive(v);
+            showIcons(v);
+        }
+        if (s.layer != null) s.layer.remove();
+        if (session == s) session = null;
+    }
+
+    /**
+     * Otra sesión sustituye a esta (nuevo arrastre antes de que acabara la anterior): se quita
+     * su capa y se enseñan sus iconos, o se quedaría la capa pegada y los iconos ocultos.
+     */
+    private static void abandon(Session s) {
+        if (s.follow != null) s.follow.stop();
+        if (s.layer != null) s.layer.remove();
+        if (s.view != null) {
+            clearLive(s.view);
+            showIcons(s.view);
+        }
+        if (session == s) session = null;
     }
 
     /**
@@ -505,8 +593,11 @@ final class FolderMorph {
         layer.whenSettled(new Runnable() {
             @Override
             public void run() {
+                if (layer.removed) return;              // la sesión se abandonó: sus iconos ya se enseñaron
+                if (layer.pending != this) return;      // Kashi cambió la carpeta tarde y otro asentamiento manda
+
                 if (!realIconsReady(v) && SystemClock.uptimeMillis() < deadline) {
-                    v.postDelayed(this, 32);
+                    MAIN.postDelayed(this, 32);
                     return;
                 }
                 showIcons(v);
@@ -535,7 +626,7 @@ final class FolderMorph {
         ViewGroup g = (ViewGroup) v;
         Rect ib = iconBounds(v);
         float ps = parentScale(v);
-        RectF b = naturalBox(v);
+        RectF b = naturalBox(v, ib, TMP_RECT);
         float bw = Math.max(1, ib.width()), bh = Math.max(1, ib.height());
         float sx = Math.max(0.05f, d.width() / ps / bw), sy = Math.max(0.05f, d.height() / ps / bh);
         float tx = (d.left - b.left) / ps, ty = (d.top - b.top) / ps;
@@ -543,7 +634,7 @@ final class FolderMorph {
         ViewParent p = v.getParent();
         if (!LIVE_SAVED.containsKey(v)) {
             LIVE_SAVED.put(v, new boolean[]{g.getClipChildren(),
-                    p instanceof ViewGroup && ((ViewGroup) p).getClipChildren()});
+                    p instanceof ViewGroup && ((ViewGroup) p).getClipChildren(), v.getClipToOutline()});
         }
         g.setClipChildren(false);
         if (p instanceof ViewGroup) ((ViewGroup) p).setClipChildren(false);
@@ -568,12 +659,14 @@ final class FolderMorph {
         }
         float u = Math.min(1f, Math.min(sx, sy));
         if (u < 1f) u *= (1f - SAFE_PADDING);
-        float[] counter = {u / sx, u / sy};
+        float[] counter = LIVE.get(v);
+        if (counter == null) LIVE.put(v, counter = new float[2]);
+        counter[0] = u / sx;
+        counter[1] = u / sy;
         for (View ic : icons(v)) {
             ic.setScaleX(counter[0]);
             ic.setScaleY(counter[1]);
         }
-        LIVE.put(v, counter);
         RectF cur = LIVE_D.get(v);
         if (cur == null) LIVE_D.put(v, new RectF(d));
         else cur.set(d);
@@ -600,6 +693,7 @@ final class FolderMorph {
             g.setClipChildren(saved[0]);
             ViewParent p = v.getParent();
             if (p instanceof ViewGroup) ((ViewGroup) p).setClipChildren(saved[1]);
+            if (saved[2]) v.setClipToOutline(true);    // sin esto perdía las esquinas redondeadas
         }
     }
 
@@ -799,6 +893,9 @@ final class FolderMorph {
         };
         vto.addOnPreDrawListener(holder[0]);
         WATCH.put(info, cancel);
+        // Por si la ventana se destruye antes y onPreDraw ya no llega: si no, WATCH no se vaciaría
+        // nunca y la carpeta dejaría de cambiar de tamaño hasta reiniciar el launcher.
+        MAIN.postDelayed(cancel, WATCH_TIMEOUT_MS + 100);
     }
 
     private static View buddy(Object infoEx) throws Throwable {
@@ -836,14 +933,18 @@ final class FolderMorph {
             ses.view = nv;
             applyLive(nv, ses.d);
             if (ses.layer == null) ses.layer = IconLayer.fromSnap(nv, snap, contents(info));
+            ses.layer.card(nv, ses.d);
             ses.layer.retarget(nv);
-            if (ses.releasing && ses.settle == null) settle(nv, ses);
+            // También si el muelle ya había terminado: si no, la carpeta nueva se quedaba
+            // deformada y con los iconos ocultos.
+            if (ses.releasing && (!ses.settling || ses.follow == null || ses.follow.stopped)) settle(nv, ses);
             return;
         }
         // Cambio sin arrastre (p. ej. desde el menú): contenedor e iconos con su propio muelle.
         final IconLayer layer = IconLayer.fromSnap(nv, snap, contents(info));
         final RectF ro = new RectF(snap.box), rn = naturalBox(nv), cur = new RectF();
         applyLive(nv, ro);
+        layer.card(nv, ro);
         layer.retarget(nv);
         final ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);
         Spring.apply(va, 0f, 1f, 0f, SPRING_RESPONSE, SPRING_DAMPING);
@@ -852,12 +953,14 @@ final class FolderMorph {
             public void onAnimationUpdate(ValueAnimator a) {
                 lerpRect(cur, ro, rn, (Float) a.getAnimatedValue());
                 applyLive(nv, cur);
+                layer.card(nv, cur);
                 layer.retarget(nv);
             }
         });
         va.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator a) {
+                layer.cardOff();
                 clearLive(nv);
                 finishWithLayer(nv, layer, null);
             }
@@ -927,26 +1030,37 @@ final class FolderMorph {
      * "sprite" con muelles de posición, tamaño y presencia; su destino es, en cada fotograma,
      * el sitio del icono real (oculto) en el diseño actual de la carpeta.
      */
-    static final class IconLayer extends Drawable implements Choreographer.FrameCallback {
+    static final class IconLayer extends Drawable implements Choreographer.FrameCallback, Drawable.Callback {
         static final class Sprite {
             Drawable d;
             boolean real;                 // el dibujo viene de un icono real (no del contenido)
             boolean placed;
+            // x, y: centro como fracción de la tarjeta (0..1); s: tamaño en px; p: presencia.
+            // Al ir pegados a la tarjeta, cuando esta se estira los iconos van con ella en el mismo
+            // fotograma: el muelle solo anima los cambios de hueco (antes se sumaban dos muelles y
+            // los iconos se quedaban atrás o se salían del borde en el rebote).
             float[] x = new float[2], y = new float[2], s = new float[2], p = new float[2];
             float tx, ty, ts, tp;
+            int base;                     // tamaño fijo con el que se prepara el dibujo (px)
         }
 
         final View root;
         final int[] rl = new int[2];
         final List<Sprite> sprites = new ArrayList<>();
         final List<Drawable> pool;
+        /** Caja de la tarjeta en pantalla (la del fotograma actual). */
+        final RectF frame = new RectF();
         long last;
         boolean removed;
+        boolean wasMoving = true;
         Runnable onSettled;
+        /** El cierre que vale ahora (finishWithLayer): uno viejo que llegue tarde no hace nada. */
+        Runnable pending;
 
-        private IconLayer(View anyView, List<Drawable> pool) {
+        private IconLayer(View anyView, RectF box, List<Drawable> pool) {
             this.root = anyView.getRootView();
             this.pool = pool;
+            frame.set(box);
             root.getLocationOnScreen(rl);
             setBounds(0, 0, Math.max(1, root.getWidth()), Math.max(1, root.getHeight()));
             try {
@@ -957,8 +1071,8 @@ final class FolderMorph {
         }
 
         /** Sembrada con los iconos que se ven ahora en la carpeta v (en su sitio, sin animar). */
-        static IconLayer fromView(View v, List<Drawable> pool) {
-            IconLayer l = new IconLayer(v, pool);
+        static IconLayer fromView(View v, RectF box, List<Drawable> pool) {
+            IconLayer l = new IconLayer(v, box, pool);
             List<View> ics = icons(v);
             for (int k = 0; k < ics.size(); k++) {
                 View ic = ics.get(k);
@@ -970,7 +1084,7 @@ final class FolderMorph {
 
         /** Sembrada con lo capturado antes del cambio de tamaño. */
         static IconLayer fromSnap(View v, Snap snap, List<Drawable> pool) {
-            IconLayer l = new IconLayer(v, pool);
+            IconLayer l = new IconLayer(v, snap != null ? snap.box : naturalBox(v), pool);
             if (snap != null) {
                 for (int k = 0; k < snap.icons.size(); k++) l.seed(k, snap.icons.get(k), snap.drawables.get(k));
             }
@@ -984,20 +1098,28 @@ final class FolderMorph {
             return sp;
         }
 
+        private float fx(float screenX) {
+            return (screenX - frame.left) / Math.max(1f, frame.width());
+        }
+
+        private float fy(float screenY) {
+            return (screenY - frame.top) / Math.max(1f, frame.height());
+        }
+
         private void seed(int k, RectF r, Drawable real) {
             Sprite sp = sprite(k);
             if (real != null) {
                 sp.d = real;
                 sp.real = true;
             }
-            sp.x[0] = sp.tx = r.centerX();
-            sp.y[0] = sp.ty = r.centerY();
+            sp.x[0] = sp.tx = fx(r.centerX());
+            sp.y[0] = sp.ty = fy(r.centerY());
             sp.s[0] = sp.ts = r.width();
             sp.p[0] = sp.tp = 1f;
             sp.placed = true;
         }
 
-        /** Destinos = sitios de los iconos reales (ocultos) del diseño actual de v. */
+        /** Destinos = sitios de los iconos reales (ocultos) del diseño actual de v, relativos a la tarjeta. */
         void retarget(View v) {
             if (removed) return;
             List<View> ics = icons(v);
@@ -1007,7 +1129,7 @@ final class FolderMorph {
                     ic.setVisibility(View.INVISIBLE);
                     HIDDEN.put(ic, Boolean.TRUE);
                 }
-                RectF r = screenRect(ic);
+                RectF r = screenRect(ic, TMP_RECT);
                 Sprite sp = sprite(k);
                 if (!sp.real && ic instanceof ImageView && ((ImageView) ic).getDrawable() != null) {
                     Drawable d = copy(((ImageView) ic).getDrawable(), ic);
@@ -1016,8 +1138,8 @@ final class FolderMorph {
                         sp.real = true;
                     }
                 }
-                sp.tx = r.centerX();
-                sp.ty = r.centerY();
+                sp.tx = fx(r.centerX());
+                sp.ty = fy(r.centerY());
                 sp.ts = r.width();
                 sp.tp = 1f;
                 if (!sp.placed || (sp.p[0] < 0.02f && sp.p[1] <= 0f)) {
@@ -1031,15 +1153,125 @@ final class FolderMorph {
                 }
             }
             for (int k = ics.size(); k < sprites.size(); k++) sprites.get(k).tp = 0f;   // sobran: se encogen
+            // Sin invalidar aquí: doFrame redibuja solo si algún icono se mueve.
+        }
+
+        // Tarjeta propia (como HOS4: tamaño de verdad, no escala): el fondo real, estirado, deformaba
+        // las esquinas y el cristal, y tras cada cambio de Kashi tardaba en aparecer.
+        GlassFolder.Glass card;
+        Drawable cardBase;
+        boolean cardTried, cardOn, roundBase;
+        View bgHidden;
+        float bgAlpha = 1f;
+        float glowX, glowY;
+        final RectF cardBox = new RectF();
+        static final android.graphics.Paint MASK = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        static {
+            MASK.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN));
+        }
+
+        /** La tarjeta (y los iconos, que van pegados a ella) pasan a D (pantalla); oculta el fondo real. */
+        void card(View folder, RectF d) {
+            if (removed) return;
+            frame.set(d);
             invalidateSelf();
+            if (!cardTried) {
+                cardTried = true;
+                card = GlassFolder.cardFor(folder, parentScale(folder));
+                if (card == null) XposedBridge.log("IceHome: carpeta sin cristal, se estira el fondo real");
+                if (card != null) {
+                    View bg0 = GlassFolder.background(folder);
+                    Drawable src = bg0 instanceof ImageView ? ((ImageView) bg0).getDrawable() : null;
+                    cardBase = copy(src, bg0);
+                    // El gris de MIUI no siempre es un dibujo copiable: se lee su color y se pinta
+                    // un rectángulo redondeado liso de ese color.
+                    if (cardBase == null && bg0 != null) cardBase = solid(bg0, card.getRadius());
+                    XposedBridge.log("IceHome: tarjeta de carpeta: fondo " + name(bg0) + ", dibujo " + name(src)
+                            + ", base " + name(cardBase) + (card.plain ? ", gris liso" : ", cristal"));
+                    if (cardBase == null && (card.plain || !GlassFolder.opaque(card))) {
+                        // Sin el fondo de MIUI que poner debajo, y sin cristal que se rellene solo,
+                        // la tarjeta quedaría hueca: mejor el fondo real escalado, como antes.
+                        card = null;
+                    } else {
+                        card.setCallback(this);           // para que el brillo del dedo se redibuje
+                        roundBase = cardBase instanceof android.graphics.drawable.GradientDrawable;
+                    }
+                }
+            }
+            if (card == null) return;
+            View bg = GlassFolder.background(folder);
+            if (bg != bgHidden) {
+                restoreBg();
+                if (bg != null) {
+                    bgAlpha = bg.getAlpha();
+                    bg.setAlpha(0f);
+                }
+                bgHidden = bg;
+            }
+            cardOn = true;
+            card.setBounds(Math.round(d.left - rl[0]), Math.round(d.top - rl[1]),
+                    Math.round(d.right - rl[0]), Math.round(d.bottom - rl[1]));
+        }
+
+        private static String name(Object o) {
+            return o == null ? "ninguno" : o.getClass().getSimpleName();
+        }
+
+        /** Color del centro del fondo (tal como se ve ahora) como rectángulo redondeado; null si es transparente. */
+        private static Drawable solid(View bg, float radius) {
+            if (bg.getWidth() <= 0 || bg.getHeight() <= 0) return null;
+            try {
+                android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas c = new android.graphics.Canvas(b);
+                c.translate(-bg.getWidth() / 2f, -bg.getHeight() / 2f);
+                bg.draw(c);
+                int col = b.getPixel(0, 0);
+                b.recycle();
+                if (android.graphics.Color.alpha(col) < 8) return null;
+                android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+                g.setColor(col);
+                g.setCornerRadius(radius);
+                return g;
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+
+        /** El canto se enciende junto a la esquina que arrastra el dedo (coordenadas de pantalla). */
+        void glow(float x, float y, boolean on) {
+            if (card == null || removed) return;
+            if (on) {
+                glowX = x - frame.left;
+                glowY = y - frame.top;
+            }
+            card.press(glowX, glowY, on);
+        }
+
+        /** Vuelve el fondo real (ya con su tamaño final). */
+        void cardOff() {
+            restoreBg();
+            if (cardOn) {
+                cardOn = false;
+                invalidateSelf();
+            }
+        }
+
+        private void restoreBg() {
+            // Su alfa de antes; si estaba a 0 (aún entrando con el fundido de Kashi) se deja visible,
+            // o la carpeta se quedaría sin fondo para siempre.
+            if (bgHidden != null) bgHidden.setAlpha(bgAlpha > 0.01f ? bgAlpha : 1f);
+            bgHidden = null;
         }
 
         void whenSettled(Runnable r) {
             onSettled = r;
+            pending = r;
         }
 
         void remove() {
             if (removed) return;
+            cardOff();
             removed = true;
             Choreographer.getInstance().removeFrameCallback(this);
             try {
@@ -1051,22 +1283,35 @@ final class FolderMorph {
         @Override
         public void doFrame(long nanos) {
             if (removed) return;
+            if (!root.isAttachedToWindow()) {
+                // La ventana se fue (launcher recreado): se termina ya, o pediría fotogramas para siempre.
+                Runnable r = onSettled;
+                onSettled = null;
+                if (r != null) r.run();
+                remove();
+                return;
+            }
             float dt = last == 0 ? 1f / 120f : Math.min(1f / 30f, (nanos - last) / 1e9f);
             last = nanos;
+            float fw = Math.max(1f, frame.width()), fh = Math.max(1f, frame.height());
             boolean moving = false;
-            for (Sprite sp : sprites) {
+            for (int k = 0; k < sprites.size(); k++) {
+                Sprite sp = sprites.get(k);
                 if (!sp.placed) continue;
-                StackSwipe.springStep(sp.x, sp.tx, ICON_MOVE_RESPONSE, ICON_MOVE_DAMPING, dt);
-                StackSwipe.springStep(sp.y, sp.ty, ICON_MOVE_RESPONSE, ICON_MOVE_DAMPING, dt);
-                StackSwipe.springStep(sp.s, sp.ts, ICON_MOVE_RESPONSE, ICON_MOVE_DAMPING, dt);
+                // En cascada: cada icono un poco más lento que el anterior (como HOS4).
+                float resp = ICON_MOVE_RESPONSE + Math.min(k, 8) * ICON_STAGGER;
+                StackSwipe.springStep(sp.x, sp.tx, resp, ICON_MOVE_DAMPING, dt);
+                StackSwipe.springStep(sp.y, sp.ty, resp, ICON_MOVE_DAMPING, dt);
+                StackSwipe.springStep(sp.s, sp.ts, resp, ICON_MOVE_DAMPING, dt);
                 StackSwipe.springStep(sp.p, sp.tp, ICON_POP_RESPONSE, ICON_POP_DAMPING, dt);
-                if (Math.abs(sp.x[0] - sp.tx) > 0.5f || Math.abs(sp.y[0] - sp.ty) > 0.5f
+                if (Math.abs(sp.x[0] - sp.tx) * fw > 0.5f || Math.abs(sp.y[0] - sp.ty) * fh > 0.5f
                         || Math.abs(sp.s[0] - sp.ts) > 0.5f || Math.abs(sp.p[0] - sp.tp) > 0.01f
                         || Math.abs(sp.p[1]) > 0.05f) {
                     moving = true;
                 }
             }
-            invalidateSelf();
+            if (moving || wasMoving) invalidateSelf();   // un fotograma más al parar, para dibujar el sitio final
+            wasMoving = moving;
             if (!moving && onSettled != null) {
                 Runnable r = onSettled;
                 onSettled = null;
@@ -1078,15 +1323,58 @@ final class FolderMorph {
 
         @Override
         public void draw(android.graphics.Canvas canvas) {
+            if (cardOn && card != null) {
+                if (cardBase != null && !GlassFolder.opaque(card)) {
+                    Rect cb = card.getBounds();
+                    cardBase.setBounds(cb);
+                    if (roundBase) {
+                        cardBase.draw(canvas);            // ya trae sus esquinas redondeadas
+                    } else {
+                        // Recorte con antialias (clipPath dentaría las esquinas): capa y máscara.
+                        cardBox.set(cb);
+                        float r = Math.min(card.getRadius(), Math.min(cardBox.width(), cardBox.height()) / 2f);
+                        int save = canvas.saveLayer(cardBox, null);
+                        cardBase.draw(canvas);
+                        canvas.drawRoundRect(cardBox, r, r, MASK);
+                        canvas.restoreToCount(save);
+                    }
+                }
+                card.draw(canvas);
+            }
+            float fw = frame.width(), fh = frame.height();
             for (Sprite sp : sprites) {
                 if (!sp.placed || sp.d == null || sp.p[0] <= 0.002f) continue;
-                float size = Math.max(0f, sp.s[0] * sp.p[0]);
-                float cx = sp.x[0] - rl[0], cy = sp.y[0] - rl[1];
-                sp.d.setBounds(Math.round(cx - size / 2f), Math.round(cy - size / 2f),
-                        Math.round(cx + size / 2f), Math.round(cy + size / 2f));
+                // El icono se prepara una vez a un tamaño fijo y se mueve y escala con el lienzo
+                // (gratis en la GPU). Antes cambiaba setBounds en cada fotograma, y los iconos
+                // adaptativos rehacen entonces su máscara y repintan sus capas: iba a pocos fps.
+                // (también si el dibujo se cambió por el del icono real, que llega sin tamaño)
+                if (sp.base <= 0 || sp.ts > sp.base * 1.25f || sp.d.getBounds().width() != sp.base) {
+                    sp.base = Math.max(1, Math.round(sp.ts));
+                    sp.d.setBounds(-sp.base / 2, -sp.base / 2, sp.base - sp.base / 2, sp.base - sp.base / 2);
+                }
+                float k = Math.max(0f, sp.s[0] * sp.p[0]) / sp.base;
+                if (k <= 0.001f) continue;
+                float cx = frame.left + sp.x[0] * fw - rl[0], cy = frame.top + sp.y[0] * fh - rl[1];
+                int save = canvas.save();
+                canvas.translate(cx, cy);
+                canvas.scale(k, k);
                 sp.d.setAlpha(Math.round(255 * StackSwipe.clamp01(sp.p[0] * 1.6f)));
                 sp.d.draw(canvas);
+                canvas.restoreToCount(save);
             }
+        }
+
+        @Override
+        public void invalidateDrawable(Drawable who) {
+            invalidateSelf();
+        }
+
+        @Override
+        public void scheduleDrawable(Drawable who, Runnable what, long when) {
+        }
+
+        @Override
+        public void unscheduleDrawable(Drawable who, Runnable what) {
         }
 
         @Override
@@ -1116,22 +1404,25 @@ final class FolderMorph {
 
     /** Caja del icono de la carpeta en pantalla, solo por layout (sin transformaciones). */
     private static RectF naturalBox(View v) {
-        Rect ib = iconBounds(v);
+        return naturalBox(v, iconBounds(v), new RectF());
+    }
+
+    /** Igual, con los límites del icono ya leídos y escribiendo en out (sin objetos nuevos). */
+    private static RectF naturalBox(View v, Rect ib, RectF out) {
         float ps = parentScale(v), ox, oy;
         ViewParent p = v.getParent();
         if (p instanceof View) {
             View pv = (View) p;
-            int[] pl = new int[2];
-            pv.getLocationOnScreen(pl);
-            ox = pl[0] + (v.getLeft() - pv.getScrollX()) * ps;
-            oy = pl[1] + (v.getTop() - pv.getScrollY()) * ps;
+            pv.getLocationOnScreen(TMP_LOC);
+            ox = TMP_LOC[0] + (v.getLeft() - pv.getScrollX()) * ps;
+            oy = TMP_LOC[1] + (v.getTop() - pv.getScrollY()) * ps;
         } else {
-            int[] l = new int[2];
-            v.getLocationOnScreen(l);
-            ox = l[0];
-            oy = l[1];
+            v.getLocationOnScreen(TMP_LOC);
+            ox = TMP_LOC[0];
+            oy = TMP_LOC[1];
         }
-        return new RectF(ox + ib.left * ps, oy + ib.top * ps, ox + ib.right * ps, oy + ib.bottom * ps);
+        out.set(ox + ib.left * ps, oy + ib.top * ps, ox + ib.right * ps, oy + ib.bottom * ps);
+        return out;
     }
 
     private static List<View> icons(View root) {
@@ -1153,29 +1444,29 @@ final class FolderMorph {
     }
 
     private static RectF screenRect(View v) {
-        int[] l = new int[2];
-        v.getLocationOnScreen(l);
+        return screenRect(v, new RectF());
+    }
+
+    private static RectF screenRect(View v, RectF out) {
+        v.getLocationOnScreen(TMP_LOC);
         float sx = 1f, sy = 1f;
         for (View c = v; c != null; c = c.getParent() instanceof View ? (View) c.getParent() : null) {
             sx *= c.getScaleX();
             sy *= c.getScaleY();
         }
-        return new RectF(l[0], l[1], l[0] + v.getWidth() * sx, l[1] + v.getHeight() * sy);
+        out.set(TMP_LOC[0], TMP_LOC[1], TMP_LOC[0] + v.getWidth() * sx, TMP_LOC[1] + v.getHeight() * sy);
+        return out;
     }
 
+    /** Escala horizontal acumulada de los padres (la carpeta escala igual en los dos ejes). */
     private static float parentScale(View v) {
-        return parentScaleXY(v)[0];
-    }
-
-    private static float[] parentScaleXY(View v) {
-        float sx = 1f, sy = 1f;
+        float sx = 1f;
         ViewParent p = v.getParent();
         for (View c = p instanceof View ? (View) p : null; c != null;
              c = c.getParent() instanceof View ? (View) c.getParent() : null) {
             sx *= c.getScaleX();
-            sy *= c.getScaleY();
         }
-        return new float[]{Math.max(0.01f, sx), Math.max(0.01f, sy)};
+        return Math.max(0.01f, sx);
     }
 
     private static Field findField(Class<?> c, String name) {

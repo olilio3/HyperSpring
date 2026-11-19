@@ -6,7 +6,12 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v3.0.0</b> · <a href="README.es.md">Español</a>
+  <b>v3.0.1</b> · <a href="README.es.md">Español</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/olilio3/HyperSpring/releases"><img src="https://img.shields.io/github/downloads/olilio3/HyperSpring/total?label=downloads&color=FF6F61" alt="Downloads"></a>
+  <a href="https://github.com/olilio3/HyperSpring/stargazers"><img src="https://img.shields.io/github/stars/olilio3/HyperSpring?style=flat&color=FF6F61" alt="Stars"></a>
 </p>
 
 <p align="center">

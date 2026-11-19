@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.0.1
+
+**Smoother folder resizing** (Kashi's launcher)
+- When you let go, the folder keeps the speed it had and glides to its size with the same spring, instead of stopping dead and starting a new animation. Icons and folder move in the same frame.
+- Nothing is redrawn while your finger is still, and far fewer objects are created per frame.
+- The folder card is drawn at its real size, like HyperOS 4, instead of stretching the real background: corners and glass rim stay round, and the background no longer vanishes for a moment at every size change or turns dark while you pull.
+- Icons stay glued to the card while it stretches and arrive one after another when they change place. Their appearing animation is much lighter (about 25 % less time per frame on a Redmi 14C).
+- The glass rim lights up next to the corner you drag.
+- A quick flick when you let go picks the size you were heading to.
+- A soft tick when you hit the biggest or smallest size.
+
+**New**
+- **Haptic on resize** (Folders): strength of the tick each time a folder jumps to another size. 0 turns it off.
+- Download and star counters in the README.
+
+**Changed**
+- Without advanced textures, folders show MIUI's plain grey background with no glass rim, also while resizing.
+
+**Fixed**
+- Dragging again right after letting go could leave a layer of icons stuck on screen with the real icons hidden.
+- If the launcher went to the background mid-resize, the icons could stay hidden, or folders could stop resizing until a restart.
+- Folders lost their rounded corners after resizing.
+- Folder glass: the wallpaper is read and blurred in the background (changing a setting from the app no longer stutters the launcher), the shader only gets the values that change each frame, and the touch glow no longer stays on after dragging an icon.
+
 ## 3.0.0
 
 **Important: tick the new scope.** HyperSpring can now hook **POCO Launcher**. On a POCO phone, open LSPosed → HyperSpring and tick **POCO Launcher** (`com.mi.android.globallauncher`), then restart it. LSPosed does not tick new scopes when you update.
