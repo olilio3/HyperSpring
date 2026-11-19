@@ -126,8 +126,6 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 4. Open HyperSpring and grant root when asked (it's only used to restart the launcher and System UI).
 5. In **About → Compatibility**, every part should show **Active**.
 
-### Coming from Ice Home
-HyperSpring installs over it and keeps your settings, because it uses the same package (`com.icehome.up`). LSPosed does **not** tick the new scope by itself: check that all of them are ticked (Screenshot is new since 2.7.1).
 
 ### Updating
 1. Install the new version over the old one.
