@@ -42,7 +42,7 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 ## Compilar
 
 - **Con Android SDK:** `./gradlew assembleRelease`.
-- **Sin SDK ni GitHub** (sesiones en la nube): `TOOLS=/ruta bash local-build/maven/build.sh`. Solo usa Maven Central; las URL de cada herramienta están en su cabecera.
+- **Sin SDK ni GitHub** (sesiones en la nube y **Termux** en el móvil): `bash local-build/maven/get-tools.sh` descarga las herramientas en `~/tools` y `bash local-build/maven/build.sh` compila. Con `KEYSTORE=/ruta/hyperspring.jks` firma con la clave de releases (pide la contraseña). En Termux usa el `aapt2` del sistema (`pkg install aapt2`), porque el de apktool es x86_64.
 - **CI:** `.github/workflows/build.yml` compila en cada push con `build.sh` y sube los APK.
 - **Sin SDK:** `TOOLS=/ruta bash local-build/build.sh`.
   - Necesita JDK 17, `android.jar` (API 35), jadx, apktool y uber-apk-signer.

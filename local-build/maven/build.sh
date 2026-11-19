@@ -17,6 +17,14 @@
 # alineado con zipalign.py. Para publicar releases, mejor build.sh o el CI.
 #
 # Uso: TOOLS=/ruta bash local-build/maven/build.sh   → apk/HyperSpring.apk y apk/HyperSpring-legacy.apk
+#
+# Opcional:
+#   KEYSTORE=/ruta/hyperspring.jks  firma con tu clave de releases (pide la contraseña; alias en
+#                                   KS_ALIAS, por defecto hyperspring). Sin él, clave de depuración.
+#   AAPT2=/ruta/aapt2               aapt2 propio. Si no, el del PATH (Termux: pkg install aapt2) y,
+#                                   si no hay, el de apktool-lib (solo ordenadores x86_64).
+#
+# En Termux (Android): pkg install openjdk-17 aapt2 python zip unzip curl git
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 TOOLS="${TOOLS:-$HOME/tools}"
@@ -38,7 +46,11 @@ javac -nowarn -encoding UTF-8 -source 8 -target 8 -bootclasspath "$TOOLS/android
 java -cp "$TOOLS/dalvik-dx-16.0.1.jar" com.android.dx.command.Main --dex --min-sdk-version=26 \
   --output="$O/dex/classes.dex" "$O/classes"
 # Recursos y manifiesto
-unzip -p "$TOOLS/apktool-lib-3.0.3.jar" prebuilt/linux/aapt2 > "$O/aapt2" && chmod +x "$O/aapt2"
+# aapt2: el indicado, el del sistema (Termux, ARM) o el que trae apktool (Linux x86_64).
+if [ -n "${AAPT2:-}" ]; then cp "$AAPT2" "$O/aapt2"
+elif command -v aapt2 >/dev/null 2>&1; then ln -sf "$(command -v aapt2)" "$O/aapt2"
+else unzip -p "$TOOLS/apktool-lib-3.0.3.jar" prebuilt/linux/aapt2 > "$O/aapt2"; fi
+chmod +x "$O/aapt2" 2>/dev/null || true
 "$O/aapt2" compile --dir app/src/main/res -o "$O/res/res.zip"
 sed 's#<manifest #<manifest package="com.icehome.up" #' app/src/main/AndroidManifest.xml > "$O/AndroidManifest.xml"
 "$O/aapt2" link -I "$TOOLS/android.jar" --manifest "$O/AndroidManifest.xml" --min-sdk-version 30 --target-sdk-version 35 \
@@ -50,9 +62,15 @@ cp "$O/apk/unsigned.apk" "$O/apk/modern/HyperSpring.apk"
 (cd app/src/main/resources && zip -q -r -D "$OLDPWD/$O/apk/modern/HyperSpring.apk" META-INF/xposed)
 # Alinear, firmar y comprobar
 javac -nowarn -cp "$TOOLS/apksig-2.3.0.jar" -d "$O/signer" "$HERE/Sign.java" "$HERE/Verify.java"
+KS="${KEYSTORE:-$TOOLS/debug.keystore}"
+if [ -n "${KEYSTORE:-}" ] && [ -z "${KS_PASS:-}" ]; then
+  # La contraseña se pide una vez y sirve para los dos APK (no se ve al escribirla).
+  printf "Contraseña del keystore: "; stty -echo 2>/dev/null; read -r KS_PASS; stty echo 2>/dev/null; echo
+  export KS_PASS
+fi
 for v in modern/HyperSpring legacy/HyperSpring-legacy; do
   python3 -I "$HERE/zipalign.py" "$O/apk/$v.apk" "$O/apk/$v-aligned.apk"
-  java $X -cp "$O/signer:$TOOLS/apksig-2.3.0.jar" Sign "$TOOLS/debug.keystore" "$O/apk/$v-aligned.apk" "$O/out/$(basename $v).apk"
+  java $X -cp "$O/signer:$TOOLS/apksig-2.3.0.jar" Sign "$KS" "$O/apk/$v-aligned.apk" "$O/out/$(basename $v).apk"
   java $X -cp "$O/signer:$TOOLS/apksig-2.3.0.jar" Verify "$O/out/$(basename $v).apk"
 done
 "$O/aapt2" dump badging "$O/out/HyperSpring.apk" > "$O/badging.txt"; head -1 "$O/badging.txt"
