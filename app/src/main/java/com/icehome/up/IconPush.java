@@ -38,7 +38,7 @@ final class IconPush {
     static volatile float strength = 0.4f;
 
     /** Lo que se aparta un icono pegado al tocado, a fuerza 1, en anchos de pantalla. */
-    private static final float REACH = 0.96f;
+    private static final float REACH = 0.6f;
     /** Distancia (en anchos de pantalla) a la que el empuje se queda en 1/e (~37 %). */
     private static final float FALLOFF = 0.63f;
     /** Red de seguridad: sin fotogramas durante esto y con el launcher delante, se vuelve. */
@@ -115,9 +115,27 @@ final class IconPush {
         lastFrameMs = SystemClock.uptimeMillis();
         if (!posted) {
             posted = true;
-            MAIN.post(APPLY);
+            MAIN.post(SCHEDULE);
         }
     }
+
+    /**
+     * Se aplica en el siguiente fotograma de pantalla con el último valor de MIUI: con un post
+     * normal caía cuando el hilo principal quedaba libre (al abrir una app está muy ocupado) y los
+     * iconos avanzaban a saltos.
+     */
+    private static final Runnable SCHEDULE = new Runnable() {
+        @Override
+        public void run() {
+            android.view.Choreographer.getInstance().postFrameCallback(TICK);
+        }
+    };
+    private static final android.view.Choreographer.FrameCallback TICK = new android.view.Choreographer.FrameCallback() {
+        @Override
+        public void doFrame(long t) {
+            APPLY.run();
+        }
+    };
 
     private static final Runnable APPLY = new Runnable() {
         @Override
@@ -152,7 +170,9 @@ final class IconPush {
         }
         applied = p;
         float w = screenW, cx = centerX, cy = centerY;
-        float reach = p * REACH * strength * w, fall = FALLOFF * w;
+        // Suave al salir y al llegar (smoothstep), como el boceto: el muelle de MIUI ya arranca de golpe.
+        float e = p * p * (3f - 2f * p);
+        float reach = e * REACH * strength * w, fall = FALLOFF * w;
         for (int i = moved.size() - 1; i >= 0; i--) {
             Moved m = moved.get(i);
             View v = m.view.get();

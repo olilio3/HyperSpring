@@ -1522,6 +1522,17 @@ final class Genie {
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
+            // Abanico, Pergamino y Carta: sin captura aún, la pantalla provisional sería un color liso
+            // (el blanco de la app: el fogonazo blanco al abrir). Mientras tanto se queda el icono y la
+            // app entra fundida con su primera captura. Con tope: si tarda, la provisional de siempre.
+            if (startedOpen && iconReady && (style == STYLE_SCROLL || style == STYLE_FAN || style == STYLE_CARD)) {
+                float wait = fromWindow ? 1f - geoNow.fade : 1f;
+                wait *= 1f - smooth((geoNow.pw - 0.45f) / 0.15f);
+                if (wait > 0f) {
+                    geoNow.iconMix = Math.max(geoNow.iconMix, wait);
+                    dirty = true;
+                }
+            }
             // Con estela, otro fotograma: así se apaga sola aunque MIUI deje de mandar fotogramas.
             if (geoNow.vel[0] != 0f || geoNow.vel[1] != 0f || geoNow.vel[2] != 0f || geoNow.vel[3] != 0f) dirty = true;
             long t0 = System.nanoTime();
