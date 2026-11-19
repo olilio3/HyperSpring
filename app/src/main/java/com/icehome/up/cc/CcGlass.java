@@ -1151,7 +1151,7 @@ public final class CcGlass {
                 protected void afterHookedMethod(MethodHookParam p) {
                     try {
                         View icon = (View) XposedHelpers.getObjectField(p.thisObject, "icon");
-                        if (icon != null) apply(icon, clamp01(XposedHelpers.getFloatField(p.thisObject, "iconProgress")), false);
+                        if (icon != null) apply(icon, clamp01(tileProgress(p)), false);
                     } catch (Throwable t) {
                         once("tile", t);
                     }
@@ -1183,14 +1183,17 @@ public final class CcGlass {
                 @Override
                 protected void afterHookedMethod(MethodHookParam p) {
                     try {
-                        Object b = XposedHelpers.getObjectField(p.thisObject, "binding");
-                        View host = (View) XposedHelpers.getObjectField(b, "progressBg");
-                        try {
-                            exclude((View) XposedHelpers.getObjectField(b, "progress"));   // relleno: blanco sólido
-                            exclude((View) XposedHelpers.getObjectField(b, "icon"));       // icono del slider
-                        } catch (Throwable ignored) {
+                        Object b = sliderViews(p.thisObject);
+                        View host = sliderView(b, p.thisObject, "progressBg", "progress_bg");
+                        exclude(sliderView(b, p.thisObject, "progress", "progress"));   // relleno: blanco sólido
+                        exclude(sliderView(b, p.thisObject, "icon", "icon"));           // icono del slider
+                        if (host != null) {
+                            apply(host, 0f, false);
+                        } else {
+                            // Para el siguiente informe: qué campos tiene el slider en esta versión.
+                            once("slider", new NoSuchFieldError("fondo del slider; campos: " + fieldNames(p.thisObject)
+                                    + (b != p.thisObject ? " / " + fieldNames(b) : "")));
                         }
-                        if (host != null) apply(host, 0f, false);
                     } catch (Throwable t) {
                         once("slider", t);
                     }
@@ -1214,6 +1217,87 @@ public final class CcGlass {
             Deopt.all(holder);
         }
         note("HyperSpring CC: clases de serie enganchadas");
+    }
+
+    // ------------------------------------------------- nombres que cambian entre versiones de HyperOS
+    private static final Map<Object, Float> TILE_PROGRESS = Collections.synchronizedMap(new WeakHashMap<Object, Float>());
+
+    /**
+     * Cuánto está encendido un botón (0..1). En HyperOS 3 es el campo iconProgress; en HyperOS 2
+     * (Android 15) no existe, y se usa el valor que recibe setIconProgress (el último conocido).
+     */
+    private static float tileProgress(XC_MethodHook.MethodHookParam p) {
+        Object tv = p.thisObject;
+        if (p.method != null && "setIconProgress".equals(p.method.getName())
+                && p.args != null && p.args.length > 0 && p.args[0] instanceof Float) {
+            float v = (Float) p.args[0];
+            TILE_PROGRESS.put(tv, v);
+            return v;
+        }
+        try {
+            return XposedHelpers.getFloatField(tv, "iconProgress");
+        } catch (Throwable ignored) {
+        }
+        Float last = TILE_PROGRESS.get(tv);
+        return last != null ? last : 0f;
+    }
+
+    /** Campo que puede no existir en otra versión: null en vez de excepción. */
+    private static Object fieldOrNull(Object o, String name) {
+        try {
+            return o == null ? null : XposedHelpers.getObjectField(o, name);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Lo que guarda las vistas del slider: el campo binding (HyperOS 3), otro campo *Binding, o el propio holder. */
+    private static Object sliderViews(Object holder) {
+        Object b = fieldOrNull(holder, "binding");
+        if (b != null) return b;
+        for (Class<?> c = holder.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            java.lang.reflect.Field[] fs;
+            try {
+                fs = c.getDeclaredFields();
+            } catch (Throwable t) {
+                continue;                      // algún campo nombra una clase que no existe
+            }
+            for (java.lang.reflect.Field f : fs) {
+                if (!f.getType().getSimpleName().endsWith("Binding")) continue;
+                try {
+                    f.setAccessible(true);
+                    Object v = f.get(holder);
+                    if (v != null) return v;
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+        return holder;
+    }
+
+    /** Una vista del slider: por su campo, o buscándola por id dentro del itemView del holder. */
+    private static View sliderView(Object src, Object holder, String field, String idName) {
+        Object v = fieldOrNull(src, field);
+        if (v instanceof View) return (View) v;
+        Object item = fieldOrNull(holder, "itemView");
+        if (!(item instanceof View)) return null;
+        View iv = (View) item;
+        int id = iv.getResources().getIdentifier(idName, "id", iv.getContext().getPackageName());
+        return id != 0 ? iv.findViewById(id) : null;
+    }
+
+    /** Nombres y tipos de los campos de un objeto (para el registro cuando algo no se encuentra). */
+    private static String fieldNames(Object o) {
+        if (o == null) return "-";
+        StringBuilder sb = new StringBuilder(o.getClass().getSimpleName()).append('{');
+        try {
+            for (java.lang.reflect.Field f : o.getClass().getDeclaredFields()) {
+                sb.append(f.getName()).append(':').append(f.getType().getSimpleName()).append(' ');
+            }
+        } catch (Throwable t) {
+            sb.append('?');
+        }
+        return sb.append('}').toString();
     }
 
     // ---------------------------------------------------------------- aplicar

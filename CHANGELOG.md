@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.2
+
+**Fixed**
+- Control center on HyperOS 2 (Android 15) without Kashi's control center mod: the round toggle buttons and the brightness and volume sliders had no glass, because their internal fields have other names there. HyperSpring now finds them on both versions. If a slider still can't be found, the log lists what it has, to fix it for good.
+
 ## 3.0.1
 
 **Smoother folder resizing** (Kashi's launcher)
