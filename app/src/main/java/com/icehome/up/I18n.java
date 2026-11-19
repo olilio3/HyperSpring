@@ -108,7 +108,7 @@ final class I18n {
         i("icehome_depth_taper", "Top narrowing",
                 "Depth only: how much narrower the window looks at the top than at the bottom while it leaves the icon or goes back to it, in %. 0 keeps it straight.");
         i("icehome_depth_blur", "Motion blur",
-                "Depth only: the trail the window leaves as it moves. 0 turns it off.");
+                "All styles: the trail the window leaves as it moves, like a photo with the shutter open. Higher, more trail. 0 turns it off. Uses some GPU while the window moves fast.");
         i("icehome_genie_quality", "Resolution",
                 "Sharpness of the animation. Higher looks sharper but uses more GPU; on modest phones, 50–60 %.");
         i("icehome_genie_fps", "Frames per second",

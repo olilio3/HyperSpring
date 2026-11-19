@@ -238,42 +238,33 @@ final class GlRenderer {
             + "    iconIn = step(0.0, iuv.x) * step(iuv.x, 1.0) * step(0.0, iuv.y) * step(iuv.y, 1.0);\n"
             + "  } else if (cup > 3.5 && cup < 4.5) {\n"
             // Pergamino. Todo en coordenadas «anclado a la izquierda» (xl); si el borde cercano es el
-            // derecho (ex.w > 0), se da la vuelta. El papel (la app) empieza en el ancla ex.x, está
-            // plano hasta el centro del rollo ex.y y sigue enrollado en un cilindro de radio ex.z:
-            // sube por el lado lejano y vuelve por delante, así que ahí se ve al revés.
+            // derecho (ex.w > 0), se da la vuelta. La app empieza en el ancla ex.x y está plana hasta
+            // el pliegue ex.y. Desde ahí se curva hacia el FONDO (alejándose de ti) alrededor de un
+            // cilindro de radio ex.z: se ve el cuarto de vuelta que va hacia atrás, cada vez más
+            // estrecho, más bajo (más lejos, perspectiva) y más oscuro. El rollo queda escondido detrás.
             + "    float W = 2.0 * fullHalf;\n"
             + "    float xl = ex.w < 0.0 ? p.x : W - p.x;\n"
             + "    float anchor = ex.x, xc = ex.y, r = max(ex.z, 0.5);\n"
             + "    float cy = (cur.y + cur.w) * 0.5, hh = max((cur.w - cur.y) * 0.5, 0.5);\n"
-            + "    float dl = (xl - xc) / r;\n"
-            + "    float ul = -1.0, kz = 1.0, dx = -1.0;\n"
-            + "    if (abs(dl) <= 1.0) {\n"
-            + "      float al = asin(dl), nz = cos(al);\n"
-            + "      float ur = (xc - anchor + r * (3.14159265 - al)) / W;\n"
-            + "      if (ur <= 1.0) {\n"
-            + "        ul = ur;\n"
-            // Más cerca de ti, un pelín más alto; luz de arriba desde el lado cercano y un brillo.
-            + "        kz = 1.0 + 0.05 * nz * min(1.0, r / (0.08 * W));\n"
-            // La luz viene siempre de arriba a la izquierda de la pantalla, sea cual sea el lado.
-            + "        float dsx = ex.w < 0.0 ? dl : -dl;\n"
-            + "        lit = clamp(0.35 + 0.65 * (nz * 0.85 - dsx * 0.45), 0.2, 1.0);\n"
-            + "        spec = pow(clamp(nz * 0.8 - dsx * 0.6, 0.0, 1.0), 24.0) * 0.55;\n"
-            + "        dx = r - abs(xl - xc);\n"
-            + "      }\n"
+            + "    float ul, kz = 1.0, dx;\n"
+            + "    if (xl > xc) {\n"
+            + "      float t = min((xl - xc) / r, 1.0);\n"
+            + "      float ph = asin(t), cp = cos(ph);\n"
+            // Más lejos, más pequeño: la profundidad es r·(1 − cos) y la cámara está a W / 2,4.
+            + "      kz = 1.0 / (1.0 + r * (1.0 - cp) * 2.4 / W);\n"
+            + "      ul = (xc - anchor + r * ph) / W;\n"
+            + "      lit = 0.25 + 0.75 * cp;\n"
+            + "      dx = min(r - (xl - xc), (1.0 - ul) * W * cp);\n"
+            + "    } else {\n"
+            + "      ul = (xl - anchor) / W;\n"
+            + "      dx = min(xl - anchor, W - xl);\n"
             + "    }\n"
+            // Un brillo fino en el pliegue, donde la app empieza a curvarse.
+            + "    spec = 0.3 * (1.0 - smoothstep(0.0, 3.0, abs(xl - xc))) * step(r, W - xc + r);\n"
             + "    float y0 = (p.y - cy) / kz;\n"
             + "    float dy = (hh - abs(y0)) * kz;\n"
             + "    float rad = min(g.w, hh);\n"
-            + "    if (ul < 0.0) {\n"
-            // Parte plana, con la sombra que le hace el rollo.
-            + "      ul = (xl - anchor) / W;\n"
-            // La sombra se apaga cuando el rollo sale de la pantalla (si no, quedaba una franja gris).
-            + "      float gone = clamp((W - (xc - r)) / (0.1 * W), 0.0, 1.0);\n"
-            + "      lit = 1.0 - 0.38 * gone * smoothstep(xc - r - 0.1 * W, xc - r, xl);\n"
-            + "      float de = min(xl - anchor, W - xl);\n"
-            + "      dx = min(de, xc - xl);\n"
-            + "      if (de < rad && dy < rad && xc - xl > rad) dx = rad - length(vec2(rad - de, rad - dy));\n"
-            + "    }\n"
+            + "    if (xl <= xc && dx < rad && dy < rad) dx = rad - length(vec2(rad - dx, rad - dy));\n"
             + "    u = clamp(ex.w < 0.0 ? ul : 1.0 - ul, 0.0, 1.0);\n"
             + "    s = clamp(y0 / (2.0 * hh) + 0.5, 0.0, 1.0);\n"
             + "    wE = W;\n"

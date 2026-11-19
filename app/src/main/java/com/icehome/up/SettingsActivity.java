@@ -1807,7 +1807,8 @@ public class SettingsActivity extends Activity {
             k.addView(row);
             // Solo lo que sirve para el estilo elegido: Estrechamiento y Desenfoque de movimiento son de
             // Profundidad, e Intensidad (cuánto se deforma) solo la usan el genio clásico y la copa.
-            final boolean depthOnly = key.startsWith("icehome_depth_");
+            // El desenfoque de movimiento vale para todos los estilos desde la 3.1.0.
+            final boolean depthOnly = "icehome_depth_taper".equals(key);
             if (depthOnly || "icehome_genie_strength".equals(key)) {
                 Runnable vis = new Runnable() {
                     @Override

@@ -204,6 +204,8 @@ final class Genie {
     private static final float CARD_TURNS = 2f, CARD_EASE = 3.2f, CARD_CAMERA = 1.93f;
     /** Carta: por debajo de esta apertura ya no gira (de frente, el icono se funde sobre ella quieta). */
     private static final float CARD_STILL = 0.14f;
+    /** Pergamino: sus muelles van a esta velocidad (más lento que los demás estilos). Ver Springs. */
+    static final float SCROLL_SPEED = 0.6f;
     /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
@@ -1518,7 +1520,7 @@ final class Genie {
                     uploadIcon();
                 }
             }
-            if (style == STYLE_DEPTH) drawVelocity(cur);
+            if (depthBlur > 0f) drawVelocity(cur);
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
@@ -1800,8 +1802,17 @@ final class Genie {
         float shape = smooth(pw / DEPTH_RISE) * (1f - smooth((pw - DEPTH_SETTLE) / (1f - DEPTH_SETTLE)));
         out.tiltTarget = k * shape * ramp;
         applyTilt(out, out.tiltTarget);
+        motion(vel, ramp, pw, dir, full, out);
+    }
+
+    /**
+     * Desenfoque de movimiento (desde la 3.1.0, en todos los estilos; antes solo en Profundidad):
+     * cada borde se difumina en la dirección en la que va, como una cámara con el obturador
+     * abierto {@link #DEPTH_SHUTTER_S}. {@code vel} = velocidad de cada borde (px/s), null = sin.
+     */
+    private static void motion(float[] vel, float ramp, float pw, float dir, RectF full, GlRenderer.Geo out) {
         java.util.Arrays.fill(out.vel, 0f);
-        if (vel == null) return;
+        if (vel == null || depthBlur <= 0f) return;
         float amt = depthBlur * ramp;
         // Muy cerca del icono la estela se apaga: aterriza nítido, sin «manchar» el icono. Y al
         // abrir, en el último tramo (el muelle llegando a pantalla completa), también: la app
@@ -1920,6 +1931,14 @@ final class Genie {
      */
     private static void shape(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
                               float radius, float bend, float flip, boolean iconReady, float[] vel, GlRenderer.Geo out) {
+        float pw0 = progress(cur.width(), icon.width(), full.width());
+        shapeOnly(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, vel, out);
+        // Profundidad ya pone su estela; los demás estilos, aquí.
+        if (style != STYLE_DEPTH) motion(vel, ramp, pw0, dir, full, out);
+    }
+
+    private static void shapeOnly(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
+                                  float radius, float bend, float flip, boolean iconReady, float[] vel, GlRenderer.Geo out) {
         float pw = progress(cur.width(), icon.width(), full.width());
         float ph = progress(cur.height(), icon.height(), full.height());
         float g = strength * ramp;
