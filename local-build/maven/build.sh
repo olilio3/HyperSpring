@@ -24,7 +24,7 @@
 #   AAPT2=/ruta/aapt2               aapt2 propio. Si no, el del PATH (Termux: pkg install aapt2) y,
 #                                   si no hay, el de apktool-lib (solo ordenadores x86_64).
 #
-# En Termux (Android): pkg install openjdk-17 aapt2 python zip unzip curl git
+# En Termux (Android): pkg install openjdk-21 aapt2 python zip unzip curl git
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 TOOLS="${TOOLS:-$HOME/tools}"
