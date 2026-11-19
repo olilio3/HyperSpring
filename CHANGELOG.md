@@ -9,7 +9,7 @@ Designed with the user on animated sketches, from ColorOS videos.
 - **Fan** style: the two icon corners on the side nearest the screen edge go straight to the screen corners, and the other two start towards the other side before the first ones arrive.
 - **Scroll** style: the app leaves the icon rolled up, goes straight to the nearest edge while it grows to full height and unrolls to the other edge. Past the fold the app curls away from you, behind itself, getting narrower, smaller and darker with depth, with a thin highlight on the fold. It runs slower than the other styles. Closing rolls it back up into the icon.
 - **Motion blur** now works with every style, not only Depth, and keeps its own setting: each edge of the window blurs in the direction it moves, like a photo with the shutter open. 0 turns it off.
-- **Card** style: the window spins out of the icon in 3D, like a card turning on itself: two fast turns that slow down as it reaches full screen. Its back shows the icon colour with the icon in the middle.
+- **Card** style: the window spins out of the icon in 3D, like a card turning on itself: two fast turns that slow down as it reaches full screen. Its back shows the icon colour with the icon in the middle. While you drag it home it follows your finger facing you, and when you let go it spins the turns it has left and lands on its icon. The spin is spread so no frame jumps more than ~90°, it moves away a little as it turns so it never gets cut off, and a light from the top left shades each side with a highlight that sweeps across it.
 - Styles depend on which half of the screen the icon is in. Strength only shows for the classic genie and the cup, the only ones it changes.
 
 **Fixed**

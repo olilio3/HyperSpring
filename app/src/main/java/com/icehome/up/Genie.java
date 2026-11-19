@@ -195,15 +195,25 @@ final class Genie {
      * brillo y la sombra que le hace a la parte plana (todo en el shader, GlRenderer cup = 4).
      *
      * Carta (7): la ventana de MIUI tal cual, girando sobre su eje vertical en 3D: CARD_TURNS
-     * vueltas, deprisa al salir y frenando al llegar (1 − (1 − pw)^CARD_EASE). De espaldas se ve el
-     * dorso: el color del icono con el icono en medio.
+     * vueltas, arrancando suave y frenando al llegar (ver Genie.card). De espaldas se ve el dorso:
+     * el color del icono con el icono en medio. Con el dedo no gira: sigue al dedo de frente y,
+     * al soltar, da las vueltas que le quedan desde ahí hasta el icono.
      */
     private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
     private static final float SCROLL_TRAVEL = 0.36f, SCROLL_UNROLL = 0.30f;
-    /** Cámara de la Carta, en anchos de pantalla (más cerca = más perspectiva). */
-    private static final float CARD_TURNS = 2f, CARD_EASE = 3.2f, CARD_CAMERA = 1.93f;
+    /**
+     * Carta: vueltas, curva del giro y cámara (en anchos de pantalla; más cerca = más perspectiva).
+     * El giro es 1 − (1 − q^CARD_EASE_IN)^CARD_EASE_OUT: arranca suave y frena al final. El muelle
+     * de MIUI ya va deprisa al salir del icono; con la curva de antes (1 − (1 − q)^3,2) las dos
+     * prisas se sumaban y la carta giraba hasta 160-200° por fotograma: el ojo no ve un giro,
+     * ve saltos (frente, canto, dorso, canto…), como las ruedas de un coche en un vídeo. Con esta,
+     * unos 85° como mucho.
+     */
+    private static final float CARD_TURNS = 2f, CARD_EASE_IN = 1.6f, CARD_EASE_OUT = 1.5f, CARD_CAMERA = 1.93f;
     /** Carta: por debajo de esta apertura ya no gira (de frente, el icono se funde sobre ella quieta). */
     private static final float CARD_STILL = 0.14f;
+    /** Carta: al soltar el dedo con menos apertura que CARD_STILL + esto, vuelve sin girar. */
+    private static final float CARD_MIN_SPIN = 0.08f;
     /** Pergamino: sus muelles van a esta velocidad (más lento que los demás estilos). Ver Springs. */
     static final float SCROLL_SPEED = 0.6f;
     /**
@@ -954,6 +964,8 @@ final class Genie {
         private final RectF iconNow = new RectF(), iconFrom = new RectF(), iconTo = new RectF(), iconGoal = new RectF();
         private boolean iconInit;
         volatile boolean following;
+        /** Carta: apertura desde la que gira (ver Genie.card). Con el dedo, la de ahora: de frente. */
+        private volatile float cardTop = 1f;
         private boolean landed;
         private long blendNs;
         // Lámpara: posición y velocidad del extremo lejano (centro de arriba), peso de las físicas.
@@ -1242,6 +1254,7 @@ final class Genie {
             flipNs = nowNs;
             float pw = progress(f.cur.width(), iconNow.width(), full.width());
             pwNow = pw;
+            if (following) cardTop = pw;                        // al soltar se queda la última
             if (firstPw < 0f) firstPw = pw;
             float done = open ? pw : 1f - pw;
             long sinceMs = SystemClock.uptimeMillis() - startMs;
@@ -1521,6 +1534,7 @@ final class Genie {
                 }
             }
             if (depthBlur > 0f) drawVelocity(cur);
+            geoNow.cardTop = cardTop;
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
@@ -1756,6 +1770,7 @@ final class Genie {
             }
             java.lang.ref.WeakReference<View> v = targetView;
             ghost = new Ghost(c, full, raw, goal, vel, r, b, bgNow(), iconReady, leash, v);
+            ghost.geo.cardTop = cardTop;                         // la Carta sigue girando igual
             Ghost.schedule();
             final View iconView = v == null ? null : v.get();
             final Icons ic = icons;
@@ -1895,14 +1910,25 @@ final class Genie {
         out.cup = 4f;
     }
 
-    /** Carta (ver {@link #STYLE_CARD}): ex = (coseno, seno del giro, distancia de la cámara en px). */
+    /**
+     * Carta (ver {@link #STYLE_CARD}): ex = (coseno, seno del giro, distancia de la cámara en px).
+     * {@code out.cardTop} es la apertura desde la que gira (1 = pantalla completa). Al cerrar con
+     * el dedo vale lo abierta que estaba al soltar: hasta entonces la carta va de frente y, desde
+     * ahí, da vueltas enteras (así empieza de frente, sin saltos) hasta quedarse quieta en CARD_STILL.
+     */
     private static void card(RectF cur, RectF icon, RectF full, float pw, GlRenderer.Geo out) {
         float side = nearSide(icon, full);
         out.cur.set(cur);
+        float top = Math.max(out.cardTop, CARD_STILL + 0.01f);
+        // Vueltas que caben en lo que queda de camino: soltando con la ventana a media pantalla,
+        // una; casi en el icono, ninguna (el giro sería tan rápido que solo se verían saltos).
+        int turns = top - CARD_STILL < CARD_MIN_SPIN ? 0
+                : Math.max(1, Math.round(CARD_TURNS * (top - CARD_STILL) / (1f - CARD_STILL)));
         // Cerca del icono, quieta y de frente: girando a tamaño de icono salían rayas (dorso, canto,
         // frente en pocos fotogramas).
-        float q = clamp((pw - CARD_STILL) / (1f - CARD_STILL));
-        double ang = CARD_TURNS * 2.0 * Math.PI * (1.0 - Math.pow(1.0 - q, CARD_EASE));
+        float q = clamp((pw - CARD_STILL) / (top - CARD_STILL));
+        double x = Math.pow(q, CARD_EASE_IN);
+        double ang = turns * 2.0 * Math.PI * (1.0 - Math.pow(1.0 - x, CARD_EASE_OUT));
         out.ex[0] = (float) Math.cos(ang);
         out.ex[1] = (float) Math.sin(ang) * -side;             // gira hacia el centro de la pantalla
         out.ex[2] = CARD_CAMERA * Math.max(1f, full.width());

@@ -146,10 +146,11 @@ final class GlRenderer {
             + "      x0 = min(cur.x, cur.z); x1 = max(cur.x, cur.z);\n"
             + "      y0 = min(ex.x, ex.z); y1 = max(ex.y, ex.w);\n"
             + "    } else {\n"
-            // Pergamino: el rollo se ve un 5 % más alto (está más cerca). Carta: lo más cerca que
-            // llega un borde al girar se ve D / (D - media anchura) de grande.
+            // Pergamino: el rollo se ve un 5 % más alto (está más cerca). Carta: con este giro, el
+            // borde más cercano se ve D / (D - media anchura · |sen|) de grande, y a lo ancho la
+            // carta mide |cos| de eso. Ajustada así, la malla no pinta de más (de canto, casi nada).
             + "      vec2 c = vec2(cur.x + cur.z, cur.y + cur.w) * 0.5, hs = vec2(cur.z - cur.x, cur.w - cur.y) * 0.5;\n"
-            + "      vec2 k = cup < 4.5 ? vec2(1.0, 1.06) : vec2(ex.z / max(ex.z - hs.x, 1.0));\n"
+            + "      vec2 k = cup < 4.5 ? vec2(1.0, 1.06) : vec2(abs(ex.x), 1.0) * ex.z / max(ex.z - hs.x * abs(ex.y), 1.0);\n"
             + "      x0 = c.x - hs.x * k.x; x1 = c.x + hs.x * k.x; y0 = c.y - hs.y * k.y; y1 = c.y + hs.y * k.y;\n"
             + "    }\n"
             + "    float yb = mix(y0 - mb, y1 + mb, aRow.x);\n"
@@ -283,6 +284,11 @@ final class GlRenderer {
             + "    float cx = (cur.x + cur.z) * 0.5, cy = (cur.y + cur.w) * 0.5;\n"
             + "    float hw = max((cur.z - cur.x) * 0.5, 0.5), hh = max((cur.w - cur.y) * 0.5, 0.5);\n"
             + "    float co = ex.x, si = ex.y, D = ex.z;\n"
+            // Mientras gira se aleja un poco: el borde que se acerca nunca se ve más grande que la
+            // ventana de MIUI (si no, cerca de pantalla completa se salía por arriba y por abajo).
+            // De frente es 1: llega tal cual.
+            + "    float fit = 1.0 - hw * abs(si) / D;\n"
+            + "    hw *= fit; hh *= fit;\n"
             + "    float px = p.x - cx;\n"
             + "    float den = hw * (co * D - px * si);\n"
             + "    float u0 = abs(den) < 0.001 ? 2.0 : px * D / den;\n"
@@ -296,11 +302,18 @@ final class GlRenderer {
             + "    float ex0 = (1.0 - abs(u0)) * hw, ey0 = hh - abs(y0);\n"
             + "    float rad = min(g.w, min(hw, hh));\n"
             + "    float dd = (ex0 < rad && ey0 < rad) ? rad - length(vec2(rad - ex0, rad - ey0)) : min(ex0, ey0);\n"
-            // A píxeles de pantalla: en horizontal la carta se ve estrechada por |cos|.
-            + "    d = dd * f * (ex0 < ey0 ? max(abs(co), 0.05) : 1.0);\n"
-            // De canto se ve más oscura.
-            + "    lit = 1.0 - (1.0 - abs(co)) * 0.45;\n"
-            + "    iuv = vec2(u, s);\n"
+            // A píxeles de pantalla: en vertical la carta se ve f veces más grande y en horizontal
+            // |cos|·f² (la derivada de la proyección). Con solo f el borde cercano salía borroso y
+            // el lejano con dientes. El tope evita que, justo de canto, toda la malla quede a medias.
+            + "    d = dd * f * (ex0 < ey0 ? max(abs(co) * f, 0.02) : 1.0);\n"
+            // Luz desde arriba a la izquierda, delante: la cara que mira hacia ella se aclara y la
+            // otra se oscurece (de frente, 1: tal cual). El brillo es el reflejo de esa luz, que
+            // cruza la carta al girar. De frente se apaga, para que la app llegue limpia.
+            + "    vec3 nrm = vec3(si, 0.0, -co) * (co < 0.0 ? -1.0 : 1.0);\n"
+            + "    vec3 lgt = vec3(-0.45, -0.55, -1.0) * 0.8151;\n"
+            + "    lit = clamp(0.4 + 0.6 * dot(nrm, lgt) / 0.8151, 0.45, 1.08);\n"
+            + "    vec3 eye = normalize(-vec3(u0 * hw * co, y0, D + u0 * hw * si));\n"
+            + "    spec = pow(max(dot(nrm, normalize(lgt + eye)), 0.0), 48.0) * 0.5 * smoothstep(0.0, 0.25, 1.0 - abs(co));\n"
             + "  } else if (cup > 1.5) {\n"
             // Profundidad: de la pantalla al punto de la lámina (y0, x0), y allí, como siempre,
             // la distancia al borde redondeado. Se pasa a píxeles de pantalla con la escala de
@@ -336,7 +349,11 @@ final class GlRenderer {
             + "  float a = clamp(d / max(1.0 / scale, ml * 0.5) + 0.5, 0.0, 1.0);\n"
             + "  if (a <= 0.0) { gl_FragColor = vec4(0.0); return; }\n"
             + "  vec4 col;\n"
-            + "  if (ml * scale < 1.5) {\n"
+            // Si encima va algo opaco (dorso de la Carta, o el icono entero), la app no se ve: no se
+            // lee (con estela serían 8 lecturas de la captura por píxel, caras en una GPU modesta).
+            + "  if (back > 0.5 || iconMix >= 1.0) {\n"
+            + "    col = vec4(0.0);\n"
+            + "  } else if (ml * scale < 1.5) {\n"
             + "    col = CONTENT(u, s);\n"
             + "  } else {\n"
             // Desenfoque de movimiento: 8 muestras a lo largo de la estela, centradas en el punto
@@ -350,15 +367,25 @@ final class GlRenderer {
             + "    col *= 0.125;\n"
             + "  }\n"
             + "  col = col + bg * (1.0 - col.a);\n"
-            // Dorso de la carta: el color de fondo del icono (cerca de su borde) y el icono en medio.
-            + "  if (back > 0.5) {\n"
-            + "    vec4 bk = texture2D(iconTex, vec2(0.08, 0.5));\n"
-            + "    bk = vec4(bk.rgb / max(bk.a, 0.01), 1.0);\n"
-            + "    vec2 qi = (vec2(u, s) - 0.5) * vec2(1.0, h / max(wE, 1.0)) / 0.42 + 0.5;\n"
-            + "    vec4 ic = (qi.x >= 0.0 && qi.x <= 1.0 && qi.y >= 0.0 && qi.y <= 1.0) ? texture2D(iconTex, qi) : vec4(0.0);\n"
-            + "    col = ic + bk * (1.0 - ic.a);\n"
+            // Carta: su cara de icono, que es el dorso y también lo que se ve por delante mientras
+            // sale del icono o vuelve a él (iconMix). Es el color de fondo del icono (cerca de su
+            // borde; si ahí es transparente, el de la app) con el icono cuadrado en medio: del
+            // tamaño del icono de verdad, pero nunca menos del 42 % del ancho. Así, a tamaño de
+            // icono es justo el icono (sin saltos) y el icono nunca sale estirado.
+            + "  if (cup > 4.5) {\n"
+            + "    float fm = max(back, iconMix);\n"
+            + "    if (fm > 0.0) {\n"
+            + "      vec4 bk = texture2D(iconTex, vec2(0.08, 0.5));\n"
+            + "      bk = bk.a > 0.5 ? vec4(bk.rgb / bk.a, 1.0) : vec4(bg.rgb / max(bg.a, 0.01), 1.0);\n"
+            + "      float fr = clamp((icon.z - icon.x) / max(wE, 1.0), 0.42, 1.0);\n"
+            + "      vec2 qi = (vec2(u, s) - 0.5) * vec2(1.0, h / max(wE, 1.0)) / fr + 0.5;\n"
+            + "      vec4 ic = (qi.x >= 0.0 && qi.x <= 1.0 && qi.y >= 0.0 && qi.y <= 1.0) ? texture2D(iconTex, qi) : vec4(0.0);\n"
+            // Casi a tamaño de icono, el fondo se aparta: queda el icono con su forma.
+            + "      col = mix(col, ic + bk * (1.0 - ic.a) * (1.0 - smoothstep(0.85, 1.0, fr)), fm);\n"
+            + "    }\n"
+            + "  } else if (iconMix > 0.0) {\n"
+            + "    col = mix(col, texture2D(iconTex, clamp(iuv, 0.0, 1.0)) * iconIn, iconMix);\n"
             + "  }\n"
-            + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, clamp(iuv, 0.0, 1.0)) * iconIn, iconMix); }\n"
             // Luz y brillo (Pergamino y Carta); en color premultiplicado, rgb nunca pasa de a.
             + "  col.rgb = min(col.rgb * lit + vec3(spec) * col.a, vec3(col.a));\n"
             + "  gl_FragColor = col * a;\n"
@@ -419,6 +446,8 @@ final class GlRenderer {
         float fade = 1f;
         /** Profundidad: inclinación (1/px), curvatura (1/px²) y empuje hacia el fondo de la lámina (ver PERSP). 0 = plana. */
         float tilt, curl, push;
+        /** Carta: apertura desde la que gira (ver Genie.card); 1 = desde pantalla completa. */
+        float cardTop = 1f;
         /** Profundidad: cuánto más lejos está arriba que abajo (ver Genie.applyTilt). */
         float tiltTarget;
         /** Abanico, Pergamino y Carta: sus datos (ver Genie.fan, Genie.scroll y Genie.card). */
