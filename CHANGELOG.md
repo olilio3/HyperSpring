@@ -8,6 +8,11 @@
 - **POCO Launcher support** (`com.mi.android.globallauncher`). It is Xiaomi's own launcher inside, with the same internal classes, so the genie, the springs, the bending recents, glass folders, the shortcut menu, sinking icons and the wallpaper zoom work the same. Kashi's widget stack and folder resize are not available there (POCO Launcher has neither). Based on the analysis in the community fork by ToolDroidYT ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)), credited in NOTICE.
 - The app finds which launcher your phone uses: **About → Compatibility**, the bug report and **Restart launcher** now work with POCO Launcher too (it showed "Launcher null" before).
 
+**Changed**
+- **Only one APK now, for Vector 2.2** (or another framework with libxposed API 101+). The legacy APK for old LSPosed builds (API 93) is gone; the last one is 2.13.1.
+- **Phones that aren't Xiaomi, Redmi or POCO get a clear notice** on the home page: HyperSpring can't work on other brands.
+- **Report a bug** asks you to write what happens first, fills in the title and adds the end of the log by itself. It doesn't open GitHub on unsupported phones or while the module isn't active, and explains why instead.
+
 ## 2.13.1
 
 **New**

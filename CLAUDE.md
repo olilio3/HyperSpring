@@ -46,7 +46,7 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 - **CI:** `.github/workflows/build.yml` compila en cada push con `build.sh` y sube los APK.
 - **Sin SDK:** `TOOLS=/ruta bash local-build/build.sh`.
   - Necesita JDK 17, `android.jar` (API 35), jadx, apktool y uber-apk-signer.
-  - Salen dos APK en `local-build/out/`: `HyperSpring.apk` (libxposed 102, lleva `META-INF/xposed`) y `HyperSpring-legacy.apk` (solo API 93, sin esa carpeta). Los LSPosed antiguos solo conocen la API 100, ya retirada, y no cargarían el primero.
+  - Sale un APK en `local-build/out/`: `HyperSpring.apk` (libxposed 102, lleva `META-INF/xposed`). El legacy (solo API 93) se dejó de publicar en la 3.0.0; `LegacyEntry` sigue en el código.
   - Se compila contra `local-build/xposed-stub` (API 93) y `local-build/libxposed-stub` (copia de libxposed 102). Ninguno va en el APK.
 - **Firma, importante:**
   - Hasta la 2.12.x las releases iban firmadas con la clave de depuración de uber-apk-signer (pública). **Desde la 2.13.0 van con la clave privada del usuario**, que vive fuera del repo (`C:\HyperSpring\Keys\`). Compilar una release: `KEYSTORE=/ruta/hyperspring.jks TOOLS=/ruta bash local-build/build.sh` (la contraseña la escribe el usuario).

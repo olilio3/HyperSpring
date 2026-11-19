@@ -71,9 +71,10 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 
 | | |
 |---|---|
+| **Phone** | **Xiaomi, Redmi or POCO only.** Other brands (realme, OPPO, Samsung, Honor…) can't work: HyperSpring hooks Xiaomi's own launcher and System UI. |
 | **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. |
 | **Root** | Magisk, KernelSU or APatch. Grant root to the HyperSpring app so the restart buttons work instantly. |
-| **LSPosed** | A framework with libxposed API 101+ such as JingMatrix/Vector 2.x (`HyperSpring.apk`), or an older LSPosed with Xposed API 93 (`HyperSpring-legacy.apk`). |
+| **Framework** | **Vector 2.2** (JingMatrix) or another LSPosed with libxposed API 101+. Since 3.0.0 there is no APK for old LSPosed builds (API 93): the last one is 2.13.1. |
 | **Scopes** | `com.miui.home` (System launcher) or, on POCO phones, `com.mi.android.globallauncher` (POCO Launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
 
 ### Tested with
@@ -119,7 +120,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 
 ## Installation
 
-1. Install the APK from [Releases](../../releases): `HyperSpring.apk` on Vector and other current frameworks (libxposed API 102), `HyperSpring-legacy.apk` on older LSPosed builds.
+1. Install the APK from [Releases](../../releases): `HyperSpring.apk`, on Vector 2.2 or another framework with libxposed API 101+.
 2. In LSPosed, enable **HyperSpring** and tick the **System launcher** (or **POCO Launcher**), **System UI** and **Screenshot** scopes.
 3. Reboot.
 4. Open HyperSpring and grant root when asked (it's only used to restart the launcher and System UI).
@@ -159,7 +160,7 @@ If the phone doesn't boot properly, disable the module in LSPosed, or boot into 
 - **Without the SDK:** `TOOLS=/path bash local-build/build.sh`.
   - Uses JDK 17, the API 35 `android.jar`, jadx (D8), apktool (aapt2) and uber-apk-signer.
   - The version comes from `Version.java`.
-  - The APKs end up in `local-build/out/`: `HyperSpring.apk` (libxposed API 102) and `HyperSpring-legacy.apk` (API 93).
+  - The APKs end up in `local-build/out/`: `HyperSpring.apk` (libxposed API 102).
 - **Shader checks:** the AGSL shaders are validated with skia-python before building, and the OpenGL ones with Mesa (scripts in `local-build/`).
 
 ### Layout

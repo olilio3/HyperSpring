@@ -56,12 +56,9 @@ sed 's#<manifest #<manifest package="com.icehome.up" #' app/src/main/AndroidMani
   -o "$OUT/apk/unsigned.apk" "$OUT/res/res.zip"
 (cd "$OUT/dex" && zip -q -j ../apk/unsigned.apk classes.dex)
 
-# 5) Dos APK con el mismo código:
-#    - HyperSpring.apk: lleva META-INF/xposed (libxposed, API 102). Para Vector y LSPosed actuales.
-#    - HyperSpring-legacy.apk: sin META-INF/xposed, solo API clásica (93). Para LSPosed antiguos,
-#      que al ver META-INF/xposed intentarían cargarlo con la API 100 (ya retirada) y fallarían.
-mkdir -p "$OUT/apk/legacy" "$OUT/apk/modern"
-cp "$OUT/apk/unsigned.apk" "$OUT/apk/legacy/HyperSpring-legacy.apk"
+# 5) Un APK con META-INF/xposed (libxposed, API 102), para Vector 2.2 y LSPosed con API 101+.
+#    El APK legacy (solo API 93) se dejó de publicar en la 3.0.0: casi nadie usa ya los LSPosed antiguos.
+mkdir -p "$OUT/apk/modern"
 mv "$OUT/apk/unsigned.apk" "$OUT/apk/modern/HyperSpring.apk"
 (cd app/src/main/resources && zip -q -r "../../../../$OUT/apk/modern/HyperSpring.apk" META-INF/xposed)
 
@@ -74,7 +71,7 @@ SIGN=()
 if [ -n "${KEYSTORE:-}" ]; then
   SIGN=(--ks "$KEYSTORE" --ksAlias "${KS_ALIAS:-hyperspring}")
 fi
-for v in modern legacy; do
+for v in modern; do
   if [ ${#SIGN[@]} -gt 0 ]; then
     java -jar "$TOOLS/uber-apk-signer.jar" -a "$OUT/apk/$v" -o "$OUT/apk/$v/signed" --allowResign "${SIGN[@]}"
   else
@@ -82,5 +79,4 @@ for v in modern legacy; do
   fi
 done
 cp "$OUT"/apk/modern/signed/*.apk "$OUT/HyperSpring.apk"
-cp "$OUT"/apk/legacy/signed/*.apk "$OUT/HyperSpring-legacy.apk"
-echo "OK -> $OUT/HyperSpring.apk (API 102) y $OUT/HyperSpring-legacy.apk (API 93)"
+echo "OK -> $OUT/HyperSpring.apk (API 102)"

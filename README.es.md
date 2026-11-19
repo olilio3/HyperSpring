@@ -61,9 +61,10 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 
 | | |
 |---|---|
+| **Móvil** | **Solo Xiaomi, Redmi o POCO.** En otras marcas (realme, OPPO, Samsung, Honor…) no puede funcionar: HyperSpring engancha el launcher y la interfaz propios de Xiaomi. |
 | **Sistema** | HyperOS 2 o 3 (Android 13 o superior). El cristal y la refracción necesitan Android 13+. |
 | **Root** | Magisk, KernelSU o APatch. Concede root a la app HyperSpring para que los botones de reiniciar funcionen al momento. |
-| **LSPosed** | LSPosed (Zygisk) o un fork actual, como JingMatrix/Vector. API de Xposed 93+. |
+| **Framework** | **Vector 2.2** (JingMatrix) u otro LSPosed con libxposed API 101+. Desde la 3.0.0 no hay APK para los LSPosed antiguos (API 93): el último es la 2.13.1. |
 | **Ámbitos** | `com.miui.home` (Launcher del sistema) o, en los POCO, `com.mi.android.globallauncher` (POCO Launcher), y `com.android.systemui` (Interfaz del sistema). Si LSPosed lo muestra, marca también `miui.systemui.plugin`. |
 
 ### Con qué se ha probado
@@ -107,7 +108,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 
 ## Instalación
 
-1. Instala el APK de [Releases](../../releases): `HyperSpring.apk` en Vector y otros frameworks actuales (libxposed API 102), `HyperSpring-legacy.apk` en LSPosed antiguos.
+1. Instala el APK de [Releases](../../releases): `HyperSpring.apk`, en Vector 2.2 u otro framework con libxposed API 101+.
 2. En LSPosed, activa **HyperSpring** y marca los ámbitos **Launcher del sistema** (o **POCO Launcher**), **Interfaz del sistema** y **Captura de pantalla**.
 3. Reinicia el móvil.
 4. Abre HyperSpring y concede root cuando lo pida (solo se usa para reiniciar el launcher y la interfaz).
@@ -141,7 +142,7 @@ Si el móvil no arranca bien, desactiva el módulo en LSPosed. También puedes a
 ## Compilar
 
 - **Con Android SDK:** `./gradlew assembleRelease`.
-- **Sin SDK:** `TOOLS=/ruta bash local-build/build.sh`. Usa JDK 17, `android.jar` de la API 35, jadx (D8), apktool (aapt2) y uber-apk-signer. Los APK salen en `local-build/out/`: `HyperSpring.apk` (libxposed API 102) y `HyperSpring-legacy.apk` (API 93).
+- **Sin SDK:** `TOOLS=/ruta bash local-build/build.sh`. Usa JDK 17, `android.jar` de la API 35, jadx (D8), apktool (aapt2) y uber-apk-signer. Los APK salen en `local-build/out/`: `HyperSpring.apk` (libxposed API 102).
 - **Shaders:** antes de compilar se validan los AGSL (`agsl_check.py`, con skia-python). Los de OpenGL se comprueban con Mesa usando los scripts de `local-build/`.
 
 Para conservar los ajustes al actualizar, el paquete sigue siendo `com.icehome.up`.

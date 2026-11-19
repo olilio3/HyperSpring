@@ -887,7 +887,14 @@ public class SettingsActivity extends Activity {
                     }));
         }
         String stale = staleParts();
-        if (stale != null) {
+        if (!xiaomiOs()) {
+            // Mucha gente lo instala en realme, OPPO, Samsung… y abre issues: decirlo claro y lo primero.
+            c.addView(notice(I18n.t("Este móvil no tiene HyperOS ni MIUI. HyperSpring solo funciona en Xiaomi, Redmi y POCO "
+                            + "con HyperOS o MIUI: engancha su launcher y su interfaz, que no existen en otras marcas.",
+                    "This phone doesn't run HyperOS or MIUI. HyperSpring only works on Xiaomi, Redmi and POCO "
+                            + "with HyperOS or MIUI: it hooks their launcher and System UI, which other brands don't have."),
+                    null, null));
+        } else if (stale != null) {
             c.addView(notice(I18n.t("Has actualizado HyperSpring, pero " + stale + " sigue con la versión anterior. "
                             + "Reinícialo (o reinicia el móvil) para cargar la nueva.",
                     "You updated HyperSpring, but " + stale + " is still running the previous version. "
@@ -1971,19 +1978,86 @@ public class SettingsActivity extends Activity {
      * y lo envía él; la app no manda nada por su cuenta.
      */
     private void reportBug() {
+        // Filtros: los issues llegaban vacíos o de móviles donde el módulo no puede funcionar.
+        if (!xiaomiOs()) {
+            info(I18n.t("Móvil no compatible", "Phone not supported"),
+                    I18n.t("HyperSpring solo funciona en Xiaomi, Redmi y POCO con HyperOS o MIUI. En este móvil no va a "
+                                    + "funcionar, así que no hace falta abrir un informe.",
+                            "HyperSpring only works on Xiaomi, Redmi and POCO with HyperOS or MIUI. It can't work on this "
+                                    + "phone, so there's no need to open a report."));
+            return;
+        }
+        if (state("launcher_seen") == null && state("systemui_seen") == null) {
+            info(I18n.t("El módulo no está activo", "The module isn't active"),
+                    I18n.t("HyperSpring todavía no se ha cargado en ningún sitio. Usa Vector 2.2 (o un LSPosed con la API "
+                                    + "101/102), activa el módulo y sus ámbitos (launcher e Interfaz del sistema) y reinicia el móvil.",
+                            "HyperSpring hasn't loaded anywhere yet. Use Vector 2.2 (or an LSPosed with API 101/102), "
+                                    + "enable the module and its scopes (launcher and System UI) and reboot."));
+            return;
+        }
+        final android.widget.EditText what = new android.widget.EditText(this);
+        what.setHint(I18n.t("Qué pasa y cómo hacer que pase", "What happens and how to make it happen"));
+        what.setMinLines(3);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(px(20), px(8), px(20), 0);
+        box.addView(what);
+        final android.app.AlertDialog d = new android.app.AlertDialog.Builder(this)
+                .setTitle(I18n.t("Informar de un error", "Report a bug"))
+                .setView(box)
+                .setNegativeButton(I18n.t("Cancelar", "Cancel"), null)
+                .setPositiveButton(I18n.t("Abrir GitHub", "Open GitHub"), new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface di, int w) {
+                        openIssue(what.getText().toString().trim());
+                    }
+                }).show();
+        final android.widget.Button ok = d.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        ok.setEnabled(false);                       // sin texto no hay informe útil
+        what.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int a, int b, int n) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int a, int b, int n) {
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                ok.setEnabled(s.toString().trim().length() >= 15);
+            }
+        });
+    }
+
+    private void info(String title, String msg) {
+        new android.app.AlertDialog.Builder(this).setTitle(title).setMessage(msg).setPositiveButton("OK", null).show();
+    }
+
+    /** El final del registro, cortado en un salto de línea, para que el enlace no pase del límite de GitHub. */
+    static String logTail(String log, int max) {
+        if (log.length() <= max) return log;
+        String t = log.substring(log.length() - max);
+        int nl = t.indexOf('\n');
+        return nl >= 0 ? t.substring(nl + 1) : t;
+    }
+
+    /** Abre el issue con lo que escribió el usuario, el móvil y el final del registro ya puestos. */
+    private void openIssue(String what) {
         copyLog();
         String fx = launcherFx();
-        String body = "**" + I18n.t("Qué pasa", "What happens") + ":**\n\n\n"
-                + "**" + I18n.t("Pasos para que pase", "Steps to make it happen") + ":**\n\n\n"
+        String title = what.length() > 70 ? what.substring(0, 70) + "…" : what;
+        String body = "**" + I18n.t("Qué pasa", "What happens") + ":**\n" + what + "\n\n"
                 + "---\n"
                 + "- HyperSpring " + version() + "\n"
                 + "- " + Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion() + "\n"
                 + "- Launcher " + appVersion(Launchers.current(this)) + " · System UI " + appVersion("com.android.systemui") + "\n"
                 + (fx != null ? "- " + I18n.t("Efectos del escritorio", "Launcher effects") + ": " + fx + "\n" : "")
-                + "\n**" + I18n.t("Registro", "Log") + "** (" + I18n.t("ya está copiado: pégalo aquí", "already copied: paste it here") + "):\n\n```\n\n```\n";
+                + "\n**" + I18n.t("Registro (final; el entero está copiado)", "Log (end; the full one is copied)") + "**:\n\n```\n"
+                + logTail(readLog(), 2500) + "\n```\n";
         try {
             startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(
-                    "https://github.com/olilio3/HyperSpring/issues/new?body=" + android.net.Uri.encode(body))));
+                    "https://github.com/olilio3/HyperSpring/issues/new?title=" + android.net.Uri.encode(title)
+                            + "&body=" + android.net.Uri.encode(body))));
         } catch (Throwable t) {
             toast(I18n.t("No hay navegador para abrir GitHub", "No browser to open GitHub"));
         }
@@ -3923,6 +3997,11 @@ public class SettingsActivity extends Activity {
         if (os != null) return out + " · HyperOS " + (os.startsWith("OS") ? os.substring(2) : os);
         String miui = prop("ro.miui.ui.version.name");
         return miui != null ? out + " · MIUI " + miui.replace("V", "") : out;
+    }
+
+    /** ¿HyperOS o MIUI? Sin ellos no hay launcher ni interfaz de Xiaomi que enganchar. */
+    static boolean xiaomiOs() {
+        return prop("ro.mi.os.version.name") != null || prop("ro.miui.ui.version.name") != null;
     }
 
     private static String prop(String key) {
