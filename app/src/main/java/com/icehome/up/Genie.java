@@ -176,7 +176,32 @@ final class Genie {
      * copa «Ice», quitada en la 2.13.0: un 2 guardado se lee como Copa (ver Tune.reload). Los
      * números no cambian para que sigan valiendo los ajustes guardados y los códigos compartidos.
      */
-    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3;
+    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3, STYLE_FUNNEL = 4, STYLE_BEND = 5;
+    /**
+     * Embudo (3.1.0, sacado de un vídeo de ColorOS): la ventana crece desde el icono siguiendo el
+     * muelle de MIUI en vertical (sin que arriba se adelante, como en la Copa), pero en horizontal
+     * es un trapecio muy marcado: arriba se ensancha enseguida y abajo, por donde sale del icono, se
+     * queda estrecha casi hasta el final. A mitad de camino arriba mide ~3/4 de la pantalla y abajo
+     * ~1/3. Usa la forma de copa del shader (cup = 1) con otro retraso: con intensidad 2,2 el
+     * extremo cercano va como q^3,2 (la Copa, q^2,1).
+     */
+    private static final float FUNNEL_LEAD = 0.9f, FUNNEL_LAG = 1.0f;
+    /**
+     * Doblada (3.1.0): el icono se convierte en una cápsula de cristal que se estira hacia arriba;
+     * al crecer es una hoja doblada hacia el fondo (los extremos de arriba y abajo más lejos, como
+     * una página que se curva) y un poco inclinada; al llenar la pantalla se endereza y se pasa un
+     * poco hacia el otro lado antes de quedar plana, como si rebotara. Todo depende solo de lo
+     * abierta que está, así que cerrar es lo mismo al revés. La fuerza la da Intensidad.
+     * <ul>
+     * <li>{@link #BEND_STRETCH}: cuánto más alta que ancha es la cápsula al salir del icono.</li>
+     * <li>{@link #BEND_CURL}: cuánto se alejan los extremos (fracción de la distancia a la cámara).</li>
+     * <li>{@link #BEND_TILT}: inclinación (arriba más lejos que abajo).</li>
+     * <li>{@link #BEND_WOBBLE}: lo que se pasa al otro lado al enderezarse.</li>
+     * <li>{@link #BEND_GLASS_END}: apertura a la que la cápsula ya no es de cristal.</li>
+     * </ul>
+     */
+    private static final float BEND_STRETCH = 0.5f, BEND_CURL = 0.35f, BEND_TILT = 0.12f, BEND_WOBBLE = 0.12f,
+            BEND_GLASS_END = 0.3f;
     /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
@@ -1782,6 +1807,61 @@ final class Genie {
     }
 
     /**
+     * Estilo Doblada (ver {@link #STYLE_BEND}): el rectángulo de MIUI, estirado en vertical al
+     * salir del icono (la cápsula), visto como una hoja doblada e inclinada en perspectiva.
+     */
+    private static void bent(RectF cur, RectF icon, float dir, float ramp, float radius,
+                             boolean iconReady, float pw, GlRenderer.Geo out) {
+        float amt = Math.max(0f, strength) / 2.2f * ramp;         // Intensidad 2,2 = lo de serie
+        // Cápsula: nada más salir del icono es más alta que ancha; se le pasa al crecer.
+        float pill = smooth(pw / 0.04f) * (1f - smooth((pw - 0.04f) / 0.35f));
+        float sy = 1f + BEND_STRETCH * pill * Math.min(1f, amt), sx = 1f - 0.3f * BEND_STRETCH * pill * Math.min(1f, amt);
+        float cx = cur.centerX(), cy = cur.centerY(), hw = cur.width() * 0.5f * sx, hh = cur.height() * 0.5f * sy;
+        out.cur.set(cx - hw, cy - hh, cx + hw, cy + hh);
+        out.icon.set(icon);
+        out.pw = pw;
+        out.lead = out.lag = 1f;
+        out.cup = 2f;
+        // Con la cápsula más estrecha, el radio no puede pasar de media anchura (ya lo limita el shader).
+        out.radius = radius;
+        out.iconMix = iconMix(pw, dir, iconReady);
+        out.splashIcon = 0f;
+        out.bend = 0f;
+        out.flip = 0f;
+        // Doblez: entra en seguida, se mantiene hasta media apertura y se va al llenar la pantalla,
+        // pasándose un poco al otro lado (la onda de sin) antes de quedar plana.
+        float on = smooth(pw / 0.06f) * (1f - smooth((pw - 0.5f) / 0.4f));
+        float wob = (float) Math.sin(Math.PI * clamp((pw - 0.72f) / 0.28f));
+        float curl = (BEND_CURL * on - BEND_WOBBLE * wob) * amt;
+        float tilt = BEND_TILT * on * amt;
+        out.tiltTarget = tilt;
+        applyPersp(out, tilt, curl);
+        // Cristal: del todo al salir del icono, se aclara hasta ser la app a BEND_GLASS_END.
+        out.glass = (1f - smooth(pw / BEND_GLASS_END)) * Math.min(1f, ramp);
+        java.util.Arrays.fill(out.vel, 0f);
+    }
+
+    /**
+     * Hoja inclinada {@code a} (arriba más lejos que abajo) y doblada {@code c} (los extremos de
+     * arriba y abajo, {@code c} más lejos que el centro; negativo, más cerca): a una altura y0
+     * está a z = push + tilt·y0 + curl·y0². {@code push} es lo justo para que ningún punto quede
+     * más cerca que el rectángulo de MIUI (z ≥ 0): solo se aleja, nunca se sale de la pantalla.
+     */
+    private static void applyPersp(GlRenderer.Geo g, float a, float c) {
+        float hh = Math.max(1f, g.cur.height() * 0.5f);
+        float t = -Math.max(0f, a) / (2f * hh), k = c / (hh * hh);
+        // Lo más cerca de la hoja sin empuje: en un extremo o, si se dobla hacia el fondo, en el vértice.
+        float min = Math.min(t * -hh + k * hh * hh, t * hh + k * hh * hh);
+        if (k > 0f) {
+            float yv = -t / (2f * k);
+            if (yv > -hh && yv < hh) min = Math.min(min, t * yv + k * yv * yv);
+        }
+        g.tilt = t;
+        g.curl = k;
+        g.push = Math.max(0f, -min);
+    }
+
+    /**
      * Pone la hoja inclinada {@code a}: arriba está {@code a} más lejos que abajo, en fracción de
      * la distancia a la cámara. Gira sobre el borde de abajo (z = 0 allí, z = a arriba; lineal,
      * ver GlRenderer.PERSP): abajo se ve del tamaño del rectángulo de MIUI y nunca se sale de la
@@ -1807,9 +1887,30 @@ final class Genie {
         float g = strength * ramp;
         // Curvatura y estela solo en Profundidad: en los demás estilos, a cero.
         out.tilt = out.curl = out.push = 0f;
+        out.glass = 0f;
         java.util.Arrays.fill(out.vel, 0f);
         if (style == STYLE_DEPTH) {
             depth(cur, icon, full, dir, ramp, radius, iconReady, vel, pw, out);
+            return;
+        }
+        if (style == STYLE_BEND) {
+            bent(cur, icon, dir, ramp, radius, iconReady, pw, out);
+            return;
+        }
+        if (style == STYLE_FUNNEL) {
+            // Embudo: en vertical, el rectángulo de MIUI tal cual (crece desde el icono); la forma
+            // de trapecio la pone el shader con un extremo cercano muy retrasado.
+            out.cur.set(cur);
+            out.icon.set(icon);
+            out.pw = pw;
+            out.lead = 1f + FUNNEL_LEAD * g;
+            out.lag = 1f + FUNNEL_LAG * g;
+            out.cup = 1f;
+            out.radius = radius;
+            out.iconMix = iconMix(pw, dir, iconReady);
+            out.splashIcon = 0f;
+            out.bend = bend;
+            out.flip = 0f;
             return;
         }
         if (style != STYLE_CLASSIC) {

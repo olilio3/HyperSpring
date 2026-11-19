@@ -25,7 +25,7 @@ public final class Tune {
             {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
             {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
-            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
+            {"icehome_genie_style", "Estilo", 0f, 5f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento. 4 = Embudo: sale del icono como un trapecio, ancho arriba y estrecho abajo hasta el final. 5 = Doblada: el icono se vuelve una cápsula de cristal y la ventana crece doblada hacia el fondo; se endereza con un pequeño rebote."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
             {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
             {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
@@ -34,6 +34,8 @@ public final class Tune {
             {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto sigue a la pantalla hasta 90 (a 120 Hz o más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
+            {"icehome_push", "Empujar iconos", 0f, 1.5f, 1f, 2, "Al abrir una app, los demás iconos se apartan hacia los bordes, crecen y se desenfocan, como si la app los empujara al salir; al cerrarla vuelven a su sitio. Va con cualquier estilo. 0 lo quita."},
+            {"icehome_push_blur", "Desenfoque de los iconos", 0f, 2f, 1f, 1, "Cuánto se desenfocan los iconos que se apartan. Es lo único del empuje que gasta GPU: si notas tirones, bájalo o ponlo a 0. Necesita Android 12 o más."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
             {"icehome_unlock_zoom", "Zoom al desbloquear", 0f, 1.5f, 0f, 2, "Al desbloquear, el escritorio entra un poco más grande y se asienta a su tamaño, todo de una pieza. 0 lo quita."},
@@ -78,6 +80,8 @@ public final class Tune {
         Haptics.strength = f(c, "icehome_haptic");
         Haptics.folder = f(c, "icehome_folder_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
+        IconPush.strength = f(c, "icehome_push");
+        IconPush.blur = f(c, "icehome_push_blur");
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
         RecentsCurtain.strength = f(c, "icehome_curtain_strength");
         RecentsCurtain.mode = f(c, "icehome_curtain_style") >= 0.5f ? 1f : 0f;

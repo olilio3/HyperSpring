@@ -527,6 +527,7 @@ final class WindowAnim {
                 if (!Genie.enabled || ((android.view.MotionEvent) p.args[0]).getActionMasked() != android.view.MotionEvent.ACTION_DOWN) return;
                 try {
                     View v = (View) p.thisObject;
+                    IconPush.touched(v);
                     String pkg = packageOfIcon(v);
                     touchedPkg = pkg;
                     if (Exclude.genie(pkg)) return;                 // va sin genio: no se prepara nada
@@ -583,6 +584,8 @@ final class WindowAnim {
         }
         boolean open = "OPEN_FROM_HOME".equals(type);
         boolean drag = "CLOSE_TO_DRAG".equals(type);
+        // Iconos que se apartan: van con cualquier estilo, y también con las apps sin genio.
+        if ((open || drag || "CLOSE_TO_HOME".equals(type)) && IconPush.on()) push(impl, open, drag, cur, bounds);
         if (!Genie.enabled || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
             Genie.stopFor(impl, type);
             // Otra app que se abre sin genio (desde un widget…) mientras una se cierra.
@@ -693,6 +696,29 @@ final class WindowAnim {
         }
         if (!open && f.hasIcon && (starting || wantIcon || Genie.needsTarget(impl))) f.targetView = currentTargetView();
         Genie.frame(f);
+    }
+
+    private static final RectF PUSH_FULL = new RectF();
+    private static boolean pushFailed;
+
+    /** Pasa a {@link IconPush} lo abierta que está la ventana. Nunca lanza: es un extra. */
+    private static void push(Object impl, boolean open, boolean drag, RectF cur, Rect bounds) {
+        try {
+            Object params = currentParams.invoke(impl);
+            if (params == null || (Boolean) quickSwitch.invoke(params)) return;
+            Object wp = windowParams.invoke(params);
+            RectF start = (RectF) startRect.invoke(wp);
+            RectF end = (RectF) targetRect.invoke(wp);
+            if (bounds != null && !bounds.isEmpty()) PUSH_FULL.set(bounds);
+            else if (open && end != null) PUSH_FULL.set(end);
+            else if (start != null) PUSH_FULL.set(start);
+            else return;
+            if (PUSH_FULL.width() >= PUSH_FULL.height()) return;     // solo en vertical
+            IconPush.frame(cur, drag ? null : (open ? start : end), PUSH_FULL);
+        } catch (Throwable t) {
+            if (!pushFailed) Log.e("empujar iconos: fotograma", t);   // una vez: va en cada fotograma
+            pushFailed = true;
+        }
     }
 
     /** Paquete del último icono del escritorio que se ha tocado. */

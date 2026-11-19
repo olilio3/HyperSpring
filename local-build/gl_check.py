@@ -28,7 +28,7 @@ def jstr(name):
     for lit, ident in re.findall(r'"((?:[^"\\]|\\.)*)"|\b([A-Z_]{4,})\b', re.sub(r'//[^\n]*', '', m.group(1))):
         out += bytes(lit, 'utf8').decode('unicode_escape') if ident == '' else JS[ident]
     return out
-for n in ('SPLASH_AT', 'VERTEX', 'FRAGMENT_BODY', 'FRAGMENT_WINDOW', 'FRAGMENT_SPLASH'):
+for n in ('PERSP', 'SPLASH_AT', 'VERTEX', 'FRAGMENT_BODY', 'FRAGMENT_WINDOW', 'FRAGMENT_SPLASH'):
     JS[n] = jstr(n)
 
 def comp(kind, code, what):

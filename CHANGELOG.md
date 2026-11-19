@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.1.0
+
+**New** (ideas taken from ColorOS videos)
+- **Push icons** (Opening and closing apps): when an app opens, the home screen zooms in from the icon you tapped, so the other icons move towards the edges (the outer ones leave the screen), grow and blur, as if the app pushed them out. When it closes they come back at the same pace as the window, also when you close it with your finger. Works with every style and with apps excluded from the genie. 0 turns it off.
+- **Icon blur**: how much the pushed icons blur (Android 12+). It is the only part that uses GPU: lower it if it stutters.
+- **Funnel** style: the window leaves the icon as a strong trapezoid, wide at the top and narrow at the bottom almost until the end. Strength sets how narrow.
+- **Bent** style: the icon turns into a glass capsule that stretches upwards; the window grows bent away from you, like a curling page, and straightens with a small bounce. Closing is the same in reverse. Strength sets how much it bends.
+
+**Fixed**
+- `local-build/gl_check.py` failed before checking anything (it did not know the `PERSP` part of the shaders).
+
 ## 3.0.2
 
 **Fixed**

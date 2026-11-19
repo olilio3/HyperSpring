@@ -2867,14 +2867,16 @@ public class SettingsActivity extends Activity {
 
     private String[] styleNames() {
         return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Copa", "Cup"),
-                I18n.t("Profundidad", "Depth")};
+                I18n.t("Profundidad", "Depth"), I18n.t("Embudo", "Funnel"), I18n.t("Doblada", "Bent")};
     }
 
     private String[] styleHints() {
         return new String[]{
                 I18n.t("Sale del icono con cola, como en un Mac", "Comes out of the icon with a tail, like on a Mac"),
                 I18n.t("Arriba sube primero, como Samsung", "The top rises first, like Samsung"),
-                I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail")};
+                I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail"),
+                I18n.t("Trapecio ancho arriba y estrecho abajo", "A trapezoid, wide at the top and narrow at the bottom"),
+                I18n.t("Cápsula de cristal que se dobla y rebota", "A glass capsule that bends and bounces")};
     }
 
     /** Color {@code top} (con su transparencia) pintado encima de {@code under} (opaco). */
@@ -2900,7 +2902,7 @@ public class SettingsActivity extends Activity {
      * como en HyperOS 4 o iOS.
      */
     /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
-    private static final int[] STYLE_VALUES = {0, 1, 3};
+    private static final int[] STYLE_VALUES = {0, 1, 3, 4, 5};
 
     /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
     private View styleRow(final Object[] it) {

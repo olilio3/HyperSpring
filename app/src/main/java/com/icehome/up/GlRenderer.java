@@ -179,6 +179,8 @@ final class GlRenderer {
             + "uniform float cup;\n"
             + "uniform vec3 persp;\n"
             + "uniform vec4 vel;\n"
+            // Doblada: cuánto es todavía una cápsula de cristal (1 al salir del icono, 0 ya abierta).
+            + "uniform float glass;\n"
             + "varying vec2 vE;\n"
             + "varying vec2 vD;\n"
             + PERSP
@@ -234,6 +236,14 @@ final class GlRenderer {
             + "  }\n"
             + "  col = col + bg * (1.0 - col.a);\n"
             + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, vec2(u, s)), iconMix); }\n"
+            // Cristal (Doblada): el contenido se ve a través de un vidrio claro y medio transparente,
+            // con un canto de luz de unos 3 px. Todo en color premultiplicado: rgb nunca pasa de a.
+            + "  if (glass > 0.0) {\n"
+            + "    float rim = 1.0 - clamp(d / 3.0, 0.0, 1.0);\n"
+            + "    vec4 frosted = col * 0.55 + vec4(0.88, 0.94, 1.0, 1.0) * 0.25;\n"
+            + "    col = mix(col, frosted, glass) + vec4(rim * 0.35 * glass);\n"
+            + "    col = min(col, vec4(1.0));\n"
+            + "  }\n"
             + "  gl_FragColor = col * a;\n"
             + "}\n";
 
@@ -294,6 +304,8 @@ final class GlRenderer {
         float tilt, curl, push;
         /** Profundidad: cuánto más lejos está arriba que abajo (ver Genie.applyTilt). */
         float tiltTarget;
+        /** Doblada: 1 = cápsula de cristal (al salir del icono), 0 = la app tal cual. */
+        float glass;
         /** Profundidad: lo que se mueve cada borde (izq., arriba, der., abajo) con el obturador abierto, en px. */
         final float[] vel = new float[4];
     }
@@ -682,6 +694,7 @@ final class GlRenderer {
             GLES20.glUniform1f(p.cup, g.cup);
             GLES20.glUniform3f(p.persp, g.tilt, g.curl, g.push);
             GLES20.glUniform4f(p.vel, g.vel[0], g.vel[1], g.vel[2], g.vel[3]);
+            GLES20.glUniform1f(p.glass, g.glass);
             mesh.position(0);
             GLES20.glEnableVertexAttribArray(p.pos);
             GLES20.glVertexAttribPointer(p.pos, 2, GLES20.GL_FLOAT, false, 0, mesh);
@@ -754,7 +767,7 @@ final class GlRenderer {
     /** Un programa con sus uniformes. */
     private static final class Program {
         final int id, pos, content, texM, iconTex, splash, fade, bend, flip, cup, buf, cur, icon, g, iconMix, fullHalf, bg, scale, bufH,
-                persp, vel;
+                persp, vel, glass;
 
         Program(String fragment) {
             id = GLES20.glCreateProgram();
@@ -784,6 +797,7 @@ final class GlRenderer {
             bufH = u("bufH");
             persp = u("persp");
             vel = u("vel");
+            glass = u("glass");
         }
 
         private int u(String name) {
