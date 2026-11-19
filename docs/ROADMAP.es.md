@@ -16,7 +16,7 @@ Criterio para entrar aquí: que lo vaya a usar bastante gente, que se pueda mant
 - [ ] **Recarga en caliente (libxposed API 102):** que una actualización del módulo y los interruptores se apliquen sin reiniciar el launcher ni la interfaz del sistema.
   - Falta que el módulo sepa "desmontarse": parar sus hilos, quitar sus listeners y volver a instalar los hooks con el código nuevo.
   - Es lo más delicado de la lista: si se deja algo a medias, se cae la interfaz. Saldrá primero en una beta.
-- [ ] **Soporte de POCO Launcher**, integrando el trabajo del fork de la comunidad ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
+- [x] **Soporte de POCO Launcher**, integrando el trabajo del fork de la comunidad ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)). *Publicado en la 3.0.0.*
 
 ## Planeado
 Sin empezar y sin orden fijo.

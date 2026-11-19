@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v2.13.1</b> · <a href="README.es.md">Español</a>
+  <b>v3.0.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -74,7 +74,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 | **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. |
 | **Root** | Magisk, KernelSU or APatch. Grant root to the HyperSpring app so the restart buttons work instantly. |
 | **LSPosed** | A framework with libxposed API 101+ such as JingMatrix/Vector 2.x (`HyperSpring.apk`), or an older LSPosed with Xposed API 93 (`HyperSpring-legacy.apk`). |
-| **Scopes** | `com.miui.home` (System launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
+| **Scopes** | `com.miui.home` (System launcher) or, on POCO phones, `com.mi.android.globallauncher` (POCO Launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
 
 ### Tested with
 
@@ -83,9 +83,11 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 
 **The Mods Center mods are not required.** HyperSpring also works with the stock HyperOS launcher and control center. The widget stack and the springy folders hook features of Kashi's launcher, so with the stock launcher those two do nothing.
 
+**POCO Launcher** (`com.mi.android.globallauncher`) is supported since 3.0.0: it is the same Xiaomi launcher inside, so everything works except the widget stack and the springy folders.
+
 ## Features
 
-### Launcher (`com.miui.home`)
+### Launcher (`com.miui.home` or POCO Launcher)
 - **Genie effect when opening and closing apps.**
   - The window comes out of its icon and goes back into it as a cup.
   - The top leads and the bottom follows, adapting to where the icon sits on screen.
@@ -118,7 +120,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 ## Installation
 
 1. Install the APK from [Releases](../../releases): `HyperSpring.apk` on Vector and other current frameworks (libxposed API 102), `HyperSpring-legacy.apk` on older LSPosed builds.
-2. In LSPosed, enable **HyperSpring** and tick the **System launcher**, **System UI** and **Screenshot** scopes.
+2. In LSPosed, enable **HyperSpring** and tick the **System launcher** (or **POCO Launcher**), **System UI** and **Screenshot** scopes.
 3. Reboot.
 4. Open HyperSpring and grant root when asked (it's only used to restart the launcher and System UI).
 5. In **About → Compatibility**, every part should show **Active**.
@@ -171,7 +173,7 @@ If the phone doesn't boot properly, disable the module in LSPosed, or boot into 
 
 ## Roadmap
 
-Coming next: even more polished app opening and closing, hot reload on libxposed API 102 and POCO Launcher support. See the full list in [`docs/ROADMAP.md`](docs/ROADMAP.md). Ideas and requests are welcome in [Issues](https://github.com/olilio3/HyperSpring/issues).
+Coming next: even more polished app opening and closing, hot reload on libxposed API 102. See the full list in [`docs/ROADMAP.md`](docs/ROADMAP.md). Ideas and requests are welcome in [Issues](https://github.com/olilio3/HyperSpring/issues).
 
 ## Credits
 

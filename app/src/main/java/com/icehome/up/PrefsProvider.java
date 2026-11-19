@@ -37,7 +37,7 @@ public class PrefsProvider extends ContentProvider {
      * sistema y su plugin, app de capturas). La propia app también, claro.
      */
     private static final java.util.Set<String> READERS = new java.util.HashSet<>(java.util.Arrays.asList(
-            "com.miui.home", "com.android.systemui", "miui.systemui.plugin", "com.miui.screenshot"));
+            Launchers.HYPEROS, Launchers.POCO, "com.android.systemui", "miui.systemui.plugin", "com.miui.screenshot"));
 
     /**
      * ¿Puede leer quien llama? El proveedor tiene que estar exportado (lo leen otros procesos),
@@ -96,7 +96,7 @@ public class PrefsProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues v) {
         // Solo el launcher y la interfaz del sistema escriben en el registro.
         String from = getCallingPackage();
-        boolean launcher = "com.miui.home".equals(from), sysui = "com.android.systemui".equals(from);
+        boolean launcher = Launchers.is(from), sysui = "com.android.systemui".equals(from);
         // La app de capturas solo puede decir que HyperSpring se ha cargado en ella (shot_seen).
         boolean shot = "com.miui.screenshot".equals(from);
         if (v == null || !(launcher || sysui || shot)) return null;

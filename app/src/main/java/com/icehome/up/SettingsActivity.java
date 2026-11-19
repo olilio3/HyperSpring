@@ -1447,7 +1447,7 @@ public class SettingsActivity extends Activity {
         c.addView(label(I18n.t("Compatibilidad", "Compatibility")));
         LinearLayout k = glassCard();
         k.addView(infoRow(Icons.PHONE, I18n.t("Este móvil", "This phone"), Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion()));
-        k.addView(statusRow(Icons.HOME, I18n.t("Escritorio", "Launcher"), appVersion("com.miui.home"), "launcher_seen"));
+        k.addView(statusRow(Icons.HOME, I18n.t("Escritorio", "Launcher"), appVersion(Launchers.current(this)), "launcher_seen"));
         String fx = launcherFx();
         if (fx != null) k.addView(infoRow(Icons.SPARKLE, I18n.t("Efectos del escritorio", "Launcher effects"), fx));
         k.addView(statusRow(Icons.CURTAIN, I18n.t("Interfaz del sistema", "System UI"), appVersion("com.android.systemui"), "systemui_seen"));
@@ -1475,9 +1475,9 @@ public class SettingsActivity extends Activity {
                 I18n.t("Android 13 o superior. El cristal y la refracción necesitan Android 13+.",
                         "Android 13 or newer. The glass and refraction need Android 13+.")));
         q.addView(infoRow(Icons.LIST, I18n.t("Ámbitos en LSPosed", "LSPosed scopes"),
-                I18n.t("Launcher del sistema (com.miui.home) e Interfaz del sistema (com.android.systemui). "
+                I18n.t("Launcher del sistema (com.miui.home) o POCO Launcher (com.mi.android.globallauncher) e Interfaz del sistema (com.android.systemui). "
                                 + "El centro de control (miui.systemui.plugin) se engancha desde la interfaz.",
-                        "System launcher (com.miui.home) and System UI (com.android.systemui). "
+                        "System launcher (com.miui.home) or POCO Launcher (com.mi.android.globallauncher) and System UI (com.android.systemui). "
                                 + "The control center (miui.systemui.plugin) is hooked from System UI.")));
         q.addView(infoRow(Icons.PHONE, I18n.t("Probado con", "Tested with"),
                 I18n.t("Redmi 14C (Helio G81 Ultra) con HyperOS 3 y los mods de Kashi de Mods Center: HyperOS Launcher "
@@ -1959,7 +1959,7 @@ public class SettingsActivity extends Activity {
     /** Copia el registro con los datos del móvil delante (lo que hace falta en un issue). */
     private void copyLog() {
         String head = "HyperSpring " + version() + " · " + Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion()
-                + " · launcher " + appVersion("com.miui.home") + "\n";
+                + " · launcher " + appVersion(Launchers.current(this)) + "\n";
         android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         cm.setPrimaryClip(android.content.ClipData.newPlainText("HyperSpring", head + readLog()));
         toast(I18n.t("Registro copiado", "Log copied"));
@@ -1978,7 +1978,7 @@ public class SettingsActivity extends Activity {
                 + "---\n"
                 + "- HyperSpring " + version() + "\n"
                 + "- " + Build.MANUFACTURER + " " + Build.MODEL + " · " + systemVersion() + "\n"
-                + "- Launcher " + appVersion("com.miui.home") + " · System UI " + appVersion("com.android.systemui") + "\n"
+                + "- Launcher " + appVersion(Launchers.current(this)) + " · System UI " + appVersion("com.android.systemui") + "\n"
                 + (fx != null ? "- " + I18n.t("Efectos del escritorio", "Launcher effects") + ": " + fx + "\n" : "")
                 + "\n**" + I18n.t("Registro", "Log") + "** (" + I18n.t("ya está copiado: pégalo aquí", "already copied: paste it here") + "):\n\n```\n\n```\n";
         try {
@@ -3679,7 +3679,7 @@ public class SettingsActivity extends Activity {
             @Override
             public void run() {
                 // Se cierra el proceso viejo (por su pid) y el sistema lo vuelve a abrir solo.
-                String pkg = systemUi ? "com.android.systemui" : "com.miui.home";
+                String pkg = systemUi ? "com.android.systemui" : Launchers.current(SettingsActivity.this);
                 String cmd = "p=$(pidof " + pkg + "); "
                         + (systemUi ? "" : "am force-stop " + pkg + " >/dev/null 2>&1; sleep 0.3; ")
                         + "[ -n \"$p\" ] && kill -9 $p 2>/dev/null; echo hecho";

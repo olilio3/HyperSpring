@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v2.13.1</b> · <a href="README.md">English</a>
+  <b>v3.0.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">
@@ -64,7 +64,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 | **Sistema** | HyperOS 2 o 3 (Android 13 o superior). El cristal y la refracción necesitan Android 13+. |
 | **Root** | Magisk, KernelSU o APatch. Concede root a la app HyperSpring para que los botones de reiniciar funcionen al momento. |
 | **LSPosed** | LSPosed (Zygisk) o un fork actual, como JingMatrix/Vector. API de Xposed 93+. |
-| **Ámbitos** | `com.miui.home` (Launcher del sistema) y `com.android.systemui` (Interfaz del sistema). Si LSPosed lo muestra, marca también `miui.systemui.plugin`. |
+| **Ámbitos** | `com.miui.home` (Launcher del sistema) o, en los POCO, `com.mi.android.globallauncher` (POCO Launcher), y `com.android.systemui` (Interfaz del sistema). Si LSPosed lo muestra, marca también `miui.systemui.plugin`. |
 
 ### Con qué se ha probado
 
@@ -75,9 +75,11 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 
 **Los mods de Mods Center no son obligatorios.** HyperSpring también funciona con el launcher y el centro de control de serie de HyperOS. La pila de widgets y las carpetas que cambian de tamaño son funciones del launcher de Kashi: con el de serie, esas dos partes no hacen nada.
 
+**POCO Launcher** (`com.mi.android.globallauncher`) funciona desde la 3.0.0: por dentro es el mismo launcher de Xiaomi, así que va todo salvo la pila de widgets y las carpetas que cambian de tamaño.
+
 ## Qué hace
 
-### Escritorio (`com.miui.home`)
+### Escritorio (`com.miui.home` o POCO Launcher)
 - **Efecto genio al abrir y cerrar apps.** La ventana sale del icono y vuelve a él con forma de copa. La parte de arriba se adelanta y la de abajo la sigue, adaptándose a la altura del icono. Hay tres estilos: genio clásico, copa tipo Samsung y Profundidad (una hoja inclinada, sin genio). Se dibuja con OpenGL en un hilo propio para que vaya fluido en gama media.
 - **Arrastrar para cerrar como una lámpara.** La ventana cuelga del dedo y se balancea.
 - **Recientes que se doblan** según la fuerza con la que deslizas las tarjetas.
@@ -106,7 +108,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 ## Instalación
 
 1. Instala el APK de [Releases](../../releases): `HyperSpring.apk` en Vector y otros frameworks actuales (libxposed API 102), `HyperSpring-legacy.apk` en LSPosed antiguos.
-2. En LSPosed, activa **HyperSpring** y marca los ámbitos **Launcher del sistema**, **Interfaz del sistema** y **Captura de pantalla**.
+2. En LSPosed, activa **HyperSpring** y marca los ámbitos **Launcher del sistema** (o **POCO Launcher**), **Interfaz del sistema** y **Captura de pantalla**.
 3. Reinicia el móvil.
 4. Abre HyperSpring y concede root cuando lo pida (solo se usa para reiniciar el launcher y la interfaz).
 5. En **Acerca de → Compatibilidad**, cada parte debería aparecer como **Activo**.
@@ -156,7 +158,7 @@ Para conservar los ajustes al actualizar, el paquete sigue siendo `com.icehome.u
 
 ## Próximamente
 
-En camino: abrir y cerrar apps aún más pulido, recarga en caliente con libxposed API 102 y soporte de POCO Launcher. La lista completa está en [`docs/ROADMAP.es.md`](docs/ROADMAP.es.md). Ideas y peticiones en [Issues](https://github.com/olilio3/HyperSpring/issues).
+En camino: abrir y cerrar apps aún más pulido, recarga en caliente con libxposed API 102. La lista completa está en [`docs/ROADMAP.es.md`](docs/ROADMAP.es.md). Ideas y peticiones en [Issues](https://github.com/olilio3/HyperSpring/issues).
 
 ## Créditos
 

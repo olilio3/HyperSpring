@@ -16,7 +16,7 @@ Found a bug? Use **About → Report a bug**: it copies the log and opens the iss
 - [ ] **Hot reload (libxposed API 102):** module updates and feature switches apply without restarting the launcher or System UI.
   - The module still has to learn to "unmount" itself: stop its threads, remove its listeners and reinstall the hooks with the new code.
   - This is the most delicate item here: leaving anything half-done crashes System UI. It will ship in a beta first.
-- [ ] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)).
+- [x] **POCO Launcher support**, bringing in the work from the community fork ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)). *Released in 3.0.0.*
 
 ## Planned
 Not started, in no fixed order.

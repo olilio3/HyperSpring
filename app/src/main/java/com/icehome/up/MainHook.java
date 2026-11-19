@@ -24,6 +24,8 @@ public class MainHook {
     private static final java.util.Map<ClassLoader, Boolean> ccDone = new java.util.WeakHashMap<>();
 
     private static volatile boolean launcherDone;
+    /** El paquete del launcher enganchado en este proceso (com.miui.home o POCO Launcher). */
+    static volatile String launcherPkg = Launchers.HYPEROS;
 
     /**
      * Un paquete acaba de cargarse en este proceso.
@@ -34,7 +36,7 @@ public class MainHook {
      * @param dataDir     carpeta de datos del paquete (para el modo seguro del launcher)
      */
     static void onPackage(String pkg, String processName, ClassLoader cl, String dataDir) {
-        if ("com.android.systemui".equals(pkg) || "miui.systemui.plugin".equals(pkg) || "com.miui.home".equals(pkg)) {
+        if ("com.android.systemui".equals(pkg) || "miui.systemui.plugin".equals(pkg) || Launchers.is(pkg)) {
             // Aún no hay animaciones: el hilo semilla nace con todas las CPU (ver Threads).
             try {
                 Threads.init();
@@ -58,11 +60,13 @@ public class MainHook {
             }
             return;
         }
-        if (!"com.miui.home".equals(pkg)) return;
-        if (processName != null && !processName.equals("com.miui.home")) return;
+        // El launcher: el de HyperOS o POCO Launcher (ver Launchers), solo en su proceso principal.
+        if (!Launchers.is(pkg)) return;
+        if (processName != null && !processName.equals(pkg)) return;
         if (launcherDone) return;                           // una sola vez por proceso
         launcherDone = true;
-        XposedBridge.log("IceHome: launcher enganchado, motor " + engineName());
+        launcherPkg = pkg;
+        XposedBridge.log("IceHome: " + Launchers.name(pkg) + " enganchado, motor " + engineName());
         try {
             Remote.install(false);
         } catch (Throwable t) {
@@ -126,7 +130,7 @@ public class MainHook {
                 Log.e("no se pudo instalar la cortina de recientes", t);
             }
         }
-        if (Tune.on(c, "icehome_stack_on")) {
+        if (Launchers.kashiFeatures(launcherPkg) && Tune.on(c, "icehome_stack_on")) {
             fxTotal++;
             try {
                 StackSwipe.install(cl);
@@ -148,7 +152,7 @@ public class MainHook {
                 XposedBridge.log(t);
             }
         }
-        if (Tune.on(c, "icehome_folder_morph_on")) {
+        if (Launchers.kashiFeatures(launcherPkg) && Tune.on(c, "icehome_folder_morph_on")) {
             fxTotal++;
             try {
                 FolderMorph.install(cl);

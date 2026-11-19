@@ -12,7 +12,8 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
   - **Clásica 93** (`de.robv.android.xposed`): entrada `LegacyEntry`, apuntada en `app/src/main/assets/xposed_init`.
   - Las dos llaman a `MainHook.onPackage`. Los hooks **nunca** usan esas API directamente: pasan por la fachada `xp/` (`XposedBridge`, `XposedHelpers`, `XC_MethodHook` propios, con los nombres de siempre), que reenvía a `xp/ModernEngine` o `xp/LegacyEngine`. Un módulo cargado con la 102 no puede tocar `de.robv`.
   - Si hace falta algo nuevo de Xposed, añádelo a `xp/Engine` y a los dos motores.
-- **Ámbitos:** `com.miui.home` (launcher), `com.android.systemui` y `miui.systemui.plugin` (centro de control y volumen).
+- **Ámbitos:** `com.miui.home` o `com.mi.android.globallauncher` (launcher de HyperOS o POCO Launcher; ver `Launchers.java`), `com.android.systemui` y `miui.systemui.plugin` (centro de control y volumen), `com.miui.screenshot`.
+- **Launchers:** usa siempre `Launchers` (`is`, `current`, `kashiFeatures`) en vez de escribir `"com.miui.home"`. POCO Launcher tiene las mismas clases `com.miui.home.*`, pero no la pila de widgets ni el redimensionado de carpetas de Kashi.
 - **Móvil de pruebas:** Redmi 14C (Helio G81 Ultra, Mali-G52), HyperOS 3, Android 16, Vector 2.2 (API 102), con los mods de Kashi (HyperOS Launcher Mod 7.5 e iOS Control Center). Si está conectado por adb se puede instalar y leer el registro (`adb logcat -s HyperSpring` con la 102, `VectorLegacyBridge` con la 93); lo visual lo valida el usuario.
 - **Versión:** cambia a la vez `Version.java` (`NAME`, `CODE`) y `app/build.gradle.kts` (`versionName`, `versionCode`). Añade la entrada en `CHANGELOG.md` y la versión en los dos README.
 

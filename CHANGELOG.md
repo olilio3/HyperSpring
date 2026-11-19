@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.0
+
+**Important: tick the new scope.** HyperSpring can now hook **POCO Launcher**. On a POCO phone, open LSPosed → HyperSpring and tick **POCO Launcher** (`com.mi.android.globallauncher`), then restart it. LSPosed does not tick new scopes when you update.
+
+**New**
+- **POCO Launcher support** (`com.mi.android.globallauncher`). It is Xiaomi's own launcher inside, with the same internal classes, so the genie, the springs, the bending recents, glass folders, the shortcut menu, sinking icons and the wallpaper zoom work the same. Kashi's widget stack and folder resize are not available there (POCO Launcher has neither). Based on the analysis in the community fork by ToolDroidYT ([ToolDroidYT/hyperspring](https://github.com/ToolDroidYT/hyperspring)), credited in NOTICE.
+- The app finds which launcher your phone uses: **About → Compatibility**, the bug report and **Restart launcher** now work with POCO Launcher too (it showed "Launcher null" before).
+
 ## 2.13.1
 
 **New**
