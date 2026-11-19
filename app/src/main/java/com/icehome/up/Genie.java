@@ -199,9 +199,11 @@ final class Genie {
      * dorso: el color del icono con el icono en medio.
      */
     private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
-    private static final float SCROLL_TRAVEL = 0.32f, SCROLL_UNROLL = 0.24f;
+    private static final float SCROLL_TRAVEL = 0.36f, SCROLL_UNROLL = 0.30f;
     /** Cámara de la Carta, en anchos de pantalla (más cerca = más perspectiva). */
     private static final float CARD_TURNS = 2f, CARD_EASE = 3.2f, CARD_CAMERA = 1.93f;
+    /** Carta: por debajo de esta apertura ya no gira (de frente, el icono se funde sobre ella quieta). */
+    private static final float CARD_STILL = 0.14f;
     /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
@@ -1825,7 +1827,9 @@ final class Genie {
         float iNear = side < 0 ? icon.left : icon.right, iFar = side < 0 ? icon.right : icon.left;
         float sNear = side < 0 ? full.left : full.right, sFar = side < 0 ? full.right : full.left;
         float nx = lerp(iNear, sNear, a), nt = lerp(icon.top, full.top, a), nb = lerp(icon.bottom, full.bottom, a);
-        float fx = lerp(iFar, sFar, e), ft = lerp(icon.top, full.top, e), fb = lerp(icon.bottom, full.bottom, e);
+        // En vertical, el lado lejano crece al menos un 60 % de lo que crece el cercano: sin esquinas en pico.
+        float ev = Math.max(e, 0.6f * a);
+        float fx = lerp(iFar, sFar, e), ft = lerp(icon.top, full.top, ev), fb = lerp(icon.bottom, full.bottom, ev);
         float top = Math.min(nt, ft), bot = Math.max(nb, fb);
         if (side < 0) {
             out.cur.set(nx, top, fx, bot);
@@ -1845,7 +1849,9 @@ final class Genie {
     private static void scroll(RectF icon, RectF full, float pw, GlRenderer.Geo out) {
         float side = nearSide(icon, full);
         float w = Math.max(1f, full.width());
-        float a = easeOut(pw / SCROLL_TRAVEL);
+        // smooth y no easeOut: el muelle de MIUI ya sale deprisa y, con los dos, el rollo llegaba
+        // al borde casi al instante.
+        float a = smooth(pw / SCROLL_TRAVEL);
         float b = smooth((pw - SCROLL_UNROLL) / (1f - SCROLL_UNROLL));
         float r0 = Math.max(4f, icon.width() * 0.5f), rEnd = Math.max(2f, w * 0.011f);
         float iconX = side < 0 ? icon.centerX() - full.left : full.right - icon.centerX();
@@ -1871,7 +1877,10 @@ final class Genie {
     private static void card(RectF cur, RectF icon, RectF full, float pw, GlRenderer.Geo out) {
         float side = nearSide(icon, full);
         out.cur.set(cur);
-        double ang = CARD_TURNS * 2.0 * Math.PI * (1.0 - Math.pow(1.0 - clamp(pw), CARD_EASE));
+        // Cerca del icono, quieta y de frente: girando a tamaño de icono salían rayas (dorso, canto,
+        // frente en pocos fotogramas).
+        float q = clamp((pw - CARD_STILL) / (1f - CARD_STILL));
+        double ang = CARD_TURNS * 2.0 * Math.PI * (1.0 - Math.pow(1.0 - q, CARD_EASE));
         out.ex[0] = (float) Math.cos(ang);
         out.ex[1] = (float) Math.sin(ang) * -side;             // gira hacia el centro de la pantalla
         out.ex[2] = CARD_CAMERA * Math.max(1f, full.width());

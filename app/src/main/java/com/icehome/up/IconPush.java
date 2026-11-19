@@ -59,6 +59,8 @@ final class IconPush {
     /** Iconos movidos, con su traslación original y su centro en pantalla. */
     private static final ArrayList<Moved> moved = new ArrayList<>();
     private static float applied;
+    /** Esta animación ya buscó los iconos sin encontrarlos: no se repite en cada fotograma. */
+    private static boolean gaveUp;
     private static ValueAnimator reset;
     /** Raíz que ya tiene el aviso de foco puesto. */
     private static WeakReference<View> watched = new WeakReference<>(null);
@@ -138,9 +140,16 @@ final class IconPush {
     private static void apply(float p) {
         if (p <= 0.002f) {
             restore();
+            gaveUp = false;
             return;
         }
-        if (moved.isEmpty() && !collect()) return;
+        if (moved.isEmpty()) {
+            if (gaveUp) return;                              // ya se buscó en esta animación
+            if (!collect()) {
+                gaveUp = true;
+                return;
+            }
+        }
         applied = p;
         float w = screenW, cx = centerX, cy = centerY;
         float reach = p * REACH * strength * w, fall = FALLOFF * w;
@@ -206,8 +215,9 @@ final class IconPush {
 
     /** Página (CellLayout) o dock (Hotseat). */
     private static void find(View v, ArrayList<View> out, int depth) {
-        if (depth > 12) return;
-        if (named(v.getClass(), ".CellLayout") || named(v.getClass(), ".Hotseat")) {
+        if (depth > 24) return;
+        // El dock de HyperOS es hotseats.HotSeats (ver GlassDock); .Hotseat por si otro launcher.
+        if (named(v.getClass(), ".CellLayout") || named(v.getClass(), ".Hotseat") || named(v.getClass(), ".HotSeats")) {
             out.add(v);
             return;
         }
@@ -223,7 +233,7 @@ final class IconPush {
      * en la página, se reconocen por su clase.
      */
     private static void items(View v, ArrayList<View> out, int depth) {
-        if (depth > 6 || !(v instanceof ViewGroup)) return;
+        if (depth > 8 || !(v instanceof ViewGroup)) return;
         ViewGroup g = (ViewGroup) v;
         boolean holder = named(g.getClass(), "ShortcutAndWidgetContainer");
         for (int i = 0; i < g.getChildCount(); i++) {

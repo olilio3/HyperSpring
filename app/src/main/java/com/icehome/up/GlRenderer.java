@@ -191,6 +191,7 @@ final class GlRenderer {
      */
     static final String FRAGMENT_BODY =
             "uniform vec4 cur;\n"
+            + "uniform vec4 icon;\n"
             + "uniform vec4 g;\n"
             + "uniform float iconMix;\n"
             + "uniform vec4 bg;\n"
@@ -215,6 +216,7 @@ final class GlRenderer {
             // va el icono (en la forma o en el rectángulo que la contiene).
             + "  float lit = 1.0, spec = 0.0, back = 0.0;\n"
             + "  vec2 iuv = vec2(0.0);\n"
+            + "  float iconIn = 1.0;\n"
             + "  if (cup > 2.5 && cup < 3.5) {\n"
             // Abanico: cuadrilátero con los lados verticales en cur.x (izquierda) y cur.z (derecha),
             // arriba y abajo, rectas entre (ex.x, ex.y) a la izquierda y (ex.z, ex.w) a la derecha.
@@ -230,7 +232,10 @@ final class GlRenderer {
             + "    float dy = min((p.y - top) * inversesqrt(1.0 + st * st), (bot - p.y) * inversesqrt(1.0 + sb * sb));\n"
             + "    float rad = min(g.w, min(wE * 0.5, h * 0.5));\n"
             + "    d = (dx < rad && dy < rad) ? rad - length(vec2(rad - dx, rad - dy)) : min(dx, dy);\n"
-            + "    iuv = vec2(u, s);\n"
+            // El icono, cuadrado y a su tamaño, en el centro de la forma (no estirado en el trapecio).
+            + "    float ihf = max(icon.z - icon.x, 1.0);\n"
+            + "    iuv = (p - vec2((lx + rx) * 0.5, (min(ex.x, ex.z) + max(ex.y, ex.w)) * 0.5)) / ihf + 0.5;\n"
+            + "    iconIn = step(0.0, iuv.x) * step(iuv.x, 1.0) * step(0.0, iuv.y) * step(iuv.y, 1.0);\n"
             + "  } else if (cup > 3.5 && cup < 4.5) {\n"
             // Pergamino. Todo en coordenadas «anclado a la izquierda» (xl); si el borde cercano es el
             // derecho (ex.w > 0), se da la vuelta. El papel (la app) empieza en el ancla ex.x, está
@@ -249,8 +254,10 @@ final class GlRenderer {
             + "        ul = ur;\n"
             // Más cerca de ti, un pelín más alto; luz de arriba desde el lado cercano y un brillo.
             + "        kz = 1.0 + 0.05 * nz * min(1.0, r / (0.08 * W));\n"
-            + "        lit = clamp(0.35 + 0.65 * (nz * 0.85 - dl * 0.45), 0.2, 1.0);\n"
-            + "        spec = pow(clamp(nz * 0.8 - dl * 0.6, 0.0, 1.0), 24.0) * 0.55;\n"
+            // La luz viene siempre de arriba a la izquierda de la pantalla, sea cual sea el lado.
+            + "        float dsx = ex.w < 0.0 ? dl : -dl;\n"
+            + "        lit = clamp(0.35 + 0.65 * (nz * 0.85 - dsx * 0.45), 0.2, 1.0);\n"
+            + "        spec = pow(clamp(nz * 0.8 - dsx * 0.6, 0.0, 1.0), 24.0) * 0.55;\n"
             + "        dx = r - abs(xl - xc);\n"
             + "      }\n"
             + "    }\n"
@@ -272,7 +279,12 @@ final class GlRenderer {
             + "    wE = W;\n"
             + "    h = 2.0 * hh;\n"
             + "    d = min(dx, dy);\n"
-            + "    iuv = clamp(vec2((p.x - cur.x) / max(cur.z - cur.x, 1.0), (p.y - cur.y) / max(cur.w - cur.y, 1.0)), 0.0, 1.0);\n"
+            + "    float ih = max(icon.z - icon.x, 1.0);\n"
+            + "    iuv = (p - vec2(ex.w < 0.0 ? xc : W - xc, cy)) / ih + 0.5;\n"
+            + "    iconIn = step(0.0, iuv.x) * step(iuv.x, 1.0) * step(0.0, iuv.y) * step(iuv.y, 1.0);\n"
+            + "    float onIcon = iconMix * iconIn;\n"
+            + "    lit = mix(lit, 1.0, onIcon);\n"
+            + "    spec *= 1.0 - onIcon;\n"
             + "  } else if (cup > 4.5) {\n"
             // Carta: la ventana gira sobre su eje vertical (ángulo con coseno ex.x y seno ex.y), vista
             // con una cámara a ex.z px. De la pantalla al punto de la carta (u0 de −1 a 1), al revés
@@ -347,7 +359,6 @@ final class GlRenderer {
             + "    col *= 0.125;\n"
             + "  }\n"
             + "  col = col + bg * (1.0 - col.a);\n"
-            + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, iuv), iconMix); }\n"
             // Dorso de la carta: el color de fondo del icono (cerca de su borde) y el icono en medio.
             + "  if (back > 0.5) {\n"
             + "    vec4 bk = texture2D(iconTex, vec2(0.08, 0.5));\n"
@@ -356,6 +367,7 @@ final class GlRenderer {
             + "    vec4 ic = (qi.x >= 0.0 && qi.x <= 1.0 && qi.y >= 0.0 && qi.y <= 1.0) ? texture2D(iconTex, qi) : vec4(0.0);\n"
             + "    col = ic + bk * (1.0 - ic.a);\n"
             + "  }\n"
+            + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, clamp(iuv, 0.0, 1.0)) * iconIn, iconMix); }\n"
             // Luz y brillo (Pergamino y Carta); en color premultiplicado, rgb nunca pasa de a.
             + "  col.rgb = min(col.rgb * lit + vec3(spec) * col.a, vec3(col.a));\n"
             + "  gl_FragColor = col * a;\n"
