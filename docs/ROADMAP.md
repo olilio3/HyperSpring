@@ -46,6 +46,7 @@ Ideas that were on the list and were removed, with the reason:
 - **More recents styles (fan, 3D stack).** What people asked for was a way to turn the folding off, and that exists.
 
 ## Done
+- [x] 3.1.0: icons pushed aside when an app opens (with blur), and the Funnel and Bent styles (a glass capsule that bends and bounces), taken from ColorOS videos.
 - [x] 2.9.2 to 2.12.x (not released yet): full code review, automatic GitHub builds, feature wheel, automatic pause (heat, games, battery saver), glass styles, system modes (HyperOS 4, iOS 26, iOS 27), glass dock (beta), unlock zoom, automatic genie resolution, "How is my phone doing?", refraction on folders and the app intro. Details in the CHANGELOG.
 - [x] 2.7.0: springy shortcut menu with a liquid-glass rim, quick settings tile to pause HyperSpring, Android animation speed and `HS1:` codes to share settings.
 - [x] 2.2.0: the welcome text no longer slides under the icon, and the About icon no longer gets cut off.
