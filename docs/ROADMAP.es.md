@@ -46,7 +46,7 @@ Ideas que estaban en la lista y se han quitado, con el motivo:
 - **Más estilos de recientes (abanico, pila 3D).** Lo que pedía la gente era poder apagar el doblado, y eso ya está.
 
 ## Hecho
-- [x] 3.1.0: iconos que se apartan al abrir una app (con desenfoque), y los estilos Embudo y Doblada (cápsula de cristal que se dobla y rebota), sacados de vídeos de ColorOS.
+- [x] 3.1.0: iconos que se apartan al abrir una app, y los estilos Abanico, Pergamino (la app se desenrolla en 3D) y Carta (gira en 3D y frena), diseñados sobre bocetos animados a partir de vídeos de ColorOS.
 - [x] 2.9.2 a 2.12.x (sin publicar todavía): revisión de todo el código, compilación automática en GitHub, rueda de funciones, pausa automática (calor, juegos, ahorro), estilos de cristal, modos de sistema (HyperOS 4, iOS 26, iOS 27), dock de cristal (beta), zoom al desbloquear, resolución automática del genio, «¿Cómo va mi móvil?», refracción en las carpetas y la intro de la app. Detalles en el CHANGELOG.
 - [x] 2.7.0: menú de atajos con muelle y borde de cristal líquido, tile para pausar HyperSpring, velocidad de las animaciones de Android y códigos `HS1:` para compartir los ajustes.
 - [x] 2.2.0: la bienvenida ya no mete el texto bajo el icono y el icono de Acerca de no se corta.

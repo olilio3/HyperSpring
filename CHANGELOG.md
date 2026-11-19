@@ -2,11 +2,14 @@
 
 ## 3.1.0
 
-**New** (ideas taken from ColorOS videos)
-- **Push icons** (Opening and closing apps): when an app opens, the home screen zooms in from the icon you tapped, so the other icons move towards the edges (the outer ones leave the screen), grow and blur, as if the app pushed them out. When it closes they come back at the same pace as the window, also when you close it with your finger. Works with every style and with apps excluded from the genie. 0 turns it off.
-- **Icon blur**: how much the pushed icons blur (Android 12+). It is the only part that uses GPU: lower it if it stutters.
-- **Funnel** style: the window leaves the icon as a strong trapezoid, wide at the top and narrow at the bottom almost until the end. Strength sets how narrow.
-- **Bent** style: the icon turns into a glass capsule that stretches upwards; the window grows bent away from you, like a curling page, and straightens with a small bounce. Closing is the same in reverse. Strength sets how much it bends.
+Designed with the user on animated sketches, from ColorOS videos.
+
+**New**
+- **Push icons** (Opening and closing apps): when an app opens, the other icons on the home screen and the dock move gently away from it, each in a straight line from the icon you tapped, in step with the window until it fills the screen. The farther an icon is, the less it moves, and neighbours move almost the same, so the grid stays together. Closing is the same in reverse, also when you close with your finger. No blur. Works with every style and with apps excluded from the genie. 0 turns it off; 0.4 by default.
+- **Fan** style: the two icon corners on the side nearest the screen edge go straight to the screen corners, and the other two start towards the other side before the first ones arrive.
+- **Scroll** style: the app leaves the icon rolled up, goes straight to the nearest edge while it grows to full height and unrolls to the other edge. The rolled part is the app itself, curved in 3D with light, a highlight and the shadow it casts on the flat part; the roll gets thinner as it unrolls. Closing rolls it back up into the icon.
+- **Card** style: the window spins out of the icon in 3D, like a card turning on itself: two fast turns that slow down as it reaches full screen. Its back shows the icon colour with the icon in the middle.
+- Styles depend on which half of the screen the icon is in. Strength only shows for the classic genie and the cup, the only ones it changes.
 
 **Fixed**
 - `local-build/gl_check.py` failed before checking anything (it did not know the `PERSP` part of the shaders).

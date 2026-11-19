@@ -176,32 +176,32 @@ final class Genie {
      * copa «Ice», quitada en la 2.13.0: un 2 guardado se lee como Copa (ver Tune.reload). Los
      * números no cambian para que sigan valiendo los ajustes guardados y los códigos compartidos.
      */
-    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3, STYLE_FUNNEL = 4, STYLE_BEND = 5;
-    /**
-     * Embudo (3.1.0, sacado de un vídeo de ColorOS): la ventana crece desde el icono siguiendo el
-     * muelle de MIUI en vertical (sin que arriba se adelante, como en la Copa), pero en horizontal
-     * es un trapecio muy marcado: arriba se ensancha enseguida y abajo, por donde sale del icono, se
-     * queda estrecha casi hasta el final. A mitad de camino arriba mide ~3/4 de la pantalla y abajo
-     * ~1/3. Usa la forma de copa del shader (cup = 1) con otro retraso: con intensidad 2,2 el
-     * extremo cercano va como q^3,2 (la Copa, q^2,1).
+    static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3, STYLE_FAN = 5, STYLE_SCROLL = 6,
+            STYLE_CARD = 7;
+    /*
+     * Estilos de la 3.1.0, diseñados con el usuario sobre bocetos animados. Los tres dependen del
+     * lado de la pantalla en el que está el icono (el «lado cercano»: izquierda si el icono está en
+     * la mitad izquierda) y solo de lo abierta que está la ventana de MIUI (pw), así que cerrar es
+     * abrir al revés fotograma a fotograma, también siguiendo al dedo. El 4 (Embudo) se probó y se
+     * quitó: un 4 guardado se lee como Copa (ver Tune.reload).
+     *
+     * Abanico (5): las dos esquinas del icono del lado cercano van directas a las de la pantalla
+     * (terminan a FAN_NEAR_END) y las otras dos salen hacia el lado contrario desde FAN_FAR_START,
+     * antes de que lleguen las primeras. Entre medias es un trapecio, como un abanico que se abre.
+     *
+     * Pergamino (6): la app sale del icono enrollada (un cilindro del ancho del icono) y va directa
+     * al borde cercano mientras crece hasta arriba y abajo (hasta SCROLL_TRAVEL). Desde
+     * SCROLL_UNROLL se desenrolla hasta el otro borde: el rollo adelgaza al gastarse la app, con luz,
+     * brillo y la sombra que le hace a la parte plana (todo en el shader, GlRenderer cup = 4).
+     *
+     * Carta (7): la ventana de MIUI tal cual, girando sobre su eje vertical en 3D: CARD_TURNS
+     * vueltas, deprisa al salir y frenando al llegar (1 − (1 − pw)^CARD_EASE). De espaldas se ve el
+     * dorso: el color del icono con el icono en medio.
      */
-    private static final float FUNNEL_LEAD = 0.9f, FUNNEL_LAG = 1.0f;
-    /**
-     * Doblada (3.1.0): el icono se convierte en una cápsula de cristal que se estira hacia arriba;
-     * al crecer es una hoja doblada hacia el fondo (los extremos de arriba y abajo más lejos, como
-     * una página que se curva) y un poco inclinada; al llenar la pantalla se endereza y se pasa un
-     * poco hacia el otro lado antes de quedar plana, como si rebotara. Todo depende solo de lo
-     * abierta que está, así que cerrar es lo mismo al revés. La fuerza la da Intensidad.
-     * <ul>
-     * <li>{@link #BEND_STRETCH}: cuánto más alta que ancha es la cápsula al salir del icono.</li>
-     * <li>{@link #BEND_CURL}: cuánto se alejan los extremos (fracción de la distancia a la cámara).</li>
-     * <li>{@link #BEND_TILT}: inclinación (arriba más lejos que abajo).</li>
-     * <li>{@link #BEND_WOBBLE}: lo que se pasa al otro lado al enderezarse.</li>
-     * <li>{@link #BEND_GLASS_END}: apertura a la que la cápsula ya no es de cristal.</li>
-     * </ul>
-     */
-    private static final float BEND_STRETCH = 0.5f, BEND_CURL = 0.35f, BEND_TILT = 0.12f, BEND_WOBBLE = 0.12f,
-            BEND_GLASS_END = 0.3f;
+    private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
+    private static final float SCROLL_TRAVEL = 0.32f, SCROLL_UNROLL = 0.24f;
+    /** Cámara de la Carta, en anchos de pantalla (más cerca = más perspectiva). */
+    private static final float CARD_TURNS = 2f, CARD_EASE = 3.2f, CARD_CAMERA = 1.93f;
     /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
@@ -1806,59 +1806,77 @@ final class Genie {
         if (most < 0.5f) java.util.Arrays.fill(out.vel, 0f);
     }
 
-    /**
-     * Estilo Doblada (ver {@link #STYLE_BEND}): el rectángulo de MIUI, estirado en vertical al
-     * salir del icono (la cápsula), visto como una hoja doblada e inclinada en perspectiva.
-     */
-    private static void bent(RectF cur, RectF icon, float dir, float ramp, float radius,
-                             boolean iconReady, float pw, GlRenderer.Geo out) {
-        float amt = Math.max(0f, strength) / 2.2f * ramp;         // Intensidad 2,2 = lo de serie
-        // Cápsula: nada más salir del icono es más alta que ancha; se le pasa al crecer.
-        float pill = smooth(pw / 0.04f) * (1f - smooth((pw - 0.04f) / 0.35f));
-        float sy = 1f + BEND_STRETCH * pill * Math.min(1f, amt), sx = 1f - 0.3f * BEND_STRETCH * pill * Math.min(1f, amt);
-        float cx = cur.centerX(), cy = cur.centerY(), hw = cur.width() * 0.5f * sx, hh = cur.height() * 0.5f * sy;
-        out.cur.set(cx - hw, cy - hh, cx + hw, cy + hh);
-        out.icon.set(icon);
-        out.pw = pw;
-        out.lead = out.lag = 1f;
-        out.cup = 2f;
-        // Con la cápsula más estrecha, el radio no puede pasar de media anchura (ya lo limita el shader).
-        out.radius = radius;
-        out.iconMix = iconMix(pw, dir, iconReady);
-        out.splashIcon = 0f;
-        out.bend = 0f;
-        out.flip = 0f;
-        // Doblez: entra en seguida, se mantiene hasta media apertura y se va al llenar la pantalla,
-        // pasándose un poco al otro lado (la onda de sin) antes de quedar plana.
-        float on = smooth(pw / 0.06f) * (1f - smooth((pw - 0.5f) / 0.4f));
-        float wob = (float) Math.sin(Math.PI * clamp((pw - 0.72f) / 0.28f));
-        float curl = (BEND_CURL * on - BEND_WOBBLE * wob) * amt;
-        float tilt = BEND_TILT * on * amt;
-        out.tiltTarget = tilt;
-        applyPersp(out, tilt, curl);
-        // Cristal: del todo al salir del icono, se aclara hasta ser la app a BEND_GLASS_END.
-        out.glass = (1f - smooth(pw / BEND_GLASS_END)) * Math.min(1f, ramp);
-        java.util.Arrays.fill(out.vel, 0f);
+    /** Lado de la pantalla más cercano al icono: −1 = izquierda, 1 = derecha. */
+    private static float nearSide(RectF icon, RectF full) {
+        return icon.centerX() < full.centerX() ? -1f : 1f;
+    }
+
+    /** Sale deprisa y llega despacio (sin pasarse). */
+    private static float easeOut(float t) {
+        float u = 1f - clamp(t);
+        return 1f - u * u * u;
+    }
+
+    /** Abanico (ver {@link #STYLE_FAN}): cur = lados izquierdo y derecho; ex = arriba y abajo de cada uno. */
+    private static void fan(RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        float a = easeOut(pw / FAN_NEAR_END);
+        float e = smooth((pw - FAN_FAR_START) / (1f - FAN_FAR_START));
+        float iNear = side < 0 ? icon.left : icon.right, iFar = side < 0 ? icon.right : icon.left;
+        float sNear = side < 0 ? full.left : full.right, sFar = side < 0 ? full.right : full.left;
+        float nx = lerp(iNear, sNear, a), nt = lerp(icon.top, full.top, a), nb = lerp(icon.bottom, full.bottom, a);
+        float fx = lerp(iFar, sFar, e), ft = lerp(icon.top, full.top, e), fb = lerp(icon.bottom, full.bottom, e);
+        float top = Math.min(nt, ft), bot = Math.max(nb, fb);
+        if (side < 0) {
+            out.cur.set(nx, top, fx, bot);
+            out.ex[0] = nt; out.ex[1] = nb; out.ex[2] = ft; out.ex[3] = fb;
+        } else {
+            out.cur.set(fx, top, nx, bot);
+            out.ex[0] = ft; out.ex[1] = fb; out.ex[2] = nt; out.ex[3] = nb;
+        }
+        out.cup = 3f;
     }
 
     /**
-     * Hoja inclinada {@code a} (arriba más lejos que abajo) y doblada {@code c} (los extremos de
-     * arriba y abajo, {@code c} más lejos que el centro; negativo, más cerca): a una altura y0
-     * está a z = push + tilt·y0 + curl·y0². {@code push} es lo justo para que ningún punto quede
-     * más cerca que el rectángulo de MIUI (z ≥ 0): solo se aleja, nunca se sale de la pantalla.
+     * Pergamino (ver {@link #STYLE_SCROLL}). Las cuentas van «ancladas a la izquierda» (x desde el
+     * borde cercano); el shader les da la vuelta si el borde cercano es el derecho. cur = el
+     * rectángulo que lo contiene todo (en pantalla); ex = (ancla, centro del rollo, radio, lado).
      */
-    private static void applyPersp(GlRenderer.Geo g, float a, float c) {
-        float hh = Math.max(1f, g.cur.height() * 0.5f);
-        float t = -Math.max(0f, a) / (2f * hh), k = c / (hh * hh);
-        // Lo más cerca de la hoja sin empuje: en un extremo o, si se dobla hacia el fondo, en el vértice.
-        float min = Math.min(t * -hh + k * hh * hh, t * hh + k * hh * hh);
-        if (k > 0f) {
-            float yv = -t / (2f * k);
-            if (yv > -hh && yv < hh) min = Math.min(min, t * yv + k * yv * yv);
-        }
-        g.tilt = t;
-        g.curl = k;
-        g.push = Math.max(0f, -min);
+    private static void scroll(RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        float w = Math.max(1f, full.width());
+        float a = easeOut(pw / SCROLL_TRAVEL);
+        float b = smooth((pw - SCROLL_UNROLL) / (1f - SCROLL_UNROLL));
+        float r0 = Math.max(4f, icon.width() * 0.5f), rEnd = Math.max(2f, w * 0.011f);
+        float iconX = side < 0 ? icon.centerX() - full.left : full.right - icon.centerX();
+        // Del icono al borde cercano (el rollo, de pie, a la vez que crece en vertical)...
+        float xA = lerp(iconX, r0, a);
+        // ...y desde ahí se desenrolla: el centro del rollo cruza la pantalla y el rollo adelgaza
+        // (su área es lo que queda de app por desenrollar).
+        float xc = lerp(xA, w + rEnd + 2f, b);
+        float r = (float) Math.sqrt(rEnd * rEnd + (r0 * r0 - rEnd * rEnd) * (1f - b));
+        float anchor = Math.max(0f, xA - r0);                // principio de la app (0 = pegada al borde)
+        float top = lerp(icon.top, full.top, a), bot = lerp(icon.bottom, full.bottom, a);
+        float l = Math.min(anchor, xc - r), rr = Math.min(w, xc + r);
+        if (side < 0) out.cur.set(full.left + l, top, full.left + rr, bot);
+        else out.cur.set(full.right - rr, top, full.right - l, bot);
+        out.ex[0] = anchor;
+        out.ex[1] = xc;
+        out.ex[2] = r;
+        out.ex[3] = side;
+        out.cup = 4f;
+    }
+
+    /** Carta (ver {@link #STYLE_CARD}): ex = (coseno, seno del giro, distancia de la cámara en px). */
+    private static void card(RectF cur, RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        out.cur.set(cur);
+        double ang = CARD_TURNS * 2.0 * Math.PI * (1.0 - Math.pow(1.0 - clamp(pw), CARD_EASE));
+        out.ex[0] = (float) Math.cos(ang);
+        out.ex[1] = (float) Math.sin(ang) * -side;             // gira hacia el centro de la pantalla
+        out.ex[2] = CARD_CAMERA * Math.max(1f, full.width());
+        out.ex[3] = 0f;
+        out.cup = 5f;
     }
 
     /**
@@ -1887,30 +1905,24 @@ final class Genie {
         float g = strength * ramp;
         // Curvatura y estela solo en Profundidad: en los demás estilos, a cero.
         out.tilt = out.curl = out.push = 0f;
-        out.glass = 0f;
+        java.util.Arrays.fill(out.ex, 0f);
         java.util.Arrays.fill(out.vel, 0f);
         if (style == STYLE_DEPTH) {
             depth(cur, icon, full, dir, ramp, radius, iconReady, vel, pw, out);
             return;
         }
-        if (style == STYLE_BEND) {
-            bent(cur, icon, dir, ramp, radius, iconReady, pw, out);
-            return;
-        }
-        if (style == STYLE_FUNNEL) {
-            // Embudo: en vertical, el rectángulo de MIUI tal cual (crece desde el icono); la forma
-            // de trapecio la pone el shader con un extremo cercano muy retrasado.
-            out.cur.set(cur);
+        if (style == STYLE_FAN || style == STYLE_SCROLL || style == STYLE_CARD) {
             out.icon.set(icon);
             out.pw = pw;
-            out.lead = 1f + FUNNEL_LEAD * g;
-            out.lag = 1f + FUNNEL_LAG * g;
-            out.cup = 1f;
+            out.lead = out.lag = 1f;
             out.radius = radius;
             out.iconMix = iconMix(pw, dir, iconReady);
             out.splashIcon = 0f;
-            out.bend = bend;
+            out.bend = 0f;
             out.flip = 0f;
+            if (style == STYLE_FAN) fan(icon, full, pw, out);
+            else if (style == STYLE_SCROLL) scroll(icon, full, pw, out);
+            else card(cur, icon, full, pw, out);
             return;
         }
         if (style != STYLE_CLASSIC) {

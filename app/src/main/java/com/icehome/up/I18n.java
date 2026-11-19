@@ -100,11 +100,9 @@ final class I18n {
         i("icehome_curtain_on", "Bending recents",
                 "In recents, cards bend the other way depending on how hard you swipe them. Applies after restarting the launcher.");
         i("icehome_genie_style", "Style",
-                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur. 4 = Funnel: it leaves the icon as a trapezoid, wide at the top and narrow at the bottom until the end. 5 = Bent: the icon turns into a glass capsule and the window grows bent away from you; it straightens with a small bounce.");
+                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur. 5 = Fan: the two icon corners on the side nearest the edge go straight to the screen corners, and the other two follow towards the other side. 6 = Scroll: the app comes out rolled up, goes to the nearest edge and unrolls to the other one, with 3D light and shadow. 7 = Card: the window spins out in 3D like a card, fast at first and slowing down as it arrives.");
         i("icehome_push", "Push icons",
-                "When an app opens, the other icons move towards the edges, grow and blur, as if the app pushed them out; when it closes they come back. Works with any style. 0 turns it off.");
-        i("icehome_push_blur", "Icon blur",
-                "How much the pushed icons blur. It is the only part of the push that uses GPU: if it stutters, lower it or set it to 0. Needs Android 12 or later.");
+                "When an app opens, the other icons move gently away from it, in step with the window; the farthest ones barely move. When it closes they come back the same way, in reverse. Works with any style. 0 turns it off.");
         i("icehome_genie_strength", "Strength",
                 "How much the window bends. 0 is a plain rectangle; 1.8–2.2 looks like Samsung.");
         i("icehome_depth_taper", "Top narrowing",

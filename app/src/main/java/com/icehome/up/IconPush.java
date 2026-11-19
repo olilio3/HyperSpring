@@ -1,11 +1,8 @@
 package com.icehome.up;
 
 import android.animation.ValueAnimator;
-import android.graphics.Rect;
+import android.appwidget.AppWidgetHostView;
 import android.graphics.RectF;
-import android.graphics.RenderEffect;
-import android.graphics.Shader;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -17,21 +14,19 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 /**
- * Iconos que se apartan (3.1.0, sacado de vídeos de ColorOS): al abrir una app, el escritorio se
- * acerca a la cámara desde el icono que tocaste, así que los demás iconos crecen, se van hacia
- * los bordes (los de fuera se salen de la pantalla) y se desenfocan, como si la app los empujara
- * al salir. Al cerrarla vuelven a su sitio, al mismo ritmo que la ventana.
- *
- * <p><b>Cómo:</b> no se mueve cada icono, sino sus contenedores: la página visible del escritorio
- * (CellLayout) y el dock (Hotseat). Se escalan con el centro en el icono tocado, que es lo mismo
- * que acercar la cámara a ese punto. Son dos o tres vistas, y escalar una vista solo cambia su
- * matriz en el RenderThread: casi gratis. Lo único que gasta GPU es el desenfoque
- * ({@link RenderEffect}, Android 12+), y por eso tiene su propio ajuste.
+ * Iconos que se apartan (3.1.0, diseñado con el usuario sobre bocetos animados): al abrir una app,
+ * los demás iconos del escritorio y del dock se apartan suavemente de ella, cada uno en línea recta
+ * alejándose del icono tocado. Cuanto más lejos, menos se mueven, y la caída es suave: los vecinos
+ * se mueven casi igual y los iconos siguen juntos, como una tela que se aparta. Sin desenfoque.
  *
  * <p><b>El ritmo</b> lo da la animación de la ventana de MIUI: {@link WindowAnim} llama a
  * {@link #frame} en cada fotograma (en el hilo de animación de MIUI) con lo abierta que está la
- * ventana. Así sigue también al dedo al cerrar con el gesto. Las vistas solo se pueden tocar en el
- * hilo principal: se guarda el último valor y se aplica allí en el siguiente fotograma.
+ * ventana, y el empuje es proporcional (sin frenar al final): los iconos se mueven hasta que la
+ * ventana llena la pantalla. Cerrar es abrir al revés, también siguiendo al dedo. Las vistas solo se
+ * pueden tocar en el hilo principal: se guarda el último valor y se aplica allí.
+ *
+ * <p><b>Cómo:</b> solo se cambia la traslación de cada icono (translationX/Y), que el RenderThread
+ * aplica sin volver a dibujar nada: casi gratis. Se guarda la que tenía cada uno para dejarla igual.
  *
  * <p><b>Red de seguridad:</b> si una animación se corta sin llegar a cerrar (otra que MIUI no
  * avisa, un cuelgue de la app…), al volver el foco al launcher y no llegar más fotogramas, los
@@ -39,17 +34,13 @@ import java.util.ArrayList;
  */
 final class IconPush {
 
-    /** Ajuste «Empujar iconos»: 0 = apagado, 1 = lo de serie (se acercan un {@link #ZOOM}). */
-    static volatile float strength = 1f;
-    /** Ajuste «Desenfoque de iconos»: 0 = sin desenfoque, 1 = {@link #BLUR_DP}. */
-    static volatile float blur = 1f;
+    /** Ajuste «Empujar iconos»: 0 = apagado; 0,4 = lo de serie. */
+    static volatile float strength = 0.4f;
 
-    /** Cuánto se acerca el escritorio a fuerza 1, con la app abierta del todo (+35 %). */
-    private static final float ZOOM = 0.35f;
-    /** Desenfoque a fuerza 1 con la app abierta, en dp. */
-    private static final float BLUR_DP = 12f;
-    /** Cuánto se apagan los iconos con la app abierta (dejan protagonismo a la ventana). */
-    private static final float DIM = 0.25f;
+    /** Lo que se aparta un icono pegado al tocado, a fuerza 1, en anchos de pantalla. */
+    private static final float REACH = 0.96f;
+    /** Distancia (en anchos de pantalla) a la que el empuje se queda en 1/e (~37 %). */
+    private static final float FALLOFF = 0.63f;
     /** Red de seguridad: sin fotogramas durante esto y con el launcher delante, se vuelve. */
     private static final long STALE_MS = 300;
     private static final long RESET_MS = 320;
@@ -58,14 +49,14 @@ final class IconPush {
 
     // ---- Entre hilos: lo escribe el hilo de animación de MIUI, lo lee el principal.
     private static volatile float wanted;
-    private static volatile float centerX = -1f, centerY = -1f;
+    private static volatile float centerX = -1f, centerY = -1f, screenW = 1080f;
     private static volatile long lastFrameMs;
     private static volatile boolean posted;
     /** Raíz de la ventana del launcher (la del último icono tocado). */
     private static volatile WeakReference<View> root = new WeakReference<>(null);
 
     // ---- Solo hilo principal.
-    /** Contenedores movidos y su estado original, para dejarlos exactamente igual. */
+    /** Iconos movidos, con su traslación original y su centro en pantalla. */
     private static final ArrayList<Moved> moved = new ArrayList<>();
     private static float applied;
     private static ValueAnimator reset;
@@ -74,22 +65,14 @@ final class IconPush {
 
     private static final class Moved {
         final WeakReference<View> view;
-        final float scaleX, scaleY, alpha, pivotX, pivotY;
-        final boolean pivotSet;
-        /** Esquina de la vista en pantalla, antes de moverla. */
-        final int left, top;
-        float lastBlur = -1f;
+        final float tx, ty, cx, cy;
 
         Moved(View v, int[] loc) {
             view = new WeakReference<>(v);
-            scaleX = v.getScaleX();
-            scaleY = v.getScaleY();
-            alpha = v.getAlpha();
-            pivotX = v.getPivotX();
-            pivotY = v.getPivotY();
-            pivotSet = v.isPivotSet();
-            left = loc[0];
-            top = loc[1];
+            tx = v.getTranslationX();
+            ty = v.getTranslationY();
+            cx = loc[0] + v.getWidth() * 0.5f;
+            cy = loc[1] + v.getHeight() * 0.5f;
         }
     }
 
@@ -114,9 +97,15 @@ final class IconPush {
      * @param full la ventana a pantalla completa
      */
     static void frame(RectF cur, RectF icon, RectF full) {
-        float iw = icon != null && !icon.isEmpty() ? icon.width() : 0f;
-        float p = (cur.width() - iw) / Math.max(1f, full.width() - iw);
+        boolean has = icon != null && !icon.isEmpty();
+        float iw = has ? icon.width() : 0f, ih = has ? icon.height() : 0f;
+        // Media de lo abierta que está en ancho y en alto: solo llega a 1 cuando la ventana llena
+        // la pantalla en las dos direcciones, así que los iconos no se paran antes.
+        float pw = (cur.width() - iw) / Math.max(1f, full.width() - iw);
+        float ph = (cur.height() - ih) / Math.max(1f, full.height() - ih);
+        float p = (pw + ph) * 0.5f;
         wanted = p < 0f ? 0f : (p > 1f ? 1f : p);
+        screenW = Math.max(1f, full.width());
         if (icon != null && !icon.isEmpty()) {
             centerX = icon.centerX();
             centerY = icon.centerY();
@@ -145,7 +134,7 @@ final class IconPush {
         }
     };
 
-    /** Hilo principal: pone el escritorio a {@code p} (0 = normal, 1 = app abierta del todo). */
+    /** Hilo principal: pone los iconos a {@code p} (0 = en su sitio, 1 = app abierta del todo). */
     private static void apply(float p) {
         if (p <= 0.002f) {
             restore();
@@ -153,16 +142,8 @@ final class IconPush {
         }
         if (moved.isEmpty() && !collect()) return;
         applied = p;
-        float z = 1f + ZOOM * strength * p;
-        float dim = 1f - DIM * p;
-        float r = 0f;
-        if (Build.VERSION.SDK_INT >= 31 && blur > 0f) {
-            View any = moved.get(0).view.get();
-            float dp = any == null ? 3f : any.getResources().getDisplayMetrics().density;
-            // A medio píxel: no se crea un efecto nuevo si el cambio no se iba a notar.
-            r = Math.round(BLUR_DP * dp * blur * p * 2f) / 2f;
-        }
-        float cx = centerX, cy = centerY;
+        float w = screenW, cx = centerX, cy = centerY;
+        float reach = p * REACH * strength * w, fall = FALLOFF * w;
         for (int i = moved.size() - 1; i >= 0; i--) {
             Moved m = moved.get(i);
             View v = m.view.get();
@@ -170,17 +151,12 @@ final class IconPush {
                 moved.remove(i);
                 continue;
             }
-            if (cx >= 0f) {
-                v.setPivotX(cx - m.left);
-                v.setPivotY(cy - m.top);
-            }
-            v.setScaleX(m.scaleX * z);
-            v.setScaleY(m.scaleY * z);
-            v.setAlpha(m.alpha * dim);
-            if (Build.VERSION.SDK_INT >= 31 && r != m.lastBlur) {
-                m.lastBlur = r;
-                v.setRenderEffect(r < 0.5f ? null : RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP));
-            }
+            float dx = m.cx - cx, dy = m.cy - cy;
+            float d = (float) Math.hypot(dx, dy);
+            if (cx < 0f || d < 1f) continue;                  // el icono tocado (o sin centro) no se mueve
+            float dist = reach * (float) Math.exp(-d / fall);
+            v.setTranslationX(m.tx + dx / d * dist);
+            v.setTranslationY(m.ty + dy / d * dist);
         }
     }
 
@@ -190,38 +166,36 @@ final class IconPush {
         for (Moved m : moved) {
             View v = m.view.get();
             if (v == null) continue;
-            v.setScaleX(m.scaleX);
-            v.setScaleY(m.scaleY);
-            v.setAlpha(m.alpha);
-            if (m.pivotSet) {
-                v.setPivotX(m.pivotX);
-                v.setPivotY(m.pivotY);
-            } else {
-                v.resetPivot();
-            }
-            if (Build.VERSION.SDK_INT >= 31 && m.lastBlur > 0f) v.setRenderEffect(null);
+            v.setTranslationX(m.tx);
+            v.setTranslationY(m.ty);
         }
         moved.clear();
     }
 
     /**
-     * Hilo principal: busca la página visible del escritorio y el dock. Solo los que se ven en
-     * pantalla (no las páginas de al lado). Devuelve si encontró alguno.
+     * Hilo principal: busca los iconos (y widgets) de la página visible del escritorio y del dock.
+     * Solo de las páginas que se ven en pantalla. Devuelve si encontró alguno.
      */
     private static boolean collect() {
         View r = root.get();
         if (r == null || !r.isAttachedToWindow()) return false;
         watch(r);
-        ArrayList<View> found = new ArrayList<>();
-        find(r, found, 0);
+        ArrayList<View> pages = new ArrayList<>();
+        find(r, pages, 0);
         int[] loc = new int[2];
-        Rect vis = new Rect();
-        for (View v : found) {
-            if (!v.isShown() || v.getWidth() == 0 || !v.getGlobalVisibleRect(vis)) continue;
+        android.graphics.Rect vis = new android.graphics.Rect();
+        ArrayList<View> items = new ArrayList<>();
+        for (View page : pages) {
+            if (!page.isShown() || page.getWidth() == 0 || !page.getGlobalVisibleRect(vis)) continue;
             // Una página de al lado asoma solo un poco (o nada): se deja quieta.
-            if (vis.width() < v.getWidth() / 2) continue;
-            v.getLocationOnScreen(loc);
-            moved.add(new Moved(v, loc));
+            if (vis.width() < page.getWidth() / 2) continue;
+            items.clear();
+            items(page, items, 0);
+            for (View it : items) {
+                if (!it.isShown()) continue;
+                it.getLocationOnScreen(loc);
+                moved.add(new Moved(it, loc));
+            }
         }
         if (moved.isEmpty()) {
             Log.i("empujar iconos: no se encontró la página ni el dock");
@@ -230,11 +204,12 @@ final class IconPush {
         return true;
     }
 
+    /** Página (CellLayout) o dock (Hotseat). */
     private static void find(View v, ArrayList<View> out, int depth) {
         if (depth > 12) return;
-        if (isContainer(v.getClass())) {
+        if (named(v.getClass(), ".CellLayout") || named(v.getClass(), ".Hotseat")) {
             out.add(v);
-            return;                                   // lo de dentro va con él
+            return;
         }
         if (v instanceof ViewGroup) {
             ViewGroup g = (ViewGroup) v;
@@ -242,11 +217,34 @@ final class IconPush {
         }
     }
 
-    /** CellLayout (una página) o Hotseat (el dock), también subclases (launcher de Kashi). */
-    private static boolean isContainer(Class<?> c) {
-        for (; c != null && c != View.class; c = c.getSuperclass()) {
+    /**
+     * Lo que se mueve dentro de una página: iconos, carpetas y widgets. Un hijo del contenedor de
+     * iconos de Launcher3 (ShortcutAndWidgetContainer) lo es siempre; si MIUI los pone directamente
+     * en la página, se reconocen por su clase.
+     */
+    private static void items(View v, ArrayList<View> out, int depth) {
+        if (depth > 6 || !(v instanceof ViewGroup)) return;
+        ViewGroup g = (ViewGroup) v;
+        boolean holder = named(g.getClass(), "ShortcutAndWidgetContainer");
+        for (int i = 0; i < g.getChildCount(); i++) {
+            View c = g.getChildAt(i);
+            if (holder || isItem(c)) out.add(c);
+            else items(c, out, depth + 1);
+        }
+    }
+
+    private static boolean isItem(View v) {
+        if (v instanceof AppWidgetHostView) return true;
+        Class<?> c = v.getClass();
+        return named(c, "ShortcutIcon") || named(c, "FolderIcon") || named(c, "ItemIcon")
+                || named(c, "WidgetView") || named(c, "HostView");
+    }
+
+    /** La clase (o una de sus madres) del launcher termina en {@code end}. */
+    private static boolean named(Class<?> c, String end) {
+        for (; c != null && c != View.class && c != ViewGroup.class; c = c.getSuperclass()) {
             String n = c.getName();
-            if (n.startsWith("com.miui.home.") && (n.endsWith(".CellLayout") || n.endsWith(".Hotseat"))) return true;
+            if (n.startsWith("com.miui.home.") && n.endsWith(end)) return true;
         }
         return false;
     }

@@ -100,6 +100,7 @@ final class GlRenderer {
             + "uniform vec2 buf;\n"
             + "uniform vec3 persp;\n"
             + "uniform vec4 vel;\n"
+            + "uniform vec4 ex;\n"
             + "varying vec2 vE;\n"
             + "varying vec2 vD;\n"
             + PERSP
@@ -136,6 +137,28 @@ final class GlRenderer {
             // Margen de la malla: 2 px de antialias, más la mitad de la estela del desenfoque
             // (si no, el borde desenfocado quedaría cortado).
             + "  float mb = 2.0 + 0.5 * max(max(abs(vel.x), abs(vel.y)), max(abs(vel.z), abs(vel.w)));\n"
+            // Abanico (cup = 3), Pergamino (4) y Carta (5): la malla es un rectángulo que cubre toda
+            // la ventana; la forma exacta la recorta el fragment shader, píxel a píxel.
+            + "  if (cup > 2.5) {\n"
+            + "    float x0, x1, y0, y1;\n"
+            + "    if (cup < 3.5) {\n"
+            // Abanico: lados verticales en cur.x y cur.z; arriba y abajo de cada lado en ex.
+            + "      x0 = min(cur.x, cur.z); x1 = max(cur.x, cur.z);\n"
+            + "      y0 = min(ex.x, ex.z); y1 = max(ex.y, ex.w);\n"
+            + "    } else {\n"
+            // Pergamino: el rollo se ve un 5 % más alto (está más cerca). Carta: lo más cerca que
+            // llega un borde al girar se ve D / (D - media anchura) de grande.
+            + "      vec2 c = vec2(cur.x + cur.z, cur.y + cur.w) * 0.5, hs = vec2(cur.z - cur.x, cur.w - cur.y) * 0.5;\n"
+            + "      vec2 k = cup < 4.5 ? vec2(1.0, 1.06) : vec2(ex.z / max(ex.z - hs.x, 1.0));\n"
+            + "      x0 = c.x - hs.x * k.x; x1 = c.x + hs.x * k.x; y0 = c.y - hs.y * k.y; y1 = c.y + hs.y * k.y;\n"
+            + "    }\n"
+            + "    float yb = mix(y0 - mb, y1 + mb, aRow.x);\n"
+            + "    float xb = aRow.y < 0.5 ? x0 - mb : x1 + mb;\n"
+            + "    vE = vec2(0.0);\n"
+            + "    vD = vec2(1.0);\n"
+            + "    gl_Position = vec4(xb * scale / buf.x * 2.0 - 1.0, 1.0 - 2.0 * yb * scale / buf.y, 0.0, 1.0);\n"
+            + "    return;\n"
+            + "  }\n"
             // Profundidad (cup = 2): la lámina inclinada y curvada, vista en perspectiva. Cada fila
             // de la malla es una altura de la pantalla; su anchura es la de la lámina a esa altura
             // (más lejos, más estrecha). El fragment shader hace la cuenta exacta en cada píxel.
@@ -179,15 +202,103 @@ final class GlRenderer {
             + "uniform float cup;\n"
             + "uniform vec3 persp;\n"
             + "uniform vec4 vel;\n"
-            // Doblada: cuánto es todavía una cápsula de cristal (1 al salir del icono, 0 ya abierta).
-            + "uniform float glass;\n"
+            // Abanico, Pergamino y Carta: sus datos (ver Genie.fan, Genie.scroll y Genie.card).
+            + "uniform vec4 ex;\n"
+            + "uniform float fullHalf;\n"
             + "varying vec2 vE;\n"
             + "varying vec2 vD;\n"
             + PERSP
             + "void main() {\n"
             + "  vec2 p = vec2(gl_FragCoord.x, bufH - gl_FragCoord.y) / scale;\n"
             + "  float wE, h, u, s, d;\n"
-            + "  if (cup > 1.5) {\n"
+            // lit = luz (1 = tal cual), spec = brillo, back = se ve el dorso (Carta), iuv = dónde
+            // va el icono (en la forma o en el rectángulo que la contiene).
+            + "  float lit = 1.0, spec = 0.0, back = 0.0;\n"
+            + "  vec2 iuv = vec2(0.0);\n"
+            + "  if (cup > 2.5 && cup < 3.5) {\n"
+            // Abanico: cuadrilátero con los lados verticales en cur.x (izquierda) y cur.z (derecha),
+            // arriba y abajo, rectas entre (ex.x, ex.y) a la izquierda y (ex.z, ex.w) a la derecha.
+            + "    float lx = cur.x, rx = max(cur.z, cur.x + 1.0);\n"
+            + "    wE = rx - lx;\n"
+            + "    float t = clamp((p.x - lx) / wE, 0.0, 1.0);\n"
+            + "    float top = mix(ex.x, ex.z, t), bot = mix(ex.y, ex.w, t);\n"
+            + "    h = max(bot - top, 1.0);\n"
+            + "    u = t;\n"
+            + "    s = clamp((p.y - top) / h, 0.0, 1.0);\n"
+            + "    float st = (ex.z - ex.x) / wE, sb = (ex.w - ex.y) / wE;\n"
+            + "    float dx = min(p.x - lx, rx - p.x);\n"
+            + "    float dy = min((p.y - top) * inversesqrt(1.0 + st * st), (bot - p.y) * inversesqrt(1.0 + sb * sb));\n"
+            + "    float rad = min(g.w, min(wE * 0.5, h * 0.5));\n"
+            + "    d = (dx < rad && dy < rad) ? rad - length(vec2(rad - dx, rad - dy)) : min(dx, dy);\n"
+            + "    iuv = vec2(u, s);\n"
+            + "  } else if (cup > 3.5 && cup < 4.5) {\n"
+            // Pergamino. Todo en coordenadas «anclado a la izquierda» (xl); si el borde cercano es el
+            // derecho (ex.w > 0), se da la vuelta. El papel (la app) empieza en el ancla ex.x, está
+            // plano hasta el centro del rollo ex.y y sigue enrollado en un cilindro de radio ex.z:
+            // sube por el lado lejano y vuelve por delante, así que ahí se ve al revés.
+            + "    float W = 2.0 * fullHalf;\n"
+            + "    float xl = ex.w < 0.0 ? p.x : W - p.x;\n"
+            + "    float anchor = ex.x, xc = ex.y, r = max(ex.z, 0.5);\n"
+            + "    float cy = (cur.y + cur.w) * 0.5, hh = max((cur.w - cur.y) * 0.5, 0.5);\n"
+            + "    float dl = (xl - xc) / r;\n"
+            + "    float ul = -1.0, kz = 1.0, dx = -1.0;\n"
+            + "    if (abs(dl) <= 1.0) {\n"
+            + "      float al = asin(dl), nz = cos(al);\n"
+            + "      float ur = (xc - anchor + r * (3.14159265 - al)) / W;\n"
+            + "      if (ur <= 1.0) {\n"
+            + "        ul = ur;\n"
+            // Más cerca de ti, un pelín más alto; luz de arriba desde el lado cercano y un brillo.
+            + "        kz = 1.0 + 0.05 * nz * min(1.0, r / (0.08 * W));\n"
+            + "        lit = clamp(0.35 + 0.65 * (nz * 0.85 - dl * 0.45), 0.2, 1.0);\n"
+            + "        spec = pow(clamp(nz * 0.8 - dl * 0.6, 0.0, 1.0), 24.0) * 0.55;\n"
+            + "        dx = r - abs(xl - xc);\n"
+            + "      }\n"
+            + "    }\n"
+            + "    float y0 = (p.y - cy) / kz;\n"
+            + "    float dy = (hh - abs(y0)) * kz;\n"
+            + "    float rad = min(g.w, hh);\n"
+            + "    if (ul < 0.0) {\n"
+            // Parte plana, con la sombra que le hace el rollo.
+            + "      ul = (xl - anchor) / W;\n"
+            // La sombra se apaga cuando el rollo sale de la pantalla (si no, quedaba una franja gris).
+            + "      float gone = clamp((W - (xc - r)) / (0.1 * W), 0.0, 1.0);\n"
+            + "      lit = 1.0 - 0.38 * gone * smoothstep(xc - r - 0.1 * W, xc - r, xl);\n"
+            + "      float de = min(xl - anchor, W - xl);\n"
+            + "      dx = min(de, xc - xl);\n"
+            + "      if (de < rad && dy < rad && xc - xl > rad) dx = rad - length(vec2(rad - de, rad - dy));\n"
+            + "    }\n"
+            + "    u = clamp(ex.w < 0.0 ? ul : 1.0 - ul, 0.0, 1.0);\n"
+            + "    s = clamp(y0 / (2.0 * hh) + 0.5, 0.0, 1.0);\n"
+            + "    wE = W;\n"
+            + "    h = 2.0 * hh;\n"
+            + "    d = min(dx, dy);\n"
+            + "    iuv = clamp(vec2((p.x - cur.x) / max(cur.z - cur.x, 1.0), (p.y - cur.y) / max(cur.w - cur.y, 1.0)), 0.0, 1.0);\n"
+            + "  } else if (cup > 4.5) {\n"
+            // Carta: la ventana gira sobre su eje vertical (ángulo con coseno ex.x y seno ex.y), vista
+            // con una cámara a ex.z px. De la pantalla al punto de la carta (u0 de −1 a 1), al revés
+            // de x = u0·hw·cos·D / (D + u0·hw·sen).
+            + "    float cx = (cur.x + cur.z) * 0.5, cy = (cur.y + cur.w) * 0.5;\n"
+            + "    float hw = max((cur.z - cur.x) * 0.5, 0.5), hh = max((cur.w - cur.y) * 0.5, 0.5);\n"
+            + "    float co = ex.x, si = ex.y, D = ex.z;\n"
+            + "    float px = p.x - cx;\n"
+            + "    float den = hw * (co * D - px * si);\n"
+            + "    float u0 = abs(den) < 0.001 ? 2.0 : px * D / den;\n"
+            + "    float f = D / max(D + u0 * hw * si, 0.001);\n"
+            + "    float y0 = (p.y - cy) / f;\n"
+            + "    back = co < 0.0 ? 1.0 : 0.0;\n"
+            + "    u = clamp(back > 0.5 ? 0.5 - u0 * 0.5 : 0.5 + u0 * 0.5, 0.0, 1.0);\n"
+            + "    s = clamp(y0 / (2.0 * hh) + 0.5, 0.0, 1.0);\n"
+            + "    wE = 2.0 * hw;\n"
+            + "    h = 2.0 * hh;\n"
+            + "    float ex0 = (1.0 - abs(u0)) * hw, ey0 = hh - abs(y0);\n"
+            + "    float rad = min(g.w, min(hw, hh));\n"
+            + "    float dd = (ex0 < rad && ey0 < rad) ? rad - length(vec2(rad - ex0, rad - ey0)) : min(ex0, ey0);\n"
+            // A píxeles de pantalla: en horizontal la carta se ve estrechada por |cos|.
+            + "    d = dd * f * (ex0 < ey0 ? max(abs(co), 0.05) : 1.0);\n"
+            // De canto se ve más oscura.
+            + "    lit = 1.0 - (1.0 - abs(co)) * 0.45;\n"
+            + "    iuv = vec2(u, s);\n"
+            + "  } else if (cup > 1.5) {\n"
             // Profundidad: de la pantalla al punto de la lámina (y0, x0), y allí, como siempre,
             // la distancia al borde redondeado. Se pasa a píxeles de pantalla con la escala de
             // esa altura (k), para que el antialias sea de un píxel también lejos.
@@ -213,6 +324,7 @@ final class GlRenderer {
             + "    float rad = min(g.w, min(wE * 0.5, h * 0.5));\n"
             + "    d = (dx < rad && dy < rad) ? rad - length(vec2(rad - dx, rad - dy)) : min(dx, dy);\n"
             + "  }\n"
+            + "  if (cup < 2.5) iuv = vec2(u, s);\n"
             // Lo que se mueve este punto: mezcla de la velocidad de los bordes según dónde está.
             // Así, al crecer, cada borde se desenfoca hacia fuera (un zoom) y el centro casi nada.
             + "  vec2 mv = vec2(mix(vel.x, vel.z, u), mix(vel.y, vel.w, s));\n"
@@ -235,15 +347,17 @@ final class GlRenderer {
             + "    col *= 0.125;\n"
             + "  }\n"
             + "  col = col + bg * (1.0 - col.a);\n"
-            + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, vec2(u, s)), iconMix); }\n"
-            // Cristal (Doblada): el contenido se ve a través de un vidrio claro y medio transparente,
-            // con un canto de luz de unos 3 px. Todo en color premultiplicado: rgb nunca pasa de a.
-            + "  if (glass > 0.0) {\n"
-            + "    float rim = 1.0 - clamp(d / 3.0, 0.0, 1.0);\n"
-            + "    vec4 frosted = col * 0.55 + vec4(0.88, 0.94, 1.0, 1.0) * 0.25;\n"
-            + "    col = mix(col, frosted, glass) + vec4(rim * 0.35 * glass);\n"
-            + "    col = min(col, vec4(1.0));\n"
+            + "  if (iconMix > 0.0) { col = mix(col, texture2D(iconTex, iuv), iconMix); }\n"
+            // Dorso de la carta: el color de fondo del icono (cerca de su borde) y el icono en medio.
+            + "  if (back > 0.5) {\n"
+            + "    vec4 bk = texture2D(iconTex, vec2(0.08, 0.5));\n"
+            + "    bk = vec4(bk.rgb / max(bk.a, 0.01), 1.0);\n"
+            + "    vec2 qi = (vec2(u, s) - 0.5) * vec2(1.0, h / max(wE, 1.0)) / 0.42 + 0.5;\n"
+            + "    vec4 ic = (qi.x >= 0.0 && qi.x <= 1.0 && qi.y >= 0.0 && qi.y <= 1.0) ? texture2D(iconTex, qi) : vec4(0.0);\n"
+            + "    col = ic + bk * (1.0 - ic.a);\n"
             + "  }\n"
+            // Luz y brillo (Pergamino y Carta); en color premultiplicado, rgb nunca pasa de a.
+            + "  col.rgb = min(col.rgb * lit + vec3(spec) * col.a, vec3(col.a));\n"
             + "  gl_FragColor = col * a;\n"
             + "}\n";
 
@@ -304,8 +418,8 @@ final class GlRenderer {
         float tilt, curl, push;
         /** Profundidad: cuánto más lejos está arriba que abajo (ver Genie.applyTilt). */
         float tiltTarget;
-        /** Doblada: 1 = cápsula de cristal (al salir del icono), 0 = la app tal cual. */
-        float glass;
+        /** Abanico, Pergamino y Carta: sus datos (ver Genie.fan, Genie.scroll y Genie.card). */
+        final float[] ex = new float[4];
         /** Profundidad: lo que se mueve cada borde (izq., arriba, der., abajo) con el obturador abierto, en px. */
         final float[] vel = new float[4];
     }
@@ -694,7 +808,7 @@ final class GlRenderer {
             GLES20.glUniform1f(p.cup, g.cup);
             GLES20.glUniform3f(p.persp, g.tilt, g.curl, g.push);
             GLES20.glUniform4f(p.vel, g.vel[0], g.vel[1], g.vel[2], g.vel[3]);
-            GLES20.glUniform1f(p.glass, g.glass);
+            GLES20.glUniform4f(p.ex, g.ex[0], g.ex[1], g.ex[2], g.ex[3]);
             mesh.position(0);
             GLES20.glEnableVertexAttribArray(p.pos);
             GLES20.glVertexAttribPointer(p.pos, 2, GLES20.GL_FLOAT, false, 0, mesh);
@@ -767,7 +881,7 @@ final class GlRenderer {
     /** Un programa con sus uniformes. */
     private static final class Program {
         final int id, pos, content, texM, iconTex, splash, fade, bend, flip, cup, buf, cur, icon, g, iconMix, fullHalf, bg, scale, bufH,
-                persp, vel, glass;
+                persp, vel, ex;
 
         Program(String fragment) {
             id = GLES20.glCreateProgram();
@@ -797,7 +911,7 @@ final class GlRenderer {
             bufH = u("bufH");
             persp = u("persp");
             vel = u("vel");
-            glass = u("glass");
+            ex = u("ex");
         }
 
         private int u(String name) {
