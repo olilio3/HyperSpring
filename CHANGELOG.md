@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.1.0
+
+**New genie styles** (Opening and closing apps → Style)
+- **Fan**: the two icon corners on the side nearest the edge go straight to the screen corners, and the other two follow towards the other side.
+- **Scroll**: the app comes out rolled up, goes to the nearest edge and unrolls to the other one, with 3D light and shadow. Its spring runs a bit slower so you can see it unroll.
+- **Card**: the window spins out in 3D like a card, fast at first and slowing down as it arrives. Its back shows the app icon.
+
+**New**
+- **Push icons**: when an app opens, the other icons on the page and the dock move gently away from it, in step with the window; when it closes they come back. Works with any style, also with the genie off. If the animation is cut short (going home from recents…) they slide back on their own.
+- **Motion blur** now works in every style, not only Depth.
+- **Glass dock margin** (Folders): how far the glass dock bar reaches around the icons.
+
+**Fixed**
+- Glass dock: the bar now hugs the dock icons instead of filling the whole dock area, so it follows Kashi's dock (#23).
+- Closing an app could show a black genie on some phones: if the snapshot taken when the gesture starts comes out black, it is dropped and the genie captures the window while it moves (#22).
+- Swiping into recents in the middle of the close gesture: the genie shape now fades over the recents card instead of jumping to a rectangle (#22).
+- HyperOS 4 / Android 17: the genie looks for the screen capture API where Android 17 moved it, and the curtain hooks every version of the system animation step. If something is still missing, the log lists what this Android has (#21). Not tested on a HyperOS 4 phone yet.
+
 ## 3.0.2
 
 **Fixed**

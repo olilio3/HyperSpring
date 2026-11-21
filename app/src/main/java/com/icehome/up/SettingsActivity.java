@@ -1805,15 +1805,17 @@ public class SettingsActivity extends Activity {
             if (springGraph != null && ("icehome_anim_speed".equals(key) || "icehome_anim_bounce".equals(key))) continue;
             final View row = settingRow(it);
             k.addView(row);
-            // Solo lo que sirve para el estilo elegido: Estrechamiento y Desenfoque de movimiento son de
-            // Profundidad, e Intensidad (cuánto se deforma) no se usa en Profundidad.
-            final boolean depthOnly = key.startsWith("icehome_depth_");
-            if (depthOnly || "icehome_genie_strength".equals(key)) {
+            // Solo lo que sirve para el estilo elegido: Estrechamiento es de Profundidad, e Intensidad
+            // (cuánto se deforma) solo de los genios (clásico y Copa). El desenfoque va en todos.
+            final boolean taper = "icehome_depth_taper".equals(key);
+            if (taper || "icehome_genie_strength".equals(key)) {
                 Runnable vis = new Runnable() {
                     @Override
                     public void run() {
-                        boolean depth = Math.round(stored(item(Tune.ITEMS, "icehome_genie_style"))) == Genie.STYLE_DEPTH;
-                        row.setVisibility(depth == depthOnly ? View.VISIBLE : View.GONE);
+                        int style = Math.round(stored(item(Tune.ITEMS, "icehome_genie_style")));
+                        boolean genie = style == Genie.STYLE_CLASSIC || style == Genie.STYLE_SAMSUNG || style == 2 || style == 4;
+                        boolean show = taper ? style == Genie.STYLE_DEPTH : genie;
+                        row.setVisibility(show ? View.VISIBLE : View.GONE);
                     }
                 };
                 vis.run();
@@ -2867,14 +2869,18 @@ public class SettingsActivity extends Activity {
 
     private String[] styleNames() {
         return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Copa", "Cup"),
-                I18n.t("Profundidad", "Depth")};
+                I18n.t("Profundidad", "Depth"), I18n.t("Abanico", "Fan"), I18n.t("Pergamino", "Scroll"),
+                I18n.t("Carta", "Card")};
     }
 
     private String[] styleHints() {
         return new String[]{
                 I18n.t("Sale del icono con cola, como en un Mac", "Comes out of the icon with a tail, like on a Mac"),
                 I18n.t("Arriba sube primero, como Samsung", "The top rises first, like Samsung"),
-                I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail")};
+                I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail"),
+                I18n.t("Se abre desde el lado más cercano al borde", "Opens from the side nearest the edge"),
+                I18n.t("Se desenrolla de un borde al otro, en 3D", "Unrolls from one edge to the other, in 3D"),
+                I18n.t("Sale girando en 3D y frena al llegar", "Spins out in 3D and slows down as it arrives")};
     }
 
     /** Color {@code top} (con su transparencia) pintado encima de {@code under} (opaco). */
@@ -2900,7 +2906,7 @@ public class SettingsActivity extends Activity {
      * como en HyperOS 4 o iOS.
      */
     /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
-    private static final int[] STYLE_VALUES = {0, 1, 3};
+    private static final int[] STYLE_VALUES = {0, 1, 3, Genie.STYLE_FAN, Genie.STYLE_SCROLL, Genie.STYLE_CARD};
 
     /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
     private View styleRow(final Object[] it) {

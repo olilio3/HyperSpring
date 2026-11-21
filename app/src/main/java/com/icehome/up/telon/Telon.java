@@ -111,7 +111,9 @@ public final class Telon {
                         }
                     }
                 });
-        XposedHelpers.findAndHookMethod(adapter, "applyTransformation", long.class, ValueAnimator.class, new XC_MethodHook() {
+        // Todas las variantes: en Android 17 (HyperOS 4) no es (long, ValueAnimator) y fallaba el
+        // telón entero. El progreso se saca de los argumentos que traiga (ver fraction).
+        java.util.Set<?> frames = XposedBridge.hookAllMethods(adapter, "applyTransformation", new XC_MethodHook() {
             // Cada fotograma de cada transición del sistema pasa por aquí. Sin telón en marcha, el
             // original sin más (sin preparar nada).
             @Override
@@ -122,7 +124,8 @@ public final class Telon {
             @Override
             protected void afterHookedMethod(MethodHookParam p) {
                 try {
-                    onFrame(p.thisObject, (ValueAnimator) p.args[1]);
+                    float f = fraction(p.thisObject, p.args);
+                    if (f >= 0f) onFrame(p.thisObject, f);
                 } catch (Throwable t) {
                     Log.e("fotograma", t);
                     Session s = session;
@@ -130,6 +133,7 @@ public final class Telon {
                 }
             }
         });
+        if (frames.isEmpty()) throw new NoSuchMethodError(adapter.getName() + "#applyTransformation");
         Log.i("telón activo");
     }
 
@@ -235,13 +239,36 @@ public final class Telon {
         }
     }
 
+    private static boolean noFraction;
+
+    /**
+     * Progreso (0-1) de un fotograma de applyTransformation: del ValueAnimator si viene, si no del
+     * tiempo (long) entre la duración de la Animation. -1 si no se sabe (se anota una vez).
+     */
+    private static float fraction(Object adapter, Object[] args) throws Throwable {
+        Long time = null;
+        for (Object a : args) {
+            if (a instanceof ValueAnimator) return ((ValueAnimator) a).getAnimatedFraction();
+            if (a instanceof Long && time == null) time = (Long) a;
+        }
+        Animation anim = (Animation) fAnim.get(adapter);
+        if (time != null && anim != null && anim.getDuration() > 0) {
+            return Math.max(0f, Math.min(1f, (time - anim.getStartOffset()) / (float) anim.getDuration()));
+        }
+        if (!noFraction) {
+            noFraction = true;
+            Log.w("telón: applyTransformation sin progreso conocido (" + args.length + " argumentos)");
+        }
+        return -1f;
+    }
+
     /** Un fotograma de HyperOS para una ventana (se llama para cada ventana de la transición). */
-    private static void onFrame(Object adapter, ValueAnimator va) throws Throwable {
+    private static void onFrame(Object adapter, float fraction) throws Throwable {
         Session s = session;
         if (s == null || s.done) return;
         SurfaceControl leash = (SurfaceControl) fLeash.get(adapter);
         if (leash != null && leash == s.belowLeash) {
-            s.postBelow(adapter, va.getAnimatedFraction());
+            s.postBelow(adapter, fraction);
             // HyperOS le vuelve a poner su transparencia en cada fotograma: mientras se ve la
             // copia, oculta (en su misma transacción).
             if (s.belowHidden && !s.done) ((SurfaceControl.Transaction) fTransaction.get(adapter)).setAlpha(leash, 0f);
@@ -264,7 +291,6 @@ public final class Telon {
         Matrix tm = tr.getMatrix();
         float alpha = tr.getAlpha();
         float radius = roundedCorners(anim) ? Math.max(0f, fRadius.getFloat(adapter)) : 0f;
-        float fraction = va.getAnimatedFraction();
         s.step(tm, fraction);
         s.post(tm, alpha, radius);
         SurfaceControl.Transaction t = (SurfaceControl.Transaction) fTransaction.get(adapter);

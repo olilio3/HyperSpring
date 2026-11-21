@@ -27,14 +27,21 @@ final class Hidden {
         if (resolved) return ok;
         resolved = true;
         try {
-            // Android 14+: android.window.ScreenCapture. Android 12-13: SurfaceControl.
-            Class<?> owner, args;
-            try {
-                owner = Class.forName("android.window.ScreenCapture");
-                args = Class.forName("android.window.ScreenCapture$LayerCaptureArgs");
-            } catch (ClassNotFoundException e) {
-                owner = SurfaceControl.class;
-                args = Class.forName("android.view.SurfaceControl$LayerCaptureArgs");
+            Class<?> args = null, owner = null;
+            for (String name : CAPTURE_OWNERS) {
+                try {
+                    Class<?> o = Class.forName(name);
+                    Class<?> a = Class.forName(name + "$LayerCaptureArgs");
+                    capture = o.getMethod("captureLayers", a);
+                    owner = o;
+                    args = a;
+                    break;
+                } catch (Throwable ignored) {
+                }
+            }
+            if (owner == null) {
+                Log.w("APIs ocultas no disponibles, genio desactivado: no hay captureLayers; " + captureInfo());
+                return false;
             }
             Class<?> b = Class.forName(args.getName() + "$Builder");
             argsBuilder = b.getConstructor(SurfaceControl.class);
@@ -43,7 +50,6 @@ final class Hidden {
             setChildrenOnly = b.getMethod("setChildrenOnly", boolean.class);
             setExclude = b.getMethod("setExcludeLayers", SurfaceControl[].class);
             build = b.getMethod("build");
-            capture = owner.getMethod("captureLayers", args);
             colorSpace = capture.getReturnType().getMethod("getColorSpace");
             attachAndQueue = Surface.class.getMethod("attachAndQueueBufferWithColorSpace",
                     HardwareBuffer.class, ColorSpace.class);
@@ -57,6 +63,33 @@ final class Hidden {
             Log.w("APIs ocultas no disponibles, genio desactivado: " + t);
         }
         return ok;
+    }
+
+    /**
+     * Dónde está captureLayers, de más nuevo a más viejo. Android 17: ScreenCaptureInternal (el
+     * nombre ScreenCapture pasó a una API pública distinta). Android 14-16: ScreenCapture.
+     * Android 12-13: SurfaceControl.
+     */
+    private static final String[] CAPTURE_OWNERS = {
+            "android.window.ScreenCaptureInternal", "android.window.ScreenCapture", "android.view.SurfaceControl"};
+
+    /** Para el registro: qué clases y métodos de captura hay en este Android (para adaptarlo). */
+    private static String captureInfo() {
+        StringBuilder s = new StringBuilder();
+        for (String name : CAPTURE_OWNERS) {
+            try {
+                Class<?> c = Class.forName(name);
+                s.append(c.getSimpleName()).append(" [");
+                for (Class<?> in : c.getDeclaredClasses()) s.append(in.getSimpleName()).append(' ');
+                for (Method m : c.getDeclaredMethods()) {
+                    if (m.getName().toLowerCase().contains("capture")) s.append(m.getName()).append('/').append(m.getParameterCount()).append(' ');
+                }
+                s.append("] ");
+            } catch (Throwable t) {
+                s.append(name.substring(name.lastIndexOf('.') + 1)).append(" no; ");
+            }
+        }
+        return s.toString();
     }
 
     /** Una captura: búfer de la GPU y su espacio de color. */

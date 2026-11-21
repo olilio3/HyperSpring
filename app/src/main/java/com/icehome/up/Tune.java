@@ -25,15 +25,16 @@ public final class Tune {
             {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
             {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
-            {"icehome_genie_style", "Estilo", 0f, 3f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento."},
+            {"icehome_genie_style", "Estilo", 0f, 7f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento. 5 = Abanico: las dos esquinas del icono del lado más cercano al borde van directas a las de la pantalla y las otras dos salen después hacia el otro lado. 6 = Pergamino: la app sale enrollada, va al borde más cercano y se desenrolla hasta el otro, con luz y sombra en 3D. 7 = Carta: la ventana sale girando en 3D como una carta, deprisa al principio y frenando al llegar."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
             {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
-            {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "Solo en Profundidad: la estela que deja la ventana al moverse. 0 la quita."},
+            {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "En todos los estilos: la estela que deja la ventana al moverse, como una foto con el obturador abierto. Más alto, más estela. 0 la quita. Gasta algo de GPU mientras la ventana se mueve deprisa."},
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
             {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto sigue a la pantalla hasta 90 (a 120 Hz o más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
+            {"icehome_push", "Empujar iconos", 0f, 1f, 0.4f, 2, "Al abrir una app, los demás iconos se apartan suavemente de ella, a la par que la ventana; los más lejanos apenas se mueven. Al cerrarla vuelven igual, al revés. Va con cualquier estilo. 0 lo quita."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
             {"icehome_unlock_zoom", "Zoom al desbloquear", 0f, 1.5f, 0f, 2, "Al desbloquear, el escritorio entra un poco más grande y se asienta a su tamaño, todo de una pieza. 0 lo quita."},
@@ -59,6 +60,7 @@ public final class Tune {
             {"icehome_folder_light", "Brillo del borde", 0f, 0.3f, 0.1f, 2, "Luz que recoge el borde de la lente desde arriba a la izquierda."},
             {"icehome_folder_glow", "Brillo al tocar", 0f, 1.5f, 1f, 2, "Al tocar una carpeta, una luz suave sigue al dedo y el canto se enciende cerca de él. 0 lo quita."},
             {"icehome_folder_haptic", "Vibración al redimensionar", 0f, 1f, 0.3f, 2, "Un tic cada vez que la carpeta salta a otro tamaño mientras la estiras. 0 lo quita. Respeta el ajuste de vibración del sistema."},
+            {"icehome_dock_pad", "Margen del dock de cristal", 0f, 30f, 12f, 0, "Cuánto sobresale la barra del dock de cristal alrededor de los iconos, en dp. Menos, una barra más ajustada. Se aplica al reiniciar el launcher."},
     };
 
     private static volatile Map<String, String> cache;
@@ -68,8 +70,8 @@ public final class Tune {
         cache = read(c);
         Genie.strength = f(c, "icehome_genie_strength");
         int style = Math.round(f(c, "icehome_genie_style"));
-        // El 2 era la copa «Ice» (quitada en la 2.13.0): quien la tuviera pasa a la Copa.
-        Genie.style = style == 2 ? Genie.STYLE_SAMSUNG : style;
+        // El 2 era la copa «Ice» (quitada en la 2.13.0) y el 4 no existe: los dos pasan a la Copa.
+        Genie.style = style == 2 || style == 4 ? Genie.STYLE_SAMSUNG : style;
         Genie.depthTaper = f(c, "icehome_depth_taper") / 100f;
         Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;
@@ -78,6 +80,7 @@ public final class Tune {
         Haptics.strength = f(c, "icehome_haptic");
         Haptics.folder = f(c, "icehome_folder_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
+        IconPush.strength = f(c, "icehome_push");
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
         RecentsCurtain.strength = f(c, "icehome_curtain_strength");
         RecentsCurtain.mode = f(c, "icehome_curtain_style") >= 0.5f ? 1f : 0f;
@@ -92,6 +95,7 @@ public final class Tune {
         GlassFolder.liquidChroma = f(c, "icehome_folder_chroma");
         GlassFolder.liquidLight = f(c, "icehome_folder_light");
         GlassFolder.touchGlow = f(c, "icehome_folder_glow");
+        GlassDock.padDp = f(c, "icehome_dock_pad");
         Map<String, String> m = cache;
         Exclude.genie = Exclude.parse(m == null ? null : m.get(Exclude.KEY));
         // Pausa (tile de ajustes rápidos): sin genio y sin recientes que se doblan, al momento.

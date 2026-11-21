@@ -29,6 +29,16 @@ Not started, in no fixed order.
 - [ ] **Icons that spring out of the way** when you drag one across the home screen, instead of sliding in a straight line.
 - [ ] **A tick when the widget stack changes**, like the ones the genie (on landing) and folders (on resize) already have.
 
+### New styles for opening and closing apps
+Proposed on 2026-11-19. All of them use the genie engine (OpenGL with the window capture), so they cost nothing to people who don't pick them. Each one has to hold 60 fps on the Redmi 14C (Mali-G52) and work the same in reverse when closing. Suggested order: cheapest and safest first.
+- [ ] **Jelly:** each corner of the window has its own spring. The corner closest to the icon leaves first and the others follow a little later, so the window stretches and settles like jelly. When closing, it squashes slightly as it lands on the icon. Only the mesh changes; it reuses the existing springs.
+- [ ] **Glass iris:** the app appears inside a circle that grows from the icon, with a liquid glass rim that bends the home screen around it like a lens. When closing, the circle shuts over the icon. It is a single shader (no mesh) and reuses the folder glass.
+- [ ] **Droplet:** the icon swells like a water drop. Its edges wobble for a moment from surface tension, then the drop stretches to fill the screen with the app inside. When closing, the window shrinks into a drop that falls into the icon with a small bounce.
+- [ ] **Unfold:** the window comes out folded in two or three panels, like paper, and unfolds from the icon. Each fold has its own light and shadow. The most ambitious one: the fold lighting has to be measured so it stays at 60 fps.
+- [ ] **Touches that add to any style** (each with its own switch):
+  - **App light:** the icon's colour spills as a soft glow over the wallpaper while the app opens, and fades when it finishes.
+  - **Icon ripple:** the surrounding icons move slightly out of the way with a spring while the app opens, and come back when it closes. It only moves the home screen views; nothing new is drawn.
+
 ## Dropped
 Ideas that were on the list and were removed, with the reason:
 - **Glass notifications** (removed 2026-11-17). People prefer HyperOS's own blur, and painting every card stuttered while scrolling on mid-range phones.

@@ -178,6 +178,28 @@ final class Genie {
      */
     static final int STYLE_CLASSIC = 0, STYLE_SAMSUNG = 1, STYLE_DEPTH = 3;
     /**
+     * Estilos 3D sin genio (3.1.0). Los tres se dibujan con formas propias del shader (cup 3, 4 y
+     * 5) a partir del rectángulo de MIUI; los datos extra van en {@code Geo.ex}:
+     * <ul>
+     * <li><b>Abanico (5):</b> las dos esquinas del lado del icono más cercano al borde van directas
+     * a las de la pantalla; las otras dos salen después hacia el otro lado. ex = y de arriba y de
+     * abajo de cada lado.</li>
+     * <li><b>Pergamino (6):</b> la app sale enrollada, va al borde más cercano y se desenrolla
+     * hacia el otro, con luz y sombra del rollo. ex = (borde fijo, centro del rollo, radio, lado).</li>
+     * <li><b>Carta (7):</b> gira dos vueltas en 3D, deprisa al principio y frenando al llegar; de
+     * espaldas enseña el icono. ex = (cos, sin del giro, distancia a la cámara, 0).</li>
+     * </ul>
+     */
+    static final int STYLE_FAN = 5, STYLE_SCROLL = 6, STYLE_CARD = 7;
+    /** Abanico: avance en el que el lado cercano ya ha llegado, y en el que empieza el lejano. */
+    private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
+    /** Pergamino: tramo en que el rollo viaja al borde, y desde dónde se desenrolla. */
+    private static final float SCROLL_TRAVEL = 0.36f, SCROLL_UNROLL = 0.3f;
+    /** Pergamino: el muelle de MIUI va a este ritmo, para que se vea desenrollar (ver Springs). */
+    static final float SCROLL_SPEED = 0.6f;
+    /** Carta: distancia de la cámara (en anchos), vueltas, avance quieto al salir y frenada. */
+    private static final float CARD_CAMERA = 1.93f, CARD_TURNS = 2f, CARD_STILL = 0.14f, CARD_EASE = 3.2f;
+    /**
      * Profundidad: sin genio. La ventana sigue el rectángulo de MIUI (su muelle de siempre, con
      * Velocidad y Rebote) y es una lámina rígida vista en perspectiva:
      * <ul>
@@ -333,6 +355,18 @@ final class Genie {
                 it.next().getValue().shot.buffer.close();
                 it.remove();
             }
+        }
+    }
+
+    /**
+     * Quita esa captura de la caché sin cerrarla (puede estar en uso).
+     * shortcut: si el genio ya la soltó mientras estaba en la caché, la cierra el recolector de
+     * basura (unos MB un rato); contar usos si algún día importa.
+     */
+    private static void forget(String pkg, Hidden.Shot shot) {
+        synchronized (snaps) {
+            Snap s = snaps.get(pkg);
+            if (s != null && s.shot.buffer == shot.buffer) snaps.remove(pkg);
         }
     }
 
@@ -508,6 +542,34 @@ final class Genie {
         }, GRACE_MS);
     }
 
+    /** Lo que tarda en fundirse el último fotograma del genio al pasar a recientes. */
+    private static final long FADE_MS = 160;
+
+    /**
+     * Funde la capa (con el último fotograma dibujado) y la oculta. Si mientras tanto otro genio
+     * empieza a usarla, se deja: él pone su transparencia en cada fotograma.
+     */
+    private static void fadeOut(final SurfaceControl l) {
+        final long t0 = SystemClock.uptimeMillis();
+        renderHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Session s = session;
+                    if (!l.isValid() || (s != null && s.started) || ghost != null) return;
+                    float k = (SystemClock.uptimeMillis() - t0) / (float) FADE_MS;
+                    SurfaceControl.Transaction t = new SurfaceControl.Transaction();
+                    if (k >= 1f) t.setVisibility(l, false);
+                    else t.setAlpha(l, 1f - smooth(k));
+                    t.apply();
+                    if (k < 1f) renderHandler().postDelayed(this, 8);
+                } catch (Throwable e) {
+                    Log.e("genio: fundido a recientes", e);
+                }
+            }
+        });
+    }
+
     /** La animación de este animador ya no lleva genio (otro tipo, gesto rápido…). */
     static void stopFor(Object key, String why) {
         Session s = session;
@@ -664,7 +726,22 @@ final class Genie {
                     preTask = taskId;
                     preShotMs = SystemClock.uptimeMillis();
                 }
+                // Antes de mirarla: el genio puede tomarla y soltarla mientras tanto, y release()
+                // solo la conserva si ya está en la caché (si no, la cerraba y luego se usaba cerrada).
                 if (pkg != null) remember(pkg, taskId, shot);
+                // Si la ventana sale negra o vacía, fuera la captura (si el genio aún no la ha
+                // usado): captura en cada fotograma mientras se mueve. Antes salía el genio negro
+                // (#22). Se mira después de guardarla para no retrasar el primer fotograma.
+                if (Hidden.looksBlank(leash, crop)) {
+                    if (pkg != null) forget(pkg, shot);
+                    synchronized (PRE) {
+                        if (preShot == shot) {
+                            release(shot);
+                            preShot = null;
+                        }
+                    }
+                    Log.i("genio: la captura al empezar a cerrar sale negra; se capturará durante el gesto");
+                }
             }
         });
     }
@@ -1491,10 +1568,20 @@ final class Genie {
                     uploadIcon();
                 }
             }
-            if (style == STYLE_DEPTH) drawVelocity(cur);
+            // La estela va en todos los estilos (3.1.0): solo se mide la velocidad si está puesta.
+            if (depthBlur > 0f) drawVelocity(cur);
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
+            // Estilos 3D al abrir: mientras no llega la imagen de la app, el icono cubre la forma
+            // (si no, se vería vacía al girar o desenrollarse). Se funde con la app al llegar.
+            if (startedOpen && iconReady && (style == STYLE_FAN || style == STYLE_SCROLL || style == STYLE_CARD)) {
+                float cover = (fromWindow ? 1f - geoNow.fade : 1f) * (1f - smooth((geoNow.pw - FAN_NEAR_END) / DIR_BLEND_S));
+                if (cover > 0f) {
+                    geoNow.iconMix = Math.max(geoNow.iconMix, cover);
+                    dirty = true;
+                }
+            }
             // Con estela, otro fotograma: así se apaga sola aunque MIUI deje de mandar fotogramas.
             if (geoNow.vel[0] != 0f || geoNow.vel[1] != 0f || geoNow.vel[2] != 0f || geoNow.vel[3] != 0f) dirty = true;
             long t0 = System.nanoTime();
@@ -1634,6 +1721,7 @@ final class Genie {
             }
             if (ending == this) ending = null;
             SurfaceControl window = leash;
+            SurfaceControl fade = null;
             try {
                 SurfaceControl.Transaction t = new SurfaceControl.Transaction();
                 Ghost gh = ghost;
@@ -1655,7 +1743,10 @@ final class Genie {
                         gh = null;
                     }
                     if (l != null && l.isValid()) {
-                        if (gh == null) t.setVisibility(l, false);
+                        // Al pasar a recientes a mitad del gesto, la forma del genio se funde sobre la
+                        // tarjeta en vez de desaparecer de golpe (saltaba a un rectángulo, issue #22).
+                        if (gh == null && shown && why != null && why.contains("RECENTS")) fade = l;
+                        else if (gh == null) t.setVisibility(l, false);
                         else if (!otherSessionOnLayer()) t.setLayer(l, Z_TOP);
                     }
                 }
@@ -1663,6 +1754,7 @@ final class Genie {
             } catch (Throwable e) {
                 Log.e("genio: error al terminar", e);
             }
+            if (fade != null) fadeOut(fade);
             Log.i(String.format(java.util.Locale.ROOT,
                     "genio %s a %.0f%%: empieza con anchura %.0f%%, %d fotogramas en %d ms (%d tirones, máx. %.0f ms); "
                             + "primer dibujo a %s, ventana a %s, visible a %s (%s); captura %.1f ms (%d/%d fallidas), "
@@ -1762,8 +1854,16 @@ final class Genie {
         float shape = smooth(pw / DEPTH_RISE) * (1f - smooth((pw - DEPTH_SETTLE) / (1f - DEPTH_SETTLE)));
         out.tiltTarget = k * shape * ramp;
         applyTilt(out, out.tiltTarget);
+        motion(vel, ramp, pw, dir, full, out);
+    }
+
+    /**
+     * Desenfoque de movimiento (todos los estilos desde la 3.1.0): cada borde se difumina en la
+     * dirección en la que va, según su velocidad {@code vel} (px/s; null = sin estela).
+     */
+    private static void motion(float[] vel, float ramp, float pw, float dir, RectF full, GlRenderer.Geo out) {
         java.util.Arrays.fill(out.vel, 0f);
-        if (vel == null) return;
+        if (vel == null || depthBlur <= 0f) return;
         float amt = depthBlur * ramp;
         // Muy cerca del icono la estela se apaga: aterriza nítido, sin «manchar» el icono. Y al
         // abrir, en el último tramo (el muelle llegando a pantalla completa), también: la app
@@ -1779,6 +1879,90 @@ final class Genie {
         }
         // Menos de medio píxel de estela no se ve: a cero, y así se deja de redibujar.
         if (most < 0.5f) java.util.Arrays.fill(out.vel, 0f);
+    }
+
+    /** -1 si el icono está a la izquierda del centro de la pantalla (su borde cercano), 1 si a la derecha. */
+    private static float nearSide(RectF icon, RectF full) {
+        return icon.centerX() < full.centerX() ? -1f : 1f;
+    }
+
+    /** Salida rápida que frena al final (cúbica). */
+    private static float easeOut(float t) {
+        float r = 1f - clamp(t);
+        return 1f - r * r * r;
+    }
+
+    /**
+     * Abanico: el lado del icono más cercano al borde va derecho a la pantalla (llega en
+     * {@link #FAN_NEAR_END}); el otro sale un poco después ({@link #FAN_FAR_START}) y acaba con el
+     * muelle. El shader une los dos lados con rectas (cup 3): ex = arriba/abajo de la izquierda
+     * y de la derecha.
+     */
+    private static void fan(RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        float near = easeOut(pw / FAN_NEAR_END);
+        float far = smooth((pw - FAN_FAR_START) / (1f - FAN_FAR_START));
+        float nearFrom = side < 0f ? icon.left : icon.right, farFrom = side < 0f ? icon.right : icon.left;
+        float nearTo = side < 0f ? full.left : full.right, farTo = side < 0f ? full.right : full.left;
+        float nx = lerp(nearFrom, nearTo, near);
+        float nTop = lerp(icon.top, full.top, near), nBot = lerp(icon.bottom, full.bottom, near);
+        // El lado lejano crece en alto algo antes que en ancho, para que no quede como una aguja.
+        float farV = Math.max(far, near * 0.6f);
+        float fx = lerp(farFrom, farTo, far);
+        float fTop = lerp(icon.top, full.top, farV), fBot = lerp(icon.bottom, full.bottom, farV);
+        float top = Math.min(nTop, fTop), bot = Math.max(nBot, fBot);
+        if (side < 0f) {
+            out.cur.set(nx, top, fx, bot);
+            out.ex[0] = nTop; out.ex[1] = nBot; out.ex[2] = fTop; out.ex[3] = fBot;
+        } else {
+            out.cur.set(fx, top, nx, bot);
+            out.ex[0] = fTop; out.ex[1] = fBot; out.ex[2] = nTop; out.ex[3] = nBot;
+        }
+        out.cup = 3f;
+    }
+
+    /**
+     * Pergamino: la app sale enrollada (un cilindro del ancho del icono), viaja al borde más
+     * cercano ({@link #SCROLL_TRAVEL}) y desde {@link #SCROLL_UNROLL} se desenrolla hacia el otro.
+     * El shader (cup 4) dibuja la parte plana y el rollo con luz; ex = (borde fijo, centro del
+     * rollo, radio del rollo, lado), todo medido desde el borde cercano.
+     */
+    private static void scroll(RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        float w = Math.max(1f, full.width());
+        float travel = smooth(pw / SCROLL_TRAVEL);
+        float unroll = smooth((pw - SCROLL_UNROLL) / (1f - SCROLL_UNROLL));
+        float r0 = Math.max(4f, icon.width() * 0.5f);        // radio del rollo al salir del icono
+        float r1 = Math.max(2f, 0.011f * w);                 // y ya desenrollado (casi plano)
+        float startC = side < 0f ? icon.centerX() - full.left : full.right - icon.centerX();
+        float c = lerp(startC, r0, travel);                  // centro del rollo, viajando al borde
+        float xc = lerp(c, w + r1 + 2f, unroll);             // y desenrollándose hacia el otro
+        // El radio baja con lo desenrollado (el papel que queda en el rollo).
+        float r = (float) Math.sqrt((1f - unroll) * (r0 * r0 - r1 * r1) + r1 * r1);
+        float anchor = Math.max(0f, c - r0);                 // borde fijo del papel ya extendido
+        float top = lerp(icon.top, full.top, travel), bot = lerp(icon.bottom, full.bottom, travel);
+        float l = Math.min(anchor, xc - r), rr = Math.min(w, xc + r);
+        if (side < 0f) out.cur.set(full.left + l, top, full.left + rr, bot);
+        else out.cur.set(full.right - rr, top, full.right - l, bot);
+        out.ex[0] = anchor; out.ex[1] = xc; out.ex[2] = r; out.ex[3] = side;
+        out.cup = 4f;
+    }
+
+    /**
+     * Carta: el rectángulo de MIUI gira {@link #CARD_TURNS} vueltas en 3D sobre su eje vertical,
+     * quieto al principio ({@link #CARD_STILL}) y frenando al llegar. El shader (cup 5) la
+     * proyecta con una cámara a {@link #CARD_CAMERA} anchos; de espaldas enseña el icono.
+     */
+    private static void card(RectF cur, RectF icon, RectF full, float pw, GlRenderer.Geo out) {
+        float side = nearSide(icon, full);
+        out.cur.set(cur);
+        float t = clamp((pw - CARD_STILL) / (1f - CARD_STILL));
+        double a = 2.0 * Math.PI * CARD_TURNS * (1.0 - Math.pow(1.0 - t, CARD_EASE));
+        out.ex[0] = (float) Math.cos(a);
+        out.ex[1] = -side * (float) Math.sin(a);              // gira hacia el lado del icono
+        out.ex[2] = CARD_CAMERA * Math.max(1f, full.width());
+        out.ex[3] = 0f;
+        out.cup = 5f;
     }
 
     /**
@@ -1803,13 +1987,36 @@ final class Genie {
     private static void shape(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
                               float radius, float bend, float flip, boolean iconReady, float[] vel, GlRenderer.Geo out) {
         float pw = progress(cur.width(), icon.width(), full.width());
+        shapeOnly(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, vel, out);
+        // Profundidad ya pone su estela dentro; los demás estilos, aquí.
+        if (style != STYLE_DEPTH) motion(vel, ramp, pw, dir, full, out);
+    }
+
+    private static void shapeOnly(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
+                                  float radius, float bend, float flip, boolean iconReady, float[] vel, GlRenderer.Geo out) {
+        float pw = progress(cur.width(), icon.width(), full.width());
         float ph = progress(cur.height(), icon.height(), full.height());
         float g = strength * ramp;
-        // Curvatura y estela solo en Profundidad: en los demás estilos, a cero.
+        // Curvatura, datos 3D y estela a cero; cada estilo pone lo suyo.
         out.tilt = out.curl = out.push = 0f;
+        java.util.Arrays.fill(out.ex, 0f);
         java.util.Arrays.fill(out.vel, 0f);
         if (style == STYLE_DEPTH) {
             depth(cur, icon, full, dir, ramp, radius, iconReady, vel, pw, out);
+            return;
+        }
+        if (style == STYLE_FAN || style == STYLE_SCROLL || style == STYLE_CARD) {
+            out.icon.set(icon);
+            out.pw = pw;
+            out.lead = out.lag = 1f;
+            out.radius = radius;
+            out.iconMix = iconMix(pw, dir, iconReady);
+            out.splashIcon = 0f;
+            out.bend = 0f;
+            out.flip = 0f;
+            if (style == STYLE_FAN) fan(icon, full, pw, out);
+            else if (style == STYLE_SCROLL) scroll(icon, full, pw, out);
+            else card(cur, icon, full, pw, out);
             return;
         }
         if (style != STYLE_CLASSIC) {

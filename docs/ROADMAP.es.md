@@ -29,6 +29,16 @@ Sin empezar y sin orden fijo.
 - [ ] **Iconos que se apartan con muelle** al arrastrar uno por el escritorio, en vez de deslizarse en línea recta.
 - [ ] **Tic al cambiar la pila de widgets**, como el que ya tienen el genio al aterrizar y las carpetas al cambiar de tamaño.
 
+### Nuevos estilos al abrir y cerrar apps
+Propuestos el 19-11-2026. Todos usan el motor del genio (OpenGL con la captura de la ventana), así que no añaden coste a quien no los elija. Condición para cada uno: 60 fps en el Redmi 14C (Mali-G52) y que funcione igual al cerrar, al revés. Orden sugerido: de más barato y seguro a más ambicioso.
+- [ ] **Gelatina:** cada esquina de la ventana tiene su propio muelle. La esquina más cercana al icono sale primero y las otras la siguen con un poco de retraso, así que la ventana se estira y se recoloca como una gelatina. Al cerrar, se aplasta un poco al llegar al icono. Solo cambia la malla; reutiliza los muelles que ya existen.
+- [ ] **Iris de cristal:** la app aparece dentro de un círculo que crece desde el icono, con un borde de cristal líquido que dobla el escritorio de alrededor, como una lente. Al cerrar, el círculo se cierra sobre el icono. Es solo un shader (sin malla), y aprovecha el cristal de las carpetas.
+- [ ] **Gota:** el icono se hincha como una gota de agua. Los bordes tiemblan un instante, por tensión superficial, y la gota se estira hasta llenar la pantalla con el contenido de la app dentro. Al cerrar, la ventana se encoge en una gota que cae en el icono con un pequeño rebote.
+- [ ] **Despliegue:** la ventana sale doblada en dos o tres paneles, como papel, y se despliega desde el icono. Cada pliegue tiene su luz y su sombra. Es el más ambicioso: hay que medir que la luz de los pliegues no baje de 60 fps.
+- [ ] **Detalles que se suman a cualquier estilo** (cada uno con su interruptor):
+  - **Luz de la app:** el color del icono se derrama como un brillo suave sobre el fondo mientras la app se abre, y se apaga al terminar.
+  - **Onda en los iconos:** los iconos de alrededor se apartan un poco con un muelle mientras la app se abre y vuelven a su sitio al cerrarla. Solo mueve las vistas del escritorio, sin dibujar nada nuevo.
+
 ## Descartado
 Ideas que estaban en la lista y se han quitado, con el motivo:
 - **Notificaciones de cristal** (quitadas el 17-11-2026). La gente prefiere el desenfoque propio de HyperOS, y pintar cada tarjeta daba tirones al deslizar en gama media.

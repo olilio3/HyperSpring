@@ -583,6 +583,8 @@ final class WindowAnim {
         }
         boolean open = "OPEN_FROM_HOME".equals(type);
         boolean drag = "CLOSE_TO_DRAG".equals(type);
+        // Empujar iconos: antes de decidir el genio, porque va también sin él.
+        if ((open || drag || "CLOSE_TO_HOME".equals(type)) && IconPush.on()) push(impl, open, drag, cur, bounds);
         if (!Genie.enabled || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
             Genie.stopFor(impl, type);
             // Otra app que se abre sin genio (desde un widget…) mientras una se cierra.
@@ -697,6 +699,36 @@ final class WindowAnim {
 
     /** Paquete del último icono del escritorio que se ha tocado. */
     private static volatile String touchedPkg;
+
+    private static boolean pushFailed;
+    /** Solo se usa en el hilo de animación de MIUI. */
+    private static final RectF PUSH_FULL = new RectF();
+
+    /** Pasa el fotograma a {@link IconPush}: pantalla completa e icono, igual que para el genio. */
+    private static void push(Object impl, boolean open, boolean drag, RectF cur, Rect bounds) {
+        try {
+            Object params = currentParams.invoke(impl);
+            if (params == null || (Boolean) quickSwitch.invoke(params)) return;
+            Object wp = windowParams.invoke(params);
+            RectF start = (RectF) startRect.invoke(wp);
+            RectF end = (RectF) targetRect.invoke(wp);
+            if (bounds != null && !bounds.isEmpty()) PUSH_FULL.set(bounds);
+            else if (open && end != null) PUSH_FULL.set(end);
+            else if (start != null) PUSH_FULL.set(start);
+            else return;
+            if (PUSH_FULL.width() >= PUSH_FULL.height()) return;          // solo en vertical
+            // La vista raíz del launcher, de él mismo: así va aunque no se haya tocado un icono
+            // (en la 3.1.0 solo se sabía al tocar uno, y solo con el genio puesto).
+            if (IconPush.needsRoot()) {
+                Object l = getLauncher.invoke(null);
+                if (l != null) IconPush.setRoot((View) rootView.invoke(l));
+            }
+            IconPush.frame(cur, drag ? null : (open ? start : end), PUSH_FULL);
+        } catch (Throwable e) {
+            if (!pushFailed) Log.e("empujar iconos: fotograma", e);
+            pushFailed = true;
+        }
+    }
 
     private static void excluded(Object impl, String type) {
         // En el registro se distingue la pausa (tile) de una app de la lista: si no, un usuario

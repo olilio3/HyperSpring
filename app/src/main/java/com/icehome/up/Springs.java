@@ -52,7 +52,8 @@ final class Springs {
 
     /** Copia ajustada del array de muelles, o null si no hay nada que cambiar. */
     private static Object adjust(Class<?> param, Object[] in, boolean open) throws Exception {
-        float s = speed, b = bounce;
+        // El Pergamino necesita más tiempo para verse desenrollar: su muelle va más despacio.
+        float s = speed * (Genie.enabled && Genie.style == Genie.STYLE_SCROLL ? Genie.SCROLL_SPEED : 1f), b = bounce;
         if (in == null || (s == 1f && b == 0f)) return null;
         Object out = Array.newInstance(param, in.length);
         for (int i = 0; i < in.length; i++) {
