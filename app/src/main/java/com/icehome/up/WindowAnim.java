@@ -108,6 +108,7 @@ final class WindowAnim {
             protected void beforeHookedMethod(MethodHookParam p) {
                 long t0 = System.nanoTime();
                 try {
+                    FRAME.alpha = (Float) p.args[0];
                     onFrame(p.thisObject, (RectF) p.args[2], p.args[3], (Rect) p.args[6]);
                 } catch (Throwable t) {
                     Genie.stop("error");

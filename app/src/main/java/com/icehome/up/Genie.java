@@ -197,6 +197,8 @@ final class Genie {
      * valen el desenfoque de movimiento, la velocidad y el rebote como a los demás estilos.
      */
     static final int STYLE_HYPEROS = 8;
+    /** Alfa del contenido de MIUI para el fotograma que se dibuja (-1 = no hay). Solo hilo del genio. */
+    private static float miuiAlpha = -1f;
     /** Abanico: avance en el que el lado cercano ya ha llegado, y en el que empieza el lejano. */
     private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
     /** Pergamino: tramo en que el rollo viaja al borde, y desde dónde se desenrolla. */
@@ -409,6 +411,12 @@ final class Genie {
         /** false al arrastrar: el extremo cercano sigue al dedo. */
         boolean hasIcon;
         float radius;
+        /**
+         * Transparencia del contenido de la app que calcula MIUI (su muelle «Alpha»): 0 = solo el
+         * icono, 1 = solo la app. Medido en el 14C: al abrir llega a 1 hacia el 75 % del ancho; al
+         * cerrar baja de 1 a 0 entre el 60 % y el 25 %. El estilo HyperOS funde el icono con esto.
+         */
+        float alpha = -1f;
         // Solo al empezar una sesión:
         SurfaceControl root;
         SurfaceControl[] exclude;
@@ -971,7 +979,7 @@ final class Genie {
         /** Icono destino, para reconocer un toque en él (bajo lock). */
         final RectF tapRect = new RectF();
         private final RectF pendingCur = new RectF(), pendingIcon = new RectF();
-        private float pendingRadius, pendingDir;
+        private float pendingRadius, pendingDir, pendingAlpha = -1f;
         // Sentido: 0 = abrir, 1 = cerrar, con transición al interrumpir (hilo de animación).
         private float dirFrom, dirTo, dirNow;
         private long dirNs;
@@ -1297,6 +1305,7 @@ final class Genie {
                 pendingCur.set(f.cur);
                 pendingIcon.set(iconNow);
                 pendingRadius = f.radius;
+                pendingAlpha = f.alpha;
                 pendingDir = dirNow;
                 pendingFlip = flipNow;
                 // Destino de la predicción: nunca se adelanta más allá de él.
@@ -1482,6 +1491,7 @@ final class Genie {
                 flip = pendingFlip;
                 icon.set(pendingIcon);
                 radius = pendingRadius;
+                miuiAlpha = pendingAlpha;
                 dir = pendingDir;
                 bend = pendingBend;
                 lift = pendingLift;
@@ -1550,6 +1560,7 @@ final class Genie {
             // La estela va en todos los estilos (3.1.0): solo se mide la velocidad si está puesta.
             if (depthBlur > 0f) drawVelocity(cur);
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
+            miuiAlpha = -1f;                                     // los fantasmas usan su propia curva
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
             // Estilos 3D al abrir: mientras no llega la imagen de la app, el icono cubre la forma
@@ -1821,7 +1832,9 @@ final class Genie {
         out.cup = 2f;
         out.radius = radius;
         // Como en HyperOS: al salir, el icono crece y se funde con la app; al volver, al revés.
-        out.iconMix = iconMix(pw, dir, iconReady);
+        // En el estilo HyperOS, con el mismo ritmo que MIUI (su alfa), no con nuestra curva.
+        out.iconMix = style == STYLE_HYPEROS && miuiAlpha >= 0f
+                ? (iconReady ? 1f - Math.min(1f, miuiAlpha) : 0f) : iconMix(pw, dir, iconReady);
         out.splashIcon = 0f;
         out.bend = 0f;
         out.flip = 0f;

@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.2
+
+**Changes**
+- **HyperOS style** now fades the icon into the app at the same pace as the real HyperOS animation (it reads the values HyperOS computes each frame), with its own corner radius. Motion blur, speed and bounce still work.
+
 ## 3.1.1
 
 **New**
