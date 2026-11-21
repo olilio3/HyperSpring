@@ -108,7 +108,6 @@ final class WindowAnim {
             protected void beforeHookedMethod(MethodHookParam p) {
                 long t0 = System.nanoTime();
                 try {
-                    FRAME.alpha = (Float) p.args[0];
                     onFrame(p.thisObject, (RectF) p.args[2], p.args[3], (Rect) p.args[6]);
                 } catch (Throwable t) {
                     Genie.stop("error");
@@ -509,7 +508,7 @@ final class WindowAnim {
                 "onAnimationStart", new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam p) {
-                        if (!Genie.enabled) return;
+                        if (!Genie.draws()) return;
                         try {
                             for (Object arg : p.args) {
                                 if (!(arg instanceof Object[])) continue;
@@ -539,7 +538,7 @@ final class WindowAnim {
         XposedHelpers.findAndHookMethod(shortcut, "onTouchEvent", android.view.MotionEvent.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam p) {
-                if (!Genie.enabled || ((android.view.MotionEvent) p.args[0]).getActionMasked() != android.view.MotionEvent.ACTION_DOWN) return;
+                if (!Genie.draws() || ((android.view.MotionEvent) p.args[0]).getActionMasked() != android.view.MotionEvent.ACTION_DOWN) return;
                 try {
                     View v = (View) p.thisObject;
                     String pkg = packageOfIcon(v);
@@ -600,10 +599,10 @@ final class WindowAnim {
         boolean drag = "CLOSE_TO_DRAG".equals(type);
         // Empujar iconos: antes de decidir el genio, porque va también sin él.
         if ((open || drag || "CLOSE_TO_HOME".equals(type)) && IconPush.on()) push(impl, open, drag, cur, bounds);
-        if (!Genie.enabled || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
+        if (!Genie.draws() || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
             Genie.stopFor(impl, type);
             // Otra app que se abre sin genio (desde un widget…) mientras una se cierra.
-            if (Genie.enabled && type.startsWith("OPEN")) Genie.otherAppOpening(impl, windowOf(impl));
+            if (Genie.draws() && type.startsWith("OPEN")) Genie.otherAppOpening(impl, windowOf(impl));
             return;
         }
         Object params = currentParams.invoke(impl);

@@ -3,7 +3,7 @@
 ## 3.1.2
 
 **Changes**
-- **HyperOS style** now fades the icon into the app at the same pace as the real HyperOS animation (it reads the values HyperOS computes each frame), with its own corner radius. Motion blur, speed and bounce still work.
+- **HyperOS style** is now the real HyperOS animation, drawn by HyperOS itself (live window, its own icon, corners and fades). Speed and bounce still change its springs, and Push icons works with it. Motion blur and the genie quality settings are hidden for this style, since they only apply when HyperSpring draws the animation.
 
 ## 3.1.1
 

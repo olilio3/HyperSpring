@@ -192,13 +192,16 @@ final class Genie {
      */
     static final int STYLE_FAN = 5, STYLE_SCROLL = 6, STYLE_CARD = 7;
     /**
-     * HyperOS (3.1.1): la animación de MIUI tal cual (el rectángulo que crece del icono y el icono
-     * que se funde con la app), sin inclinar ni oscurecer el fondo. Es Profundidad sin hoja: así le
-     * valen el desenfoque de movimiento, la velocidad y el rebote como a los demás estilos.
+     * HyperOS (3.1.2): la animación del sistema de verdad, dibujada por MIUI (no por nosotros): su
+     * ventana en vivo, su icono, su radio y sus transparencias. Solo se cambian sus muelles
+     * (velocidad y rebote, ver {@link Springs}). Sin dibujo propio no hay desenfoque de movimiento.
      */
     static final int STYLE_HYPEROS = 8;
-    /** Alfa del contenido de MIUI para el fotograma que se dibuja (-1 = no hay). Solo hilo del genio. */
-    private static float miuiAlpha = -1f;
+
+    /** Hay genio que dibujar: activado y con un estilo que no sea el nativo de HyperOS. */
+    static boolean draws() {
+        return enabled && style != STYLE_HYPEROS;
+    }
     /** Abanico: avance en el que el lado cercano ya ha llegado, y en el que empieza el lejano. */
     private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
     /** Pergamino: tramo en que el rollo viaja al borde, y desde dónde se desenrolla. */
@@ -411,12 +414,6 @@ final class Genie {
         /** false al arrastrar: el extremo cercano sigue al dedo. */
         boolean hasIcon;
         float radius;
-        /**
-         * Transparencia del contenido de la app que calcula MIUI (su muelle «Alpha»): 0 = solo el
-         * icono, 1 = solo la app. Medido en el 14C: al abrir llega a 1 hacia el 75 % del ancho; al
-         * cerrar baja de 1 a 0 entre el 60 % y el 25 %. El estilo HyperOS funde el icono con esto.
-         */
-        float alpha = -1f;
         // Solo al empezar una sesión:
         SurfaceControl root;
         SurfaceControl[] exclude;
@@ -979,7 +976,7 @@ final class Genie {
         /** Icono destino, para reconocer un toque en él (bajo lock). */
         final RectF tapRect = new RectF();
         private final RectF pendingCur = new RectF(), pendingIcon = new RectF();
-        private float pendingRadius, pendingDir, pendingAlpha = -1f;
+        private float pendingRadius, pendingDir;
         // Sentido: 0 = abrir, 1 = cerrar, con transición al interrumpir (hilo de animación).
         private float dirFrom, dirTo, dirNow;
         private long dirNs;
@@ -1305,7 +1302,6 @@ final class Genie {
                 pendingCur.set(f.cur);
                 pendingIcon.set(iconNow);
                 pendingRadius = f.radius;
-                pendingAlpha = f.alpha;
                 pendingDir = dirNow;
                 pendingFlip = flipNow;
                 // Destino de la predicción: nunca se adelanta más allá de él.
@@ -1491,7 +1487,6 @@ final class Genie {
                 flip = pendingFlip;
                 icon.set(pendingIcon);
                 radius = pendingRadius;
-                miuiAlpha = pendingAlpha;
                 dir = pendingDir;
                 bend = pendingBend;
                 lift = pendingLift;
@@ -1560,7 +1555,6 @@ final class Genie {
             // La estela va en todos los estilos (3.1.0): solo se mide la velocidad si está puesta.
             if (depthBlur > 0f) drawVelocity(cur);
             shape(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, velNow, geoNow);
-            miuiAlpha = -1f;                                     // los fantasmas usan su propia curva
             geoNow.fade = windowSinceNs == 0 ? 1f : smooth((System.nanoTime() - windowSinceNs) / 1e9f / CONTENT_FADE_S);
             if (geoNow.fade < 1f) dirty = true;                  // seguir dibujando hasta acabar el fundido
             // Estilos 3D al abrir: mientras no llega la imagen de la app, el icono cubre la forma
@@ -1832,17 +1826,14 @@ final class Genie {
         out.cup = 2f;
         out.radius = radius;
         // Como en HyperOS: al salir, el icono crece y se funde con la app; al volver, al revés.
-        // En el estilo HyperOS, con el mismo ritmo que MIUI (su alfa), no con nuestra curva.
-        out.iconMix = style == STYLE_HYPEROS && miuiAlpha >= 0f
-                ? (iconReady ? 1f - Math.min(1f, miuiAlpha) : 0f) : iconMix(pw, dir, iconReady);
+        out.iconMix = iconMix(pw, dir, iconReady);
         out.splashIcon = 0f;
         out.bend = 0f;
         out.flip = 0f;
         // La hoja: trapecio en cuanto sale del icono, inclinada casi todo el viaje y recta al
         // llegar. Solo depende del avance, así que cerrar es abrir al revés, fotograma a fotograma.
         // Arriba se ve 1 / (1 + k) de abajo: para que mida (1 − estrechamiento), k = e / (1 − e).
-        // HyperOS: sin estrechamiento, la ventana sale recta como en el sistema.
-        float e = style == STYLE_HYPEROS ? 0f : Math.max(0f, Math.min(0.9f, depthTaper));
+        float e = Math.max(0f, Math.min(0.9f, depthTaper));
         float k = e / (1f - e);
         float shape = smooth(pw / DEPTH_RISE) * (1f - smooth((pw - DEPTH_SETTLE) / (1f - DEPTH_SETTLE)));
         out.tiltTarget = k * shape * ramp;
@@ -1982,7 +1973,7 @@ final class Genie {
         float pw = progress(cur.width(), icon.width(), full.width());
         shapeOnly(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, vel, out);
         // Profundidad ya pone su estela dentro; los demás estilos, aquí.
-        if (style != STYLE_DEPTH && style != STYLE_HYPEROS) motion(vel, ramp, pw, dir, full, out);
+        if (style != STYLE_DEPTH) motion(vel, ramp, pw, dir, full, out);
     }
 
     private static void shapeOnly(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
@@ -1994,7 +1985,7 @@ final class Genie {
         out.tilt = out.curl = out.push = 0f;
         java.util.Arrays.fill(out.ex, 0f);
         java.util.Arrays.fill(out.vel, 0f);
-        if (style == STYLE_DEPTH || style == STYLE_HYPEROS) {
+        if (style == STYLE_DEPTH) {
             depth(cur, icon, full, dir, ramp, radius, iconReady, vel, pw, out);
             return;
         }

@@ -1808,13 +1808,14 @@ public class SettingsActivity extends Activity {
             // Solo lo que sirve para el estilo elegido: Estrechamiento es de Profundidad, e Intensidad
             // (cuánto se deforma) solo de los genios (clásico y Copa). El desenfoque va en todos.
             final boolean taper = "icehome_depth_taper".equals(key);
-            if (taper || "icehome_genie_strength".equals(key)) {
+            final boolean glOnly = GL_ONLY.contains(key);
+            if (taper || glOnly || "icehome_genie_strength".equals(key)) {
                 Runnable vis = new Runnable() {
                     @Override
                     public void run() {
                         int style = Math.round(stored(item(Tune.ITEMS, "icehome_genie_style")));
                         boolean genie = style == Genie.STYLE_CLASSIC || style == Genie.STYLE_SAMSUNG || style == 2 || style == 4;
-                        boolean show = taper ? style == Genie.STYLE_DEPTH : genie;
+                        boolean show = taper ? style == Genie.STYLE_DEPTH : glOnly ? style != Genie.STYLE_HYPEROS : genie;
                         row.setVisibility(show ? View.VISIBLE : View.GONE);
                     }
                 };
@@ -2881,7 +2882,7 @@ public class SettingsActivity extends Activity {
                 I18n.t("Se abre desde el lado más cercano al borde", "Opens from the side nearest the edge"),
                 I18n.t("Se desenrolla de un borde al otro, en 3D", "Unrolls from one edge to the other, in 3D"),
                 I18n.t("Sale girando en 3D y frena al llegar", "Spins out in 3D and slows down as it arrives"),
-                I18n.t("La del sistema, con estela, velocidad y rebote", "The system one, with trail, speed and bounce")};
+                I18n.t("La del sistema, con tu velocidad y rebote", "The system one, with your speed and bounce")};
     }
 
     /** Color {@code top} (con su transparencia) pintado encima de {@code under} (opaco). */
@@ -2907,6 +2908,10 @@ public class SettingsActivity extends Activity {
      * como en HyperOS 4 o iOS.
      */
     /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
+    /** Ajustes que solo valen cuando dibujamos nosotros: en el estilo HyperOS (nativo) se ocultan. */
+    private static final java.util.List<String> GL_ONLY = java.util.Arrays.asList("icehome_depth_blur",
+            "icehome_genie_quality", "icehome_genie_auto", "icehome_genie_fps", "icehome_genie_physics", "icehome_genie_live");
+
     private static final int[] STYLE_VALUES = {0, 1, 3, Genie.STYLE_FAN, Genie.STYLE_SCROLL, Genie.STYLE_CARD, Genie.STYLE_HYPEROS};
 
     /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
