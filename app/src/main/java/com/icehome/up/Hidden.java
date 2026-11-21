@@ -123,39 +123,6 @@ final class Hidden {
         }
     }
 
-    /**
-     * La capa sale vacía o negra: se captura en pequeño (96 px de ancho) y se mira si es todo
-     * transparente o negro. En algunos móviles la captura al empezar el gesto de cerrar salía negra
-     * y el genio se veía negro (issue #22). Más pequeña no vale: al reducir tanto, SurfaceFlinger
-     * solo mira unos pocos píxeles y una app en modo oscuro (texto fino sobre negro) parecía vacía.
-     */
-    static boolean looksBlank(SurfaceControl layer, Rect crop) {
-        HardwareBuffer hb = null;
-        android.graphics.Bitmap hw = null, sw = null;
-        try {
-            Shot s = capture(layer, crop, 96f / Math.max(96, crop.width()), null);
-            if (s == null) return true;
-            hb = s.buffer;
-            hw = android.graphics.Bitmap.wrapHardwareBuffer(hb, s.colorSpace);
-            if (hw == null) return false;                  // no se puede mirar: se da por buena
-            sw = hw.copy(android.graphics.Bitmap.Config.ARGB_8888, false);
-            if (sw == null) return false;
-            int n = sw.getWidth() * sw.getHeight(), dark = 0;
-            int[] px = new int[n];
-            sw.getPixels(px, 0, sw.getWidth(), 0, 0, sw.getWidth(), sw.getHeight());
-            for (int c : px) {
-                if ((c >>> 24) < 8 || ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255) < 12) dark++;
-            }
-            return n - dark < Math.max(4, n / 500);            // menos del 0,2 % con algo de color
-        } catch (Throwable t) {
-            return false;
-        } finally {
-            if (sw != null) sw.recycle();
-            if (hw != null) hw.recycle();
-            if (hb != null) hb.close();
-        }
-    }
-
     /** Pone un búfer de la GPU en una Surface sin copiarlo (como la animación de girar la pantalla). */
     static boolean queueBuffer(Surface surface, HardwareBuffer buffer, ColorSpace cs) {
         try {

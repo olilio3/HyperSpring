@@ -106,12 +106,17 @@ final class WindowAnim {
         XposedBridge.hookAllMethods(impl, "updateElementValue", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam p) {
+                long t0 = System.nanoTime();
                 try {
                     onFrame(p.thisObject, (RectF) p.args[2], p.args[3], (Rect) p.args[6]);
                 } catch (Throwable t) {
                     Genie.stop("error");
                     Log.e("genio: fotograma", t);
                 }
+                long d = System.nanoTime() - t0;
+                hookNs += d;
+                hookFrames++;
+                if (d > hookMaxNs) hookMaxNs = d;
             }
         });
 
@@ -126,9 +131,11 @@ final class WindowAnim {
             @Override
             protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 if (Genie.idle()) return;
+                long t0 = System.nanoTime();
                 Object sp = p.thisObject;
                 Genie.onApply((SurfaceControl.Transaction) p.args[0], (SurfaceControl) paramsSurface.get(sp),
                         paramsAlpha.getFloat(sp), (paramsFlags.getInt(sp) & FLAG_ALPHA) != 0);
+                applyNs += System.nanoTime() - t0;
             }
         });
 
@@ -138,6 +145,13 @@ final class WindowAnim {
             @Override
             protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 Genie.animEnded(owner.get(p.thisObject));
+                // Lo que ha costado HyperSpring en cada fotograma de MIUI (su hilo de animación).
+                if (hookFrames > 0) {
+                    Log.i(String.format(java.util.Locale.ROOT, "hilo de MIUI: %d fotogramas, HyperSpring %.2f ms de media (+%.2f en transacciones), máx. %.1f ms (%s)",
+                            hookFrames, hookNs / 1e6 / hookFrames, applyNs / 1e6 / hookFrames, hookMaxNs / 1e6, Thread.currentThread().getName()));
+                }
+                hookNs = hookMaxNs = applyNs = 0;
+                hookFrames = 0;
             }
         };
         XposedBridge.hookAllMethods(listener, "onAnimationEnd", ended);
@@ -699,6 +713,10 @@ final class WindowAnim {
 
     /** Paquete del último icono del escritorio que se ha tocado. */
     private static volatile String touchedPkg;
+
+    /** Coste de nuestros hooks por fotograma (solo hilo de animación de MIUI). */
+    private static long hookNs, hookMaxNs, applyNs;
+    private static int hookFrames;
 
     private static boolean pushFailed;
     /** Solo se usa en el hilo de animación de MIUI. */

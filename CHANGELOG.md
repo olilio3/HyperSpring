@@ -14,7 +14,6 @@
 
 **Fixed**
 - Glass dock: the bar now hugs the dock icons instead of filling the whole dock area, so it follows Kashi's dock (#23).
-- Closing an app could show a black genie on some phones: if the snapshot taken when the gesture starts comes out black, it is dropped and the genie captures the window while it moves (#22).
 - Swiping into recents in the middle of the close gesture: the genie shape now fades over the recents card instead of jumping to a rectangle (#22).
 - HyperOS 4 / Android 17: the genie looks for the screen capture API where Android 17 moved it, and the curtain hooks every version of the system animation step. If something is still missing, the log lists what this Android has (#21). Not tested on a HyperOS 4 phone yet.
 

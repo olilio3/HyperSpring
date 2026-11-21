@@ -358,18 +358,6 @@ final class Genie {
         }
     }
 
-    /**
-     * Quita esa captura de la caché sin cerrarla (puede estar en uso).
-     * shortcut: si el genio ya la soltó mientras estaba en la caché, la cierra el recolector de
-     * basura (unos MB un rato); contar usos si algún día importa.
-     */
-    private static void forget(String pkg, Hidden.Shot shot) {
-        synchronized (snaps) {
-            Snap s = snaps.get(pkg);
-            if (s != null && s.shot.buffer == shot.buffer) snaps.remove(pkg);
-        }
-    }
-
     /** Una captura ya usada: se suelta, salvo que la guarde la caché. */
     private static void release(Hidden.Shot shot) {
         synchronized (snaps) {
@@ -726,22 +714,7 @@ final class Genie {
                     preTask = taskId;
                     preShotMs = SystemClock.uptimeMillis();
                 }
-                // Antes de mirarla: el genio puede tomarla y soltarla mientras tanto, y release()
-                // solo la conserva si ya está en la caché (si no, la cerraba y luego se usaba cerrada).
                 if (pkg != null) remember(pkg, taskId, shot);
-                // Si la ventana sale negra o vacía, fuera la captura (si el genio aún no la ha
-                // usado): captura en cada fotograma mientras se mueve. Antes salía el genio negro
-                // (#22). Se mira después de guardarla para no retrasar el primer fotograma.
-                if (Hidden.looksBlank(leash, crop)) {
-                    if (pkg != null) forget(pkg, shot);
-                    synchronized (PRE) {
-                        if (preShot == shot) {
-                            release(shot);
-                            preShot = null;
-                        }
-                    }
-                    Log.i("genio: la captura al empezar a cerrar sale negra; se capturará durante el gesto");
-                }
             }
         });
     }
