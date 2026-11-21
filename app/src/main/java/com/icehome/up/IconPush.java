@@ -55,14 +55,23 @@ final class IconPush {
     /** Un icono movido y dónde estaba (su translation de antes y su centro en pantalla). */
     private static final class Moved {
         final WeakReference<View> view;
-        final float tx, ty, cx, cy;
+        final float tx, ty, cx, cy, l, t, r, b;
 
         Moved(View v, int[] loc) {
             view = new WeakReference<>(v);
             tx = v.getTranslationX();
             ty = v.getTranslationY();
-            cx = loc[0] + v.getWidth() * 0.5f;
-            cy = loc[1] + v.getHeight() * 0.5f;
+            l = loc[0];
+            t = loc[1];
+            r = l + v.getWidth();
+            b = t + v.getHeight();
+            cx = (l + r) * 0.5f;
+            cy = (t + b) * 0.5f;
+        }
+
+        /** El punto cae dentro (es el icono que se abre o cierra: MIUI da el centro de la imagen, no del icono con su nombre). */
+        boolean contains(float x, float y) {
+            return x >= l && x < r && y >= t && y < b;
         }
     }
 
@@ -156,7 +165,7 @@ final class IconPush {
                 continue;
             }
             float dx = m.cx - x, dy = m.cy - y, d = (float) Math.hypot(dx, dy);
-            if (x < 0f || d < 1f) continue;    // sin icono conocido, o es el propio icono
+            if (x < 0f || d < 1f || m.contains(x, y)) continue;    // sin icono conocido, o es el propio icono
             float k = (float) Math.exp(-d / fall) * push;
             v.setTranslationX(m.tx + dx / d * k);
             v.setTranslationY(m.ty + dy / d * k);
@@ -184,7 +193,16 @@ final class IconPush {
                 moved.add(new Moved(v, loc));
             }
         }
-        if (!moved.isEmpty()) return true;
+        if (!moved.isEmpty()) {
+            // Para el registro: el icono de la app no se mueve (si ninguno lo contiene, se movería todo).
+            String still = "ninguno";
+            for (Moved m : moved) {
+                View v = m.view.get();
+                if (v != null && m.contains(centerX, centerY)) still = v.getClass().getSimpleName();
+            }
+            Log.i("empujar iconos: " + moved.size() + " iconos; se queda quieto: " + still);
+            return true;
+        }
         Log.i("empujar iconos: no se encontró la página ni el dock");
         return false;
     }

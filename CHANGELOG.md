@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.1
+
+**New**
+- **HyperOS style** (Opening and closing apps → Style): the system animation as it is, with no tilt or dimming, but with the motion blur, speed and bounce you set in HyperSpring.
+
+**Fixes**
+- **Push icons**: the icon of the app you open or close no longer moves away. It was being pushed too, so the window closed onto an empty spot.
+
 ## 3.1.0
 
 **New genie styles** (Opening and closing apps → Style)

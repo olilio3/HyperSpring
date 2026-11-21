@@ -191,6 +191,12 @@ final class Genie {
      * </ul>
      */
     static final int STYLE_FAN = 5, STYLE_SCROLL = 6, STYLE_CARD = 7;
+    /**
+     * HyperOS (3.1.1): la animación de MIUI tal cual (el rectángulo que crece del icono y el icono
+     * que se funde con la app), sin inclinar ni oscurecer el fondo. Es Profundidad sin hoja: así le
+     * valen el desenfoque de movimiento, la velocidad y el rebote como a los demás estilos.
+     */
+    static final int STYLE_HYPEROS = 8;
     /** Abanico: avance en el que el lado cercano ya ha llegado, y en el que empieza el lejano. */
     private static final float FAN_NEAR_END = 0.45f, FAN_FAR_START = 0.12f;
     /** Pergamino: tramo en que el rollo viaja al borde, y desde dónde se desenrolla. */
@@ -1822,7 +1828,8 @@ final class Genie {
         // La hoja: trapecio en cuanto sale del icono, inclinada casi todo el viaje y recta al
         // llegar. Solo depende del avance, así que cerrar es abrir al revés, fotograma a fotograma.
         // Arriba se ve 1 / (1 + k) de abajo: para que mida (1 − estrechamiento), k = e / (1 − e).
-        float e = Math.max(0f, Math.min(0.9f, depthTaper));
+        // HyperOS: sin estrechamiento, la ventana sale recta como en el sistema.
+        float e = style == STYLE_HYPEROS ? 0f : Math.max(0f, Math.min(0.9f, depthTaper));
         float k = e / (1f - e);
         float shape = smooth(pw / DEPTH_RISE) * (1f - smooth((pw - DEPTH_SETTLE) / (1f - DEPTH_SETTLE)));
         out.tiltTarget = k * shape * ramp;
@@ -1962,7 +1969,7 @@ final class Genie {
         float pw = progress(cur.width(), icon.width(), full.width());
         shapeOnly(cur, icon, full, dir, ramp, lift, radius, bend, flip, iconReady, vel, out);
         // Profundidad ya pone su estela dentro; los demás estilos, aquí.
-        if (style != STYLE_DEPTH) motion(vel, ramp, pw, dir, full, out);
+        if (style != STYLE_DEPTH && style != STYLE_HYPEROS) motion(vel, ramp, pw, dir, full, out);
     }
 
     private static void shapeOnly(RectF cur, RectF icon, RectF full, float dir, float ramp, float lift,
@@ -1974,7 +1981,7 @@ final class Genie {
         out.tilt = out.curl = out.push = 0f;
         java.util.Arrays.fill(out.ex, 0f);
         java.util.Arrays.fill(out.vel, 0f);
-        if (style == STYLE_DEPTH) {
+        if (style == STYLE_DEPTH || style == STYLE_HYPEROS) {
             depth(cur, icon, full, dir, ramp, radius, iconReady, vel, pw, out);
             return;
         }

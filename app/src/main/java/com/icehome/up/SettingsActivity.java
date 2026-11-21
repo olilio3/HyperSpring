@@ -2870,7 +2870,7 @@ public class SettingsActivity extends Activity {
     private String[] styleNames() {
         return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Copa", "Cup"),
                 I18n.t("Profundidad", "Depth"), I18n.t("Abanico", "Fan"), I18n.t("Pergamino", "Scroll"),
-                I18n.t("Carta", "Card")};
+                I18n.t("Carta", "Card"), "HyperOS"};
     }
 
     private String[] styleHints() {
@@ -2880,7 +2880,8 @@ public class SettingsActivity extends Activity {
                 I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail"),
                 I18n.t("Se abre desde el lado más cercano al borde", "Opens from the side nearest the edge"),
                 I18n.t("Se desenrolla de un borde al otro, en 3D", "Unrolls from one edge to the other, in 3D"),
-                I18n.t("Sale girando en 3D y frena al llegar", "Spins out in 3D and slows down as it arrives")};
+                I18n.t("Sale girando en 3D y frena al llegar", "Spins out in 3D and slows down as it arrives"),
+                I18n.t("La del sistema, con estela, velocidad y rebote", "The system one, with trail, speed and bounce")};
     }
 
     /** Color {@code top} (con su transparencia) pintado encima de {@code under} (opaco). */
@@ -2906,7 +2907,7 @@ public class SettingsActivity extends Activity {
      * como en HyperOS 4 o iOS.
      */
     /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
-    private static final int[] STYLE_VALUES = {0, 1, 3, Genie.STYLE_FAN, Genie.STYLE_SCROLL, Genie.STYLE_CARD};
+    private static final int[] STYLE_VALUES = {0, 1, 3, Genie.STYLE_FAN, Genie.STYLE_SCROLL, Genie.STYLE_CARD, Genie.STYLE_HYPEROS};
 
     /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
     private View styleRow(final Object[] it) {
