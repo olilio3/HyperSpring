@@ -35,6 +35,7 @@ public final class Tune {
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
             {"icehome_push", "Empujar iconos", 0f, 1f, 0.4f, 2, "Al abrir una app, los demás iconos se apartan suavemente de ella, a la par que la ventana; los más lejanos apenas se mueven. Al cerrarla vuelven igual, al revés. Va con cualquier estilo. 0 lo quita."},
+            {"icehome_push_wave", "Ola", 0f, 1f, 0.5f, 2, "Con Empujar iconos: los iconos no se mueven todos a la vez, sino uno tras otro según lo lejos que estén de la app, como una onda, y llegan con un pequeño rebote. 0 los mueve todos a la vez, pegados a la ventana."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
             {"icehome_unlock_zoom", "Zoom al desbloquear", 0f, 1.5f, 0f, 2, "Al desbloquear, el escritorio entra un poco más grande y se asienta a su tamaño, todo de una pieza. 0 lo quita."},
@@ -81,6 +82,7 @@ public final class Tune {
         Haptics.folder = f(c, "icehome_folder_haptic");
         IconPress.enabled = f(c, "icehome_press_on") >= 0.5f;
         IconPush.strength = f(c, "icehome_push");
+        IconPush.wave = f(c, "icehome_push_wave");
         WallpaperZoom.strength = f(c, "icehome_wallpaper_zoom");
         RecentsCurtain.strength = f(c, "icehome_curtain_strength");
         RecentsCurtain.mode = f(c, "icehome_curtain_style") >= 0.5f ? 1f : 0f;

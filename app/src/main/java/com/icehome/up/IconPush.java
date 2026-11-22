@@ -36,6 +36,16 @@ final class IconPush {
     private static final long RESET_MS = 320;
 
     static volatile float strength = 0.4f;
+    /**
+     * Ola (0-1): cada icono sigue su sitio con un muelle, más lento cuanto más lejos está de la
+     * app, así que se mueven uno tras otro como una onda y llegan con un pequeño rebote. 0 = todos a
+     * la vez, pegados a la ventana (como antes de la 3.1.3).
+     */
+    static volatile float wave = 0.5f;
+    /** Muelle de los iconos pegados a la app (rad/s): sigue a la ventana casi sin retraso. */
+    private static final float OMEGA = 26f;
+    /** Cuánto más lento va el muelle por cada FALLOFF de distancia, con la ola al máximo. */
+    private static final float LAG = 2.2f;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
@@ -47,22 +57,31 @@ final class IconPush {
 
     // Solo en el hilo principal.
     private static final ArrayList<Moved> moved = new ArrayList<>();
-    private static float applied;
-    private static boolean gaveUp;
+    private static float applied, fall = 1f;
+    private static boolean gaveUp, stepping;
+    private static long lastStepNs;
     private static ValueAnimator reset;
     private static WeakReference<ViewTreeObserver> watched = new WeakReference<>(null);
 
-    /** Un icono movido y dónde estaba (su translation de antes y su centro en pantalla). */
+    /**
+     * Un icono movido: su sitio en pantalla y lo que le ha sumado HyperSpring (dx, dy). Se guarda
+     * solo lo sumado, no su translation de antes: si otra animación (de MIUI, o un empuje que aún no
+     * había vuelto) lo tenía movido al empezar, se le quita exactamente lo nuestro y no se queda
+     * desplazado (#28).
+     */
     private static final class Moved {
         final WeakReference<View> view;
-        final float tx, ty, cx, cy, l, t, r, b;
+        final float cx, cy, l, t, r, b;
+        /** Lo sumado ahora a su translation. */
+        float dx, dy;
+        /** Empuje actual y su velocidad (muelle de la ola), el que se quiere, dirección y distancia. */
+        float k, kv, target, ux, uy, d;
 
         Moved(View v, int[] loc) {
             view = new WeakReference<>(v);
-            tx = v.getTranslationX();
-            ty = v.getTranslationY();
-            l = loc[0];
-            t = loc[1];
+            // Su sitio sin translation, aunque al empezar esté movido por otra animación.
+            l = loc[0] - v.getTranslationX();
+            t = loc[1] - v.getTranslationY();
             r = l + v.getWidth();
             b = t + v.getHeight();
             cx = (l + r) * 0.5f;
@@ -142,8 +161,14 @@ final class IconPush {
 
     private static void apply(float f) {
         if (f <= 0.002f) {                     // de vuelta en el icono: todo en su sitio
-            restore();
             gaveUp = false;
+            applied = 0f;
+            if (wave <= 0f || moved.isEmpty()) {
+                restore();
+                return;
+            }
+            for (Moved m : moved) m.target = 0f;       // con ola, vuelven con su muelle
+            startStepping();
             return;
         }
         if (moved.isEmpty()) {
@@ -156,7 +181,8 @@ final class IconPush {
         applied = f;
         float w = screenW, x = centerX, y = centerY;
         float push = f * f * (3f - 2f * f) * REACH * strength * w;   // smoothstep: arranca y llega suave
-        float fall = FALLOFF * w;
+        fall = FALLOFF * w;
+        boolean springs = wave > 0f;
         for (int i = moved.size() - 1; i >= 0; i--) {
             Moved m = moved.get(i);
             View v = m.view.get();
@@ -165,12 +191,87 @@ final class IconPush {
                 continue;
             }
             float dx = m.cx - x, dy = m.cy - y, d = (float) Math.hypot(dx, dy);
-            if (x < 0f || d < 1f || m.contains(x, y)) continue;    // sin icono conocido, o es el propio icono
-            float k = (float) Math.exp(-d / fall) * push;
-            v.setTranslationX(m.tx + dx / d * k);
-            v.setTranslationY(m.ty + dy / d * k);
+            if (x < 0f || d < 1f || m.contains(x, y)) {    // sin icono conocido, o es el propio icono
+                m.target = 0f;
+            } else {
+                m.ux = dx / d;
+                m.uy = dy / d;
+                m.d = d;
+                m.target = (float) Math.exp(-d / fall) * push;
+            }
+            if (!springs) {
+                m.k = m.target;
+                m.kv = 0f;
+                write(m, v);
+            }
         }
+        if (springs) startStepping();
     }
+
+    /** Pone el empuje {@code m.k} en la vista, sumando solo la diferencia con lo que ya tenía nuestro. */
+    private static void write(Moved m, View v) {
+        float nx = m.ux * m.k, ny = m.uy * m.k;
+        v.setTranslationX(v.getTranslationX() - m.dx + nx);
+        v.setTranslationY(v.getTranslationY() - m.dy + ny);
+        m.dx = nx;
+        m.dy = ny;
+    }
+
+    private static void startStepping() {
+        if (stepping) return;
+        stepping = true;
+        Choreographer.getInstance().postFrameCallback(STEP);
+    }
+
+    /**
+     * Un paso de los muelles de la ola por fotograma de pantalla, hasta que todos llegan. Los
+     * lejanos tienen el muelle más lento: van detrás de los cercanos, como una onda.
+     */
+    private static final Choreographer.FrameCallback STEP = new Choreographer.FrameCallback() {
+        @Override
+        public void doFrame(long now) {
+            stepping = false;
+            try {
+                float dt = lastStepNs == 0 ? 1f / 60f : Math.min(1f / 30f, (now - lastStepNs) / 1e9f);
+                lastStepNs = now;
+                float wv = Math.max(0f, Math.min(1f, wave));
+                float zeta = 1f - 0.55f * wv;                // menos amortiguado = más rebote
+                boolean settled = true, home = true;
+                for (int i = moved.size() - 1; i >= 0; i--) {
+                    Moved m = moved.get(i);
+                    View v = m.view.get();
+                    if (v == null) {
+                        moved.remove(i);
+                        continue;
+                    }
+                    float w = OMEGA / (1f + LAG * wv * m.d / fall);
+                    for (int s = 0; s < 2; s++) {            // dos subpasos: estable aunque vaya a 30 fps
+                        float h = dt * 0.5f;
+                        m.kv += (w * w * (m.target - m.k) - 2f * zeta * w * m.kv) * h;
+                        m.k += m.kv * h;
+                    }
+                    if (Math.abs(m.target - m.k) < 0.5f && Math.abs(m.kv) < 8f) {
+                        m.k = m.target;
+                        m.kv = 0f;
+                    } else {
+                        settled = false;
+                    }
+                    if (m.target != 0f) home = false;
+                    write(m, v);
+                }
+                if (!settled) {
+                    startStepping();
+                } else {
+                    lastStepNs = 0;
+                    if (home) restore();                     // todos de vuelta: se olvida la lista
+                }
+            } catch (Throwable e) {
+                Log.e("empujar iconos: ola", e);
+                lastStepNs = 0;
+                restore();
+            }
+        }
+    };
 
     /** Busca los iconos y widgets de la página que se ve y del dock. */
     private static boolean collect() {
@@ -249,14 +350,14 @@ final class IconPush {
         return false;
     }
 
-    /** Todos a su sitio, sin animar. */
+    /** Todos a su sitio, sin animar: a cada uno se le quita solo lo que le sumamos. */
     private static void restore() {
         applied = 0f;
         for (Moved m : moved) {
             View v = m.view.get();
             if (v == null) continue;
-            v.setTranslationX(m.tx);
-            v.setTranslationY(m.ty);
+            v.setTranslationX(v.getTranslationX() - m.dx);
+            v.setTranslationY(v.getTranslationY() - m.dy);
         }
         moved.clear();
     }
@@ -283,7 +384,7 @@ final class IconPush {
     private static final Runnable CHECK = new Runnable() {
         @Override
         public void run() {
-            if (moved.isEmpty() || reset != null) return;
+            if (moved.isEmpty() || reset != null || applied <= 0.002f) return;
             View r = root.get();
             if (r == null || !r.hasWindowFocus()) return;
             if (SystemClock.uptimeMillis() - lastFrameMs < STALE_MS) {      // sigue animando

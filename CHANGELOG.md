@@ -4,6 +4,10 @@
 
 **Fixes**
 - **Reopening an app while it closes**: tapping its icon during the closing animation now reopens it more reliably. It no longer depends on the genie still running, and at the very end of the animation (when HyperOS has already forgotten which icon it was) the icon under your finger opens.
+- **Push icons** (#28): icons no longer stay out of place when you open, close and reopen apps very quickly. HyperSpring now only removes the offset it added itself, so another animation that was moving the icons at the same time is left alone.
+
+**New**
+- **Wave** (Push icons → Wave): the icons move one after another depending on how far they are from the app, like a wave, and settle with a small bounce. 0 moves them all at once, as before.
 
 ## 3.1.2
 
