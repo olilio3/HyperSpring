@@ -44,8 +44,8 @@ final class TapCatcher {
     private static volatile long lastWantMs;
 
     interface Listener {
-        /** Toque en el icono de la app que se cierra. */
-        void onTap();
+        /** Toque en el icono de la app que se cierra, en coordenadas de pantalla. */
+        void onTap(float x, float y);
 
         /** Un evento fuera del icono, en coordenadas de pantalla, para el launcher. */
         void forward(MotionEvent screenEvent);
@@ -227,7 +227,7 @@ final class TapCatcher {
                 if (action == MotionEvent.ACTION_UP && l != null
                         && Math.hypot(e.getX() + ox - x, e.getY() + oy - y) <= slop
                         && SystemClock.uptimeMillis() - down <= TAP_MS) {
-                    l.onTap();
+                    l.onTap(x, y);
                 }
             } else if (l != null) {
                 MotionEvent s = MotionEvent.obtain(e);

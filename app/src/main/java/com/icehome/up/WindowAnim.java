@@ -298,6 +298,12 @@ final class WindowAnim {
     private static float downX, downY;
     private static long downMs;
     private static boolean clicked, tapCandidate;
+    /**
+     * Hasta cuándo (uptime) MIUI sigue animando el cierre de una app. Va por los fotogramas de
+     * MIUI, no por la sesión del genio: esa a menudo ya no existe al tocar (o no la hay, en el
+     * estilo HyperOS), y entonces el toque en el icono se perdía.
+     */
+    private static volatile long closingUntilMs;
     // StateManager de MIUI: icono del escritorio al que vuelve la app (para el genio suelto).
     private static Method smInstanceM, targetViewM;
     private static Field smCompanionF, smWindowF;
@@ -311,6 +317,23 @@ final class WindowAnim {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    private static final Rect HIT = new Rect();
+
+    /** Icono de app (ShortcutIcon) visible bajo el punto de la pantalla, o null. */
+    private static View iconAt(View v, float x, float y, int depth) {
+        if (depth > 24 || !v.isShown() || !v.getGlobalVisibleRect(HIT) || !HIT.contains((int) x, (int) y)) return null;
+        for (Class<?> c = v.getClass(); c != null && c != View.class; c = c.getSuperclass()) {
+            if (c.getName().startsWith("com.miui.home.") && c.getName().endsWith(".ShortcutIcon")) return v;
+        }
+        if (!(v instanceof android.view.ViewGroup)) return null;
+        android.view.ViewGroup g = (android.view.ViewGroup) v;
+        for (int i = g.getChildCount() - 1; i >= 0; i--) {        // de arriba abajo, como el toque
+            View hit = iconAt(g.getChildAt(i), x, y, depth + 1);
+            if (hit != null) return hit;
+        }
+        return null;
     }
 
     /** Hasta cuándo (uptime) un clic en el icono de la app que se cierra debe darle la vuelta. */
@@ -382,13 +405,19 @@ final class WindowAnim {
         // toque llegue al launcher ni de que MIUI reconozca el icono.
         TapCatcher.listener = new TapCatcher.Listener() {
             @Override
-            public void onTap() {
+            public void onTap(float x, float y) {
                 try {
                     Object manager = smInstance.invoke(smCompanion.get(null));
                     Object window = smWindow.get(manager);
                     View target = window == null ? null : (View) targetView.invoke(window);
                     if (target == null) {
-                        Log.i("toque: en el icono, pero MIUI ya no sabe a qué icono vuelve la app");
+                        // Al final del cierre MIUI ya olvidó el icono: se abre el que hay bajo el dedo.
+                        Object l = getLauncher.invoke(null);
+                        View icon = l instanceof android.app.Activity
+                                ? iconAt(((android.app.Activity) l).getWindow().getDecorView(), x, y, 0) : null;
+                        Log.i(icon == null ? "toque: en el icono, pero MIUI ya no sabe a qué icono vuelve la app"
+                                : "toque: MIUI ya olvidó el icono; se abre el que hay bajo el dedo");
+                        if (icon != null) onClick.invoke(l, icon);
                         return;
                     }
                     if ((Boolean) reusable.invoke(window)) {
@@ -450,7 +479,7 @@ final class WindowAnim {
                     downY = e.getRawY();
                     downMs = e.getEventTime();
                     clicked = false;
-                    tapCandidate = Genie.tapOnClosingIcon(downX, downY);
+                    tapCandidate = Genie.tapOnClosingIcon(downX, downY) || e.getEventTime() < closingUntilMs;
                 } else if (e.getActionMasked() == android.view.MotionEvent.ACTION_POINTER_DOWN) {
                     tapCandidate = false;
                 }
@@ -465,17 +494,22 @@ final class WindowAnim {
                 Object self = p.thisObject;
                 float slop = android.view.ViewConfiguration.get((android.content.Context) self).getScaledTouchSlop() * 2f;
                 if (Math.hypot(e.getRawX() - downX, e.getRawY() - downY) > slop
-                        || e.getEventTime() - downMs > 500 || !Genie.tapOnClosingIcon(e.getRawX(), e.getRawY())) {
+                        || e.getEventTime() - downMs > 500) {
                     return;
                 }
                 try {
-                    Object window = smWindow.get(smInstance.invoke(smCompanion.get(null)));
-                    View target = window == null ? null : (View) targetView.invoke(window);
+                    // El icono bajo el dedo (el de la app que se cierra u otro); si no hay, el
+                    // icono al que vuelve la app según MIUI, si el toque cae en él.
+                    View target = iconAt(((android.app.Activity) self).getWindow().getDecorView(), e.getRawX(), e.getRawY(), 0);
+                    if (target == null && Genie.tapOnClosingIcon(e.getRawX(), e.getRawY())) {
+                        Object window = smWindow.get(smInstance.invoke(smCompanion.get(null)));
+                        target = window == null ? null : (View) targetView.invoke(window);
+                    }
                     if (target == null) {
-                        Log.i("toque: en el icono, pero MIUI no sabe a qué icono vuelve la app");
+                        Log.i("toque: durante el cierre, pero no en un icono");
                         return;
                     }
-                    Log.i("toque: reabro la app que se cierra (MIUI no dio el clic)");
+                    Log.i("toque: abro el icono tocado durante el cierre (MIUI no dio el clic)");
                     tapCandidate = true;                                 // para isSameElement
                     onClick.invoke(self, target);
                 } catch (Throwable t) {
@@ -597,6 +631,7 @@ final class WindowAnim {
         }
         boolean open = "OPEN_FROM_HOME".equals(type);
         boolean drag = "CLOSE_TO_DRAG".equals(type);
+        if (drag || "CLOSE_TO_HOME".equals(type)) closingUntilMs = android.os.SystemClock.uptimeMillis() + 250;
         // Empujar iconos: antes de decidir el genio, porque va también sin él.
         if ((open || drag || "CLOSE_TO_HOME".equals(type)) && IconPush.on()) push(impl, open, drag, cur, bounds);
         if (!Genie.draws() || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
