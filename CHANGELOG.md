@@ -5,9 +5,6 @@
 **Fixes**
 - **Reopening an app while it closes**: tapping its icon during the closing animation now reopens it more reliably. It no longer depends on the genie still running, and at the very end of the animation (when HyperOS has already forgotten which icon it was) the icon under your finger opens.
 
-**Changes**
-- **Push icons** goes up to 2 (it was 1), for a stronger push.
-
 ## 3.1.2
 
 **Changes**
