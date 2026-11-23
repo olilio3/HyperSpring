@@ -147,6 +147,46 @@ final class Hidden {
         }
     }
 
+    private static Method effectLayer, color, corner;
+    private static boolean colorResolved;
+
+    /**
+     * Una capa de color liso (sin búfer ni OpenGL) hija de {@code parent}, para el rectángulo de la
+     * animación paralela ligera. null si esta versión de Android no tiene las APIs.
+     */
+    static synchronized SurfaceControl colorLayer(SurfaceControl parent, String name) {
+        try {
+            if (!colorResolved) {
+                colorResolved = true;
+                effectLayer = SurfaceControl.Builder.class.getMethod("setEffectLayer");
+                color = SurfaceControl.Transaction.class.getMethod("setColor", SurfaceControl.class, float[].class);
+                corner = SurfaceControl.Transaction.class.getMethod("setCornerRadius", SurfaceControl.class, float.class);
+            }
+            if (effectLayer == null) return null;
+            SurfaceControl.Builder b = new SurfaceControl.Builder().setName(name).setParent(parent);
+            effectLayer.invoke(b);
+            return b.build();
+        } catch (Throwable t) {
+            effectLayer = null;
+            Log.w("animación paralela ligera: sin capas de color (" + t + ")");
+            return null;
+        }
+    }
+
+    static void setColor(SurfaceControl.Transaction t, SurfaceControl sc, int argb) {
+        try {
+            color.invoke(t, sc, new float[]{((argb >> 16) & 255) / 255f, ((argb >> 8) & 255) / 255f, (argb & 255) / 255f});
+        } catch (Throwable ignored) {
+        }
+    }
+
+    static void setCornerRadius(SurfaceControl.Transaction t, SurfaceControl sc, float r) {
+        try {
+            corner.invoke(t, sc, r);
+        } catch (Throwable ignored) {
+        }
+    }
+
     private Hidden() {
     }
 }

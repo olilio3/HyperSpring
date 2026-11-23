@@ -68,6 +68,19 @@ public final class Launchers {
         return HYPEROS;
     }
 
+    /**
+     * El launcher de HyperOS 4 (8.x) está hecho en Flutter y no trae código Java (hasCode=false):
+     * LSPosed no carga el módulo ahí y no hay nada que enganchar (#30, #33).
+     */
+    static boolean noJava(Context c) {
+        try {
+            return (c.getPackageManager().getApplicationInfo(current(c), 0).flags
+                    & android.content.pm.ApplicationInfo.FLAG_HAS_CODE) == 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     private Launchers() {
     }
 }

@@ -580,6 +580,11 @@ final class GlassFolder {
                     float[] sc = chainScale(h, preSc);
                     if (loc[0] != lastLoc[0] || loc[1] != lastLoc[1] || sc[0] != lastSx || sc[1] != lastSy) {
                         invalidateSelf();
+                        // Se apunta ya: si no llega a dibujarse, se pedía otro fotograma sin parar.
+                        lastLoc[0] = loc[0];
+                        lastLoc[1] = loc[1];
+                        lastSx = sc[0];
+                        lastSy = sc[1];
                     }
                     return true;
                 }

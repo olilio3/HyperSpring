@@ -77,6 +77,15 @@ public final class CcGlass {
     static final int VEIL_STRONG = 0x10;
     /** Captura: un píxel cada 3 dp, desenfoque de 10 dp (el del sistema es mayor). */
     static final float SAMPLE_DP = 1.5f, BACKDROP_BLUR_DP = 9f;
+
+    /** Calidad (Tune.quality 0-2): tamaño de la captura y dp de pantalla por píxel del fondo. */
+    static float frameScale() {
+        return Tune.quality <= 0 ? 0.18f : Tune.quality >= 2 ? 0.4f : 0.25f;
+    }
+
+    static float sampleDp() {
+        return Tune.quality <= 0 ? 2f : Tune.quality >= 2 ? 1f : SAMPLE_DP;
+    }
     /** Fondo vibrante: muy suave, como el de HyperOS 4. */
     static final float BG_SAMPLE_DP = 6f, BG_BLUR_DP = 50f;
     /**
@@ -785,6 +794,11 @@ public final class CcGlass {
     private static float backdropScale = 1f;         // px de captura por px de pantalla
     private static Handler worker;
     private static boolean captureBroken, captureInFlight;
+
+    /** Se puede capturar el fondo (Android 14+ y sin fallos): si no, no tiene sentido esperar a la foto. */
+    static boolean canCapture() {
+        return !captureBroken && Build.VERSION.SDK_INT >= 34;
+    }
     /** Ventana con un reintento de captura pendiente (solo hilo principal). */
     private static View retryView;
     private static long lastCapture;
@@ -942,6 +956,10 @@ public final class CcGlass {
         captureInFlight = true;
         final View window = cc.getRootView();
         final SurfaceControl own = surfaceOf(cc);
+        if (own == null) {                        // sin ventana que excluir saldría ella misma en el fondo
+            captureInFlight = false;
+            return;
+        }
         final int display = cc.getDisplay() != null ? cc.getDisplay().getDisplayId() : 0;
         final android.util.DisplayMetrics dm = cc.getResources().getDisplayMetrics();
         if (worker == null) {
@@ -952,16 +970,19 @@ public final class CcGlass {
             @Override
             public void run() {
                 try {
-                    final float frame = 0.25f;
+                    // La foto lo primero: leer ajustes (IPC) antes la retrasaba y salía el propio cristal.
+                    final float frame = frameScale();
                     Bitmap shot = screenshot(display, own, frame);
+                    NotifGlass.shotTaken();             // la foto ya está: la emergente puede volver a verse
                     if (shot == null) {
                         captureDone();
                         return;
                     }
+                    Tune.load(cc.getContext());         // ajustes al día para el desenfoque
                     lastShot = shot;
                     lastDensity = dm.density;
-                    float pxPerSample = SAMPLE_DP * dm.density;
-                    Tune.load(cc.getContext());
+                    lastFrame = frame;
+                    float pxPerSample = sampleDp() * dm.density;
                     float blurDp = Tune.ccBlur;
                     final Bitmap small = GlassShader.shrinkBlur(shot, 1f / frame, pxPerSample, blurDp * dm.density);
                     if (small == null) {
@@ -990,6 +1011,7 @@ public final class CcGlass {
                             for (Skin s : SKINS.values()) s.backdropChanged();
                             View root = ccRoot != null ? ccRoot.get() : null;
                             if (root != null) root.invalidate();
+                            NotifGlass.backdropChanged();
                         }
                     });
                 } catch (Throwable t) {
@@ -1002,6 +1024,39 @@ public final class CcGlass {
                 }
             }
         });
+    }
+
+    // ------------------------------------------------------------------ para NotifGlass
+
+    /**
+     * La captura del fondo, si es la de la ventana de {@code host}; si no, null. No pide ninguna:
+     * en HyperOS la captura no deja fuera la ventana de las notificaciones, así que solo se captura
+     * cuando NotifGlass lo pide ({@link #captureFor}), con la emergente escondida.
+     */
+    static Bitmap backdropFor(View host) {
+        if (captureBroken) return null;
+        View root = host.getRootView();
+        View br = backdropRoot != null ? backdropRoot.get() : null;
+        return root != null && br == root ? backdrop : null;
+    }
+
+    /** Pide una captura nueva de lo que hay detrás de la ventana de {@code host}. */
+    static void captureFor(View host) {
+        View root = host.getRootView();
+        if (root == null || captureBroken) return;
+        WINDOW_STALE.add(root);
+        capture(root);
+    }
+
+    /** px de la captura por px de pantalla. */
+    static float backdropScaleNow() {
+        return backdropScale;
+    }
+
+    /** La ventana de {@code host} se ha vuelto a mostrar: la próxima vez, captura nueva. */
+    static void markStale(View host) {
+        View root = host.getRootView();
+        if (root != null) WINDOW_STALE.add(root);
     }
 
     /** Fin de una captura que no llegó a usarse (en el hilo principal). */
@@ -1067,7 +1122,7 @@ public final class CcGlass {
     }
 
     private static Bitmap lastShot;
-    private static float lastDensity = 3f;
+    private static float lastDensity = 3f, lastFrame = 0.25f;
 
     /** Ajustes cambiados desde la app: se releen y se aplican al momento (sin reiniciar). */
     public static void retune(final android.content.Context ctx) {
@@ -1083,7 +1138,7 @@ public final class CcGlass {
                     Tune.load(ctx);
                     Bitmap shot = lastShot;
                     small0 = shot == null ? null
-                            : GlassShader.shrinkBlur(shot, 4f, SAMPLE_DP * lastDensity, Tune.ccBlur * lastDensity);
+                            : GlassShader.shrinkBlur(shot, 1f / lastFrame, sampleDp() * lastDensity, Tune.ccBlur * lastDensity);
                 } catch (Throwable t) {
                     once("retune", t);           // la captura anterior pudo liberarse: se usa la que hay
                 }
@@ -1093,7 +1148,7 @@ public final class CcGlass {
                     public void run() {
                         if (small != null) {
                             backdrop = small;
-                            backdropScale = 1f / (SAMPLE_DP * lastDensity);
+                            backdropScale = 1f / (sampleDp() * lastDensity);
                         }
                         for (Skin s : SKINS.values()) {
                             s.miCleared = s.miCleared && Tune.ccOn;
@@ -1487,6 +1542,13 @@ public final class CcGlass {
                     if (loc[0] != last[0] || loc[1] != last[1] || sc[0] != lastSx || sc[1] != lastSy) {
                         invalidateSelf();
                         if (underDrawn) host.invalidate();
+                        // Se apunta ya: si la pieza no llega a dibujarse (centro de control cerrado,
+                        // ventana oculta), «last» no cambiaba y se pedía otro fotograma sin parar
+                        // (la interfaz del sistema trabajando a 90 fps con todo cerrado).
+                        last[0] = loc[0];
+                        last[1] = loc[1];
+                        lastSx = sc[0];
+                        lastSy = sc[1];
                     }
                     return true;
                 }

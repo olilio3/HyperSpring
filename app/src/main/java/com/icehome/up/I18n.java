@@ -82,9 +82,11 @@ final class I18n {
         s("Telón", "Curtain");
         s("Captura que encoge", "Squeezing screenshot");
         s("Gemini", "Gemini");
+        s("Notificaciones", "Notifications");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
         s("Refracción del borde", "Edge refraction");
+        s("Calidad y fluidez", "Quality and smoothness");
         s("Canto y línea de luz", "Edge and light rim");
         s("Fondo", "Background");
         s("Ajustes", "Settings");
@@ -174,6 +176,24 @@ final class I18n {
                 "Seconds for the colours to go once around the frame. Higher is slower. 0 = still.");
         i("telon_gemini_colors", "Colours",
                 "0 = Gemini's: blue, violet and pink. 1 = Monet: the accents of your wallpaper. 2 = rainbow.");
+        i("telon_notif_on", "iOS 27 style notifications",
+                "Pop-up notifications are born small next to the clock, drop down growing, overshoot a little and spring back into place. When they leave they arc back to the clock.");
+        i("telon_notif_bounce", "Bounce",
+                "How far the notification overshoots its place as it drops. 0 lands without bouncing.");
+        i("telon_notif_speed", "Speed", "1 = like iOS 27. Higher is faster.");
+        i("telon_notif_blur", "Blur",
+                "The notification starts blurred and sharpens as it grows. 0 turns it off (lighter).");
+        i("telon_notif_glass", "Liquid glass",
+                "The floating notification is glass, like iOS 27: you see what's behind it blurred, with a rim of light. Only the floating one; the shade stays as usual.");
+        i("kashiplus_cc_quality", "Quality", "Resolution of the background seen through the glass: 0 low (faster), 1 medium, 2 high (sharper, uses more). Applies on the next capture.");
+        i("kashiplus_cc_fps", "Glass FPS", "How many times per second the notification glass is redrawn while it moves. Lower uses less, but the glass lags slightly.");
+        i("glass_easy_clear", "Transparency", "Higher: you see more of what is behind. Lower: milkier, more readable glass.");
+        i("glass_easy_blur", "Blur", "How much what is behind the glass is blurred.");
+        i("glass_easy_refr", "Refraction", "How much the background bends at the edge, with its rainbow. 0 leaves it flat.");
+        i("glass_easy_rim", "Edge shine", "The line of light running along the glass edge.");
+        i("icehome_light_parallel", "Light parallel animation", "If you open another app while one is closing, the closing one flies to its icon as a rectangle of its colour instead of with the genie (two genies at once stutter on modest phones). 0 off, 1 auto (only if the phone stutters), 2 always.");
+        i("telon_notif_tint", "Glass veil",
+                "A light (or dark, in dark mode) layer over the glass so the text is readable. 0 leaves the glass clearer.");
         i("telon_squeeze_size", "Size",
                 "Size of the screen, in %, at the deepest point. Pixel phones stay at about 97 %, a soft push.");
         i("telon_squeeze_left", "To the left",

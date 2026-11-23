@@ -64,30 +64,58 @@ public final class GlassShader {
             // De Kyant0/AndroidLiquidGlass (Apache-2.0): gradiente del rectángulo redondeado y bisel.
             + "float2 gradSd(float2 coord, float2 halfSize, float r) {\n"
             + "  float2 cc = abs(coord) - (halfSize - float2(r));\n"
-            + "  if (cc.x >= 0.0 || cc.y >= 0.0) return sign(coord) * normalize(max(cc, 0.0));\n"
+            + "  if (cc.x >= 0.0 || cc.y >= 0.0) return sign(coord) * normalize(max(cc, float2(1e-4)));\n"
             + "  float gx = step(cc.y, cc.x);\n"
             + "  return sign(coord) * float2(gx, 1.0 - gx);\n"
             + "}\n"
             + "float circleMap(float x) { return 1.0 - sqrt(1.0 - x * x); }\n"
             + "float3 at(float2 q) { return float3(wall.eval(q).rgb); }\n"
+            // Suavizado B-spline con 4 lecturas lineales: en la franja del borde, donde el fondo se
+            // amplía, quita las facetas del filtro bilineal.
+            + "float3 atS(float2 q) {\n"
+            + "  float2 t = q - 0.5, i = floor(t), f = t - i, f2 = f * f, f3 = f2 * f;\n"
+            + "  float2 w0 = (1.0 - 3.0 * f + 3.0 * f2 - f3) / 6.0, w1 = (4.0 - 6.0 * f2 + 3.0 * f3) / 6.0;\n"
+            + "  float2 w2 = (1.0 + 3.0 * f + 3.0 * f2 - 3.0 * f3) / 6.0, w3 = f3 / 6.0;\n"
+            + "  float2 s0 = w0 + w1, s1 = w2 + w3, c0 = i - 0.5 + w1 / s0, c1 = i + 1.5 + w3 / s1;\n"
+            + "  return s0.y * (s0.x * at(float2(c0.x, c0.y)) + s1.x * at(float2(c1.x, c0.y)))\n"
+            + "       + s1.y * (s0.x * at(float2(c0.x, c1.y)) + s1.x * at(float2(c1.x, c1.y)));\n"
+            + "}\n"
+            // Ruido de gradiente entrelazado: rompe las bandas de 8 bits del fondo.
+            + "float ign(float2 q) { return fract(52.9829189 * fract(dot(q, float2(0.06711056, 0.00583715)))); }\n"
+            // Saturar sin salirse de 0..1 manteniendo el tono (no pasa a amarillo el naranja).
+            + "float3 satKeep(float3 c, float s) {\n"
+            + "  float l = dot(c, float3(0.2126, 0.7152, 0.0722));\n"
+            + "  float3 v = mix(float3(l), c, s);\n"
+            + "  float hi = max(max(v.r, v.g), v.b), lo = min(min(v.r, v.g), v.b);\n"
+            + "  float f = min(1.0, min((1.0 - l) / max(hi - l, 1e-4), l / max(l - lo, 1e-4)));\n"
+            + "  return mix(float3(l), v, f);\n"
+            + "}\n"
+            // Hombro suave: las luces se acercan a 1 sin recortarse en manchas blancas planas.
+            + "float3 shoulder(float3 x) {\n"
+            + "  return mix(x, 0.8 + 0.2 * (1.0 - exp((0.8 - x) / 0.2)), step(float3(0.8), x));\n"
+            + "}\n"
             + "float3 vivid(float3 c) {\n"
-            + "  float l = dot(c, float3(0.299, 0.587, 0.114));\n"
-            + "  float3 v = clamp(mix(float3(l), c, sat), 0.0, 1.0);\n"
-            + "  float l2 = dot(v, float3(0.299, 0.587, 0.114));\n"
-            + "  v = v * (1.0 - darker * smoothstep(0.6, 1.0, l2));\n"
-            + "  v = mix(v, float3(1.0), whiteMix);\n"
-            + "  return clamp(v * tone, 0.0, 1.0);\n"
+            + "  float3 v = satKeep(c, sat);\n"
+            + "  float l2 = dot(v, float3(0.2126, 0.7152, 0.0722));\n"
+            + "  v *= 1.0 - darker * smoothstep(0.6, 1.0, l2);\n"
+            + "  v = shoulder(v * tone);\n"
+            + "  return mix(v, float3(1.0), whiteMix);\n"
             + "}\n"
             + "half4 main(float2 xy) {\n"
             + "  float2 h = size * 0.5;\n"
             + "  float2 p = xy - h;\n"
             + "  float d = -sd(p, h, radius);\n"
-            + "  if (d <= 0.0) return half4(0.0);\n"
-            + "  float aa = clamp(d, 0.0, 1.0);\n"
+            // Cobertura centrada en el borde (medio píxel a cada lado), como drawPath: sin escalones
+            // ni filo entre el cristal y lo que se pinta con la misma forma.
+            + "  if (d <= -0.5) return half4(0.0);\n"
+            + "  float aa = clamp(d + 0.5, 0.0, 1.0);\n"
+            + "  d = max(d, 0.0);\n"
             + "  float t = clamp(1.0 - d / band, 0.0, 1.0);\n"
             // La normal (4 sd) solo se usa cerca del borde: en la franja, el núcleo del canto o donde
             // el halo aún se ve (exp(-6)·0,55 < 1/255). Más adentro vale 0 y nos ahorramos el cálculo.
-            + "  bool edge = d < max(band, max(rimw * 1.4, glow * 6.0));\n"
+            + "  bool edge = d < max(band, max(rimw * 6.5, glow * 6.0));\n"
+            // Pasada de luz (sin relleno) lejos del borde: no hay nada que pintar.
+            + "  if (!edge && fill <= 0.0) return half4(0.0);\n"
             + "  float2 n = float2(0.0);\n"
             + "  if (edge) {\n"
             + "    float2 g = float2(sd(p + float2(1.0, 0.0), h, radius) - sd(p - float2(1.0, 0.0), h, radius),\n"
@@ -118,18 +146,22 @@ public final class GlassShader {
             + "                   o.g / 7.0 + y.g / 3.5 + gg.g / 3.5 + cy.g / 3.5,\n"
             + "                   cy.b / 3.0 + b.b / 3.0 + v.b / 3.0);\n"
             + "    } else {\n"
-            + "      float2 dd = (dv + lens) * dispersion * scale;\n"
+            // Con arcoíris de la lente, la lente no separa colores aquí (si no, una raya de color en
+            // el centro de cada lado, donde ci vale 0).
+            + "      float2 dd = (chroma > 0.0 ? dv : dv + lens) * dispersion * scale;\n"
             // Separación de menos de medio píxel del fondo (ya desenfocado): no se nota, 1 muestra.
-            + "      if (dot(dd, dd) < 0.25) raw = at(base);\n"
+            + "      if (dot(dd, dd) < 0.25) raw = edge ? atS(base) : at(base);\n"
             + "      else raw = float3(at(base + dd).r, at(base).g, at(base - dd).b);\n"
             + "    }\n"
+            + "    raw += (ign(xy) - 0.5) * (1.0 / 255.0);\n"
             + "    float3 bg = vivid(raw);\n"
-            + "    float le = dot(bg, float3(0.299, 0.587, 0.114));\n"
-            + "    bg = clamp(mix(float3(le), bg, 1.0 + edgeSat * k), 0.0, 1.0);\n"
+            + "    bg = satKeep(bg, 1.0 + edgeSat * k);\n"
             + "    bg = mix(bg, float3(1.0), edgeLift * k * k);\n"
             + "    float a = max(fill, k * bandAlpha);\n"
             + "    acc = half4(half3(bg * a), half(a));\n"
-            + "    tint = clamp(bg * 1.8 + 0.25, 0.0, 1.0);\n"
+            // El color de detrás a pleno brillo (sin recortar): el canto se tiñe también sobre fondos claros.
+            + "    float m = max(max(bg.r, bg.g), max(bg.b, 0.02));\n"
+            + "    tint = mix(bg / m, float3(1.0), 0.25);\n"
             + "    float ga = clamp(k * k * max(f, 0.0) * 0.22 * rimGain * min(1.0, bandAlpha * 4.0), 0.0, 1.0);\n"
             + "    acc = over(half4(half3(tint * ga), half(ga)), acc);\n"
             + "  }\n"
@@ -241,7 +273,7 @@ public final class GlassShader {
                 ba += c & 255;
             }
             for (int i = 0; i < len; i++) {
-                out[idx(l, i, w, horizontal)] = 0xFF000000 | ((ra / div) << 16) | ((ga / div) << 8) | (ba / div);
+                out[idx(l, i, w, horizontal)] = 0xFF000000 | (((ra + r) / div) << 16) | (((ga + r) / div) << 8) | ((ba + r) / div);   // redondeo, no truncado: no oscurece en cada pasada
                 int cOut = in[idx(l, clampI(i - r, len), w, horizontal)];
                 int cIn = in[idx(l, clampI(i + r + 1, len), w, horizontal)];
                 ra += ((cIn >> 16) & 255) - ((cOut >> 16) & 255);

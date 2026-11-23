@@ -32,6 +32,9 @@ public final class Tune {
             {"kashiplus_cc_edge_sat", "Saturación del canto", 0f, 1.5f, 0.4f, 2, "Intensidad del color del canto."},
             {"kashiplus_cc_rim", "Grosor de la línea de luz", 0f, 2.5f, 0.69f, 2, "La línea brillante que recorre el borde, en dp."},
             {"kashiplus_cc_rim_gain", "Intensidad de la línea de luz", 0f, 2.5f, 1f, 2, "Brillo de esa línea. 0 la quita."},
+            {"#", "Calidad y fluidez"},
+            {"kashiplus_cc_quality", "Calidad", 0f, 2f, 1f, 0, "Resolución del fondo que se ve a través del cristal: 0 baja (más rápido), 1 media, 2 alta (más nítido, gasta más). Se nota en la próxima captura."},
+            {"kashiplus_cc_fps", "FPS del cristal", 15f, 120f, 60f, 0, "Cuántas veces por segundo se redibuja el cristal de la notificación mientras se mueve. Menos gasta menos, pero el cristal va algo por detrás."},
             {"#", "Fondo"},
             {"kashiplus_cc_dim", "Oscurecer el fondo", 0f, 0.7f, 0.5f, 2, "Cuánto se oscurece la pantalla detrás del centro de control."},
     };
@@ -39,7 +42,8 @@ public final class Tune {
     static volatile boolean ccOn = true;
     static volatile float ccBlur = 8f, sat = 1.4f, satButton = 1.25f, tone = 1.2f, white = 0.03f,
             gloss = 34f, edge = 4f, edgeOver = 3.5f, edgeSat = 0.4f, magnify = 0.04f,
-            rim = 0.69f, rimGain = 1f, dim = 0.5f, refr = 20f, refrH = 14f, chroma = 1f;
+            rim = 0.69f, rimGain = 1f, dim = 0.5f, refr = 20f, refrH = 14f, chroma = 1f, fps = 60f;
+    static volatile int quality = 1;
 
     /** Valores guardados por la app (vía PrefsProvider); si no, "settings put global". */
     private static java.util.Map<String, String> read(Context c) {
@@ -99,6 +103,8 @@ public final class Tune {
         refr = get(c, "kashiplus_cc_refr", saved);
         refrH = get(c, "kashiplus_cc_refr_h", saved);
         chroma = get(c, "kashiplus_cc_chroma", saved);
+        quality = Math.round(get(c, "kashiplus_cc_quality", saved));
+        fps = get(c, "kashiplus_cc_fps", saved);
     }
 
     private Tune() {

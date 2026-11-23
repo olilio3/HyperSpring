@@ -38,6 +38,13 @@ public final class Tune {
             {"telon_gemini_glow", "Intensidad de la luz", 0f, 1.5f, 1f, 2, "Brillo de la luz del marco. 0 la quita y deja solo el marco."},
             {"telon_gemini_spin", "Giro de los colores", 0f, 8f, 3.5f, 1, "Segundos que tardan los colores en dar una vuelta al marco. Más alto, más lento. 0 = quietos."},
             {"telon_gemini_colors", "Colores", 0f, 2f, 1f, 0, "0 = los de Gemini: azul, violeta y rosa. 1 = Monet: los acentos de tu fondo de pantalla. 2 = arcoíris."},
+            {"#", "Notificaciones"},
+            {"telon_notif_on", "Notificaciones estilo iOS 27", 0f, 1f, 0f, -1, "Las notificaciones emergentes nacen pequeñas junto a la hora, bajan creciendo, se pasan un poco y vuelven a su sitio con un muelle. Al irse vuelven en arco a la hora."},
+            {"telon_notif_bounce", "Rebote", 0f, 1.5f, 1f, 2, "Cuánto se pasa la notificación de su sitio al caer. 0 la deja llegar sin rebote."},
+            {"telon_notif_speed", "Velocidad", 0.5f, 2f, 1f, 1, "1 = como en iOS 27. Más alto, más rápida."},
+            {"telon_notif_blur", "Desenfoque", 0f, 1.5f, 1f, 2, "La notificación sale borrosa y se enfoca al crecer. 0 lo quita (gasta menos)."},
+            {"telon_notif_glass", "Cristal líquido", 0f, 1f, 1f, -1, "La notificación flotante es de cristal, como en iOS 27: se ve lo de detrás desenfocado, con un canto de luz. Solo la flotante; en el panel se queda como siempre."},
+            {"telon_notif_tint", "Velo del cristal", 0f, 1f, 0.35f, 2, "Capa clara (u oscura en modo oscuro) sobre el cristal para que el texto se lea. 0 deja el cristal más transparente."},
     };
 
     /**
@@ -64,6 +71,13 @@ public final class Tune {
         Telon.motionBlur = f(c, "telon_blur");
         Telon.belowBlur = f(c, "telon_bg_blur");
         TelonRenderer.power = 1f + 1.4f * Math.max(0f, Math.min(1f, f(c, "telon_curve")));
+        // Se lee en cada notificación: se enciende y se apaga sin reiniciar la interfaz.
+        NotifPop.enabled = !paused && f(c, "telon_notif_on") >= 0.5f;
+        NotifPop.bounce = f(c, "telon_notif_bounce");
+        NotifPop.speed = f(c, "telon_notif_speed");
+        NotifPop.blur = f(c, "telon_notif_blur");
+        com.icehome.up.cc.NotifGlass.enabled = !paused && f(c, "telon_notif_glass") >= 0.5f;
+        com.icehome.up.cc.NotifGlass.tint = f(c, "telon_notif_tint");
         squeeze(c);
         Squeeze.retune();
     }

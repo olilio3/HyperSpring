@@ -350,6 +350,11 @@ final class WindowAnim {
      * apertura nueva desde el icono). Un clic que empezó sobre el icono de la app que se cierra
      * cuenta como el mismo.
      */
+    /** El icono tocado es el de la app que se está cerrando (por posición o porque MIUI vuelve a él). */
+    private static boolean closingIcon(View v) {
+        return Genie.tapOnClosingIcon(downX, downY) || (v != null && v == currentTargetView());
+    }
+
     private static void hookReopenTap(ClassLoader cl) {
         Class<?> launcher = XposedHelpers.findClass("com.miui.home.launcher.BaseLauncher", cl);
         final Method onClick = method(launcher, "onClick", View.class);
@@ -456,7 +461,9 @@ final class WindowAnim {
             @Override
             protected void beforeHookedMethod(MethodHookParam p) {
                 clicked = true;
-                if (tapCandidate) reuseUntilMs = android.os.SystemClock.uptimeMillis() + 400;
+                // Solo se le da la vuelta al cierre si se toca el icono de la app que se cierra: con
+                // otro icono (Chrome mientras se cierra Ajustes) MIUI reabría la app que se cerraba.
+                if (tapCandidate && closingIcon((View) p.args[0])) reuseUntilMs = android.os.SystemClock.uptimeMillis() + 400;
                 if (!Genie.idle()) Log.i("toque: clic durante el genio" + (tapCandidate ? ", en el icono de la app que se cierra" : ""));
             }
         });
@@ -634,6 +641,9 @@ final class WindowAnim {
         if (drag || "CLOSE_TO_HOME".equals(type)) closingUntilMs = android.os.SystemClock.uptimeMillis() + 250;
         // Empujar iconos: antes de decidir el genio, porque va también sin él.
         if ((open || drag || "CLOSE_TO_HOME".equals(type)) && IconPush.on()) push(impl, open, drag, cur, bounds);
+        // Otros cierres (a la isla dinámica: CLOSE_TO_ELEMENT…) no vuelven al icono: si quedaban
+        // iconos empujados de la apertura, vuelven ya en vez de esperar al vigilante.
+        else if (type.startsWith("CLOSE")) IconPush.settle();
         if (!Genie.draws() || !(open || drag || "CLOSE_TO_HOME".equals(type))) {
             Genie.stopFor(impl, type);
             // Otra app que se abre sin genio (desde un widget…) mientras una se cierra.
@@ -769,7 +779,10 @@ final class WindowAnim {
             else if (open && end != null) PUSH_FULL.set(end);
             else if (start != null) PUSH_FULL.set(start);
             else return;
-            if (PUSH_FULL.width() >= PUSH_FULL.height()) return;          // solo en vertical
+            if (PUSH_FULL.width() >= PUSH_FULL.height() || (start != null && start.width() > start.height())) {
+                IconPush.settle();                                         // en horizontal: que vuelvan ya
+                return;
+            }
             // La vista raíz del launcher, de él mismo: así va aunque no se haya tocado un icono
             // (en la 3.1.0 solo se sabía al tocar uno, y solo con el genio puesto).
             if (IconPush.needsRoot()) {

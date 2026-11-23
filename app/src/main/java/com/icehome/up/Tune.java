@@ -32,6 +32,7 @@ public final class Tune {
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
             {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto sigue a la pantalla hasta 90 (a 120 Hz o más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
+            {"icehome_light_parallel", "Animación paralela ligera", 0f, 2f, 1f, 0, "Si abres otra app mientras una se cierra, la que se cierra vuela a su icono como un rectángulo de su color en vez de con el genio (dos genios a la vez dan tirones en móviles modestos). 0 no, 1 auto (solo si el móvil va a tirones), 2 siempre."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
             {"icehome_push", "Empujar iconos", 0f, 1f, 0.4f, 2, "Al abrir una app, los demás iconos se apartan suavemente de ella, a la par que la ventana; los más lejanos apenas se mueven. Al cerrarla vuelven igual, al revés. Va con cualquier estilo. 0 lo quita."},
@@ -88,6 +89,7 @@ public final class Tune {
         RecentsCurtain.mode = f(c, "icehome_curtain_style") >= 0.5f ? 1f : 0f;
         GlRenderer.wantedScale = f(c, "icehome_genie_quality") / 100f;
         Genie.autoQuality = f(c, "icehome_genie_auto") >= 0.5f;
+        Genie.lightParallel = Math.round(f(c, "icehome_light_parallel"));
         UnlockZoom.strength = f(c, "icehome_unlock_zoom");
         Springs.speed = f(c, "icehome_anim_speed");
         Springs.bounce = f(c, "icehome_anim_bounce");

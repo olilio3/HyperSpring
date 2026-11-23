@@ -258,6 +258,13 @@ final class Genie {
     static volatile boolean live = true;
     /** Resolución automática: baja sola si varias animaciones seguidas van a tirones. Ajuste. */
     static volatile boolean autoQuality = true;
+    /** Animación paralela ligera: 0 no, 1 auto (si la última animación fue a tirones), 2 siempre. */
+    static volatile int lightParallel = 1;
+    private static volatile boolean slow;
+
+    static boolean lightNow() {
+        return lightParallel >= 2 || (lightParallel == 1 && slow);
+    }
     /** Animaciones seguidas con más de {@link #AUTO_JANK} de sus fotogramas tarde. */
     private static int jankyRuns;
     private static final float AUTO_JANK = 0.2f, AUTO_STEP = 0.1f, AUTO_MIN = 0.5f;
@@ -266,6 +273,7 @@ final class Genie {
     /** Hilo de dibujo, al acabar cada animación: {@code janks} tirones en {@code frames} fotogramas. */
     private static void autoQuality(int janks, int frames) {
         if (frames < 10) return;                           // muy corta: no dice nada
+        slow = janks / (float) frames > AUTO_JANK;        // para la animación paralela ligera (auto)
         if (janks / (float) frames <= AUTO_JANK) {
             jankyRuns = 0;
             return;
@@ -963,6 +971,8 @@ final class Genie {
         volatile boolean finishing, shown, shownEarly, handedBack, handedOver, keyEnded, hidWindow, ghosted;
         /** Icono del escritorio al que vuelve (al cerrar). */
         volatile java.lang.ref.WeakReference<View> targetView;
+        /** Color dominante del icono (para el rectángulo del modo ligero); 0 si no se sabe. */
+        volatile int iconColor;
         /** Superficie anterior de la ventana, si MIUI la cambió: también se mantiene oculta. */
         volatile SurfaceControl oldLeash;
         volatile long shownNs, lastFrameMs, leashMs, shownMs;
@@ -1673,6 +1683,7 @@ final class Genie {
                 d.setBounds(0, 0, ICON_TEXTURE, ICON_TEXTURE);
                 d.draw(new Canvas(b));
                 GlRenderer.uploadIcon(b, this);
+                iconColor = accent(b);                       // antes de reciclarlo
                 b.recycle();
                 iconReady = true;
             } catch (Throwable e) {
@@ -1698,7 +1709,10 @@ final class Genie {
         /** Fin: la capa se oculta (se reutiliza) y la ventana real queda con la transparencia de MIUI. */
         void end() {
             renderHandler().removeCallbacks(watchdog);
-            if (ghosted && !goAlone()) ghosted = false;
+            // Modo ligero: la que se cierra sigue como un rectángulo de color, sin OpenGL.
+            boolean rect = ghosted && lightNow() && RectGhost.start(this);
+            if (rect) ghosted = false;
+            else if (ghosted && !goAlone()) ghosted = false;
             SurfaceControl l = layer;
             synchronized (inverse) {
                 layer = null;                                  // ningún hook vuelve a tocarla
@@ -1721,7 +1735,8 @@ final class Genie {
                         t.setVisibility(l, true);
                     }
                 } else {
-                    if ((shown || hidWindow) && !handedBack && window != null && window.isValid()) t.setAlpha(window, alpha);
+                    if (rect && window != null && window.isValid()) t.setAlpha(window, 0f);   // la lleva el rectángulo
+                    else if ((shown || hidWindow) && !handedBack && window != null && window.isValid()) t.setAlpha(window, alpha);
                     if (gh != null && startedOpen) {
                         finishGhost();                         // la app abierta ya lo tapa todo
                         gh = null;
@@ -2228,6 +2243,194 @@ final class Genie {
                 if (ghost == g) schedule();
             }
         };
+    }
+
+    /** Color dominante de un icono: media de sus píxeles opacos, pesando más los más vivos. */
+    static int accent(Bitmap b) {
+        try {
+            Bitmap s = Bitmap.createScaledBitmap(b, 12, 12, true);
+            float r = 0f, g = 0f, bl = 0f, sum = 0f;
+            float[] hsv = new float[3];
+            for (int y = 0; y < 12; y++) {
+                for (int x = 0; x < 12; x++) {
+                    int c = s.getPixel(x, y);
+                    if ((c >>> 24) < 160) continue;
+                    android.graphics.Color.colorToHSV(c, hsv);
+                    float w = hsv[1] * hsv[2] + 0.05f;
+                    r += ((c >> 16) & 255) * w;
+                    g += ((c >> 8) & 255) * w;
+                    bl += (c & 255) * w;
+                    sum += w;
+                }
+            }
+            if (s != b) s.recycle();
+            return sum <= 0f ? 0 : 0xFF000000 | (Math.round(r / sum) << 16) | (Math.round(g / sum) << 8) | Math.round(bl / sum);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * Modo ligero de la animación paralela: la app que se cierra mientras se abre otra sigue hasta
+     * su icono como un rectángulo de su color en una capa de color del sistema (sin OpenGL ni
+     * captura), con el mismo muelle por borde que el genio suelto. Así la GPU solo dibuja el genio
+     * de la app nueva. Hilo de dibujo.
+     */
+    private static final class RectGhost implements android.view.Choreographer.FrameCallback {
+        final SurfaceControl sc;
+        final float[] pos = new float[4], vel = new float[4], goal = new float[4];
+        final RectF full;
+        final float startRadius, iconRadius, iconW;
+        final java.lang.ref.WeakReference<View> iconView;
+        final long startNs = System.nanoTime();
+        long lastNs = startNs;
+        final Rect crop = new Rect();
+        final SurfaceControl.Transaction t = new SurfaceControl.Transaction();
+
+        private RectGhost(SurfaceControl sc, Session s, RectF cur, RectF icon, float radius) {
+            this.sc = sc;
+            full = new RectF(s.full);
+            pos[0] = cur.left;
+            pos[1] = cur.top;
+            pos[2] = cur.right;
+            pos[3] = cur.bottom;
+            goal[0] = icon.left;
+            goal[1] = icon.top;
+            goal[2] = icon.right;
+            goal[3] = icon.bottom;
+            startRadius = radius;
+            iconRadius = icon.width() * 0.22f;
+            iconW = icon.width();
+            iconView = s.targetView;
+        }
+
+        /** Arranca el rectángulo desde donde iba el genio de {@code s}; false si no se puede. */
+        static boolean start(Session s) {
+            RectF cur = new RectF(), icon = new RectF();
+            float[] v = new float[4];
+            float radius;
+            synchronized (s.lock) {
+                if (!s.shown || s.tapRect.isEmpty()) return false;
+                cur.set(s.pendingCur);
+                icon.set(s.tapRect);
+                System.arraycopy(s.edgeVel, 0, v, 0, 4);
+                radius = s.pendingRadius;
+            }
+            SurfaceControl parent = GlRenderer.parent;
+            if (parent == null || !parent.isValid() || cur.isEmpty()) return false;
+            SurfaceControl sc = Hidden.colorLayer(parent, "IceHome rect");
+            if (sc == null) return false;
+            int c = s.iconColor;
+            if (c == 0) {                                    // sin color: blanco o negro según el tema
+                boolean night = (android.content.res.Resources.getSystem().getConfiguration().uiMode
+                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+                c = night ? 0xFF1C1C1E : 0xFFF2F2F7;
+            }
+            RectGhost g = new RectGhost(sc, s, cur, icon, radius);
+            try {
+                System.arraycopy(v, 0, g.vel, 0, 4);
+                Hidden.setColor(g.t, sc, c);
+                SurfaceControl below = ghostBelow;
+                ghostBelow = null;
+                SurfaceControl gl = GlRenderer.layer;
+                if (below != null && below.isValid()) Hidden.setRelativeLayer(g.t, sc, below, -1);
+                else if (gl != null && gl.isValid()) Hidden.setRelativeLayer(g.t, sc, gl, -1);   // por debajo del genio nuevo
+                else g.t.setLayer(sc, Z_TOP);
+                g.place();
+                g.t.setVisibility(sc, true);
+                g.t.apply();
+            } catch (Throwable e) {
+                sc.release();                                // sin rectángulo: sigue el genio normal
+                Log.w("genio: no se pudo poner el rectángulo: " + e);
+                return false;
+            }
+            final View iv = g.iconView == null ? null : g.iconView.get();
+            final Icons ic = icons;
+            if (iv != null && ic != null) {
+                MAIN.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ic.setVisible(iv, false);              // lo enseña al llegar
+                    }
+                });
+            }
+            android.view.Choreographer.getInstance().postFrameCallback(g);
+            Log.i("genio: la app que se cierra sigue como rectángulo (modo ligero)");
+            return true;
+        }
+
+        private void place() {
+            float l = pos[0], tp = pos[1], w = Math.max(1f, pos[2] - pos[0]), h = Math.max(1f, pos[3] - pos[1]);
+            crop.set(0, 0, Math.round(w), Math.round(h));
+            t.setPosition(sc, l, tp);
+            t.setCrop(sc, crop);
+            float pw = progress(w, iconW, full.width());
+            Hidden.setCornerRadius(t, sc, Math.min(Math.min(w, h) / 2f, lerp(iconRadius, startRadius, pw)));
+        }
+
+        @Override
+        public void doFrame(long frameNs) {
+            try {
+                if (!sc.isValid()) {
+                    finish();                                // que el icono no se quede escondido
+                    return;
+                }
+                long now = System.nanoTime();
+                float dt = Math.min(0.05f, Math.max(0f, (now - lastNs) / 1e9f));
+                lastNs = now;
+                float c = 2f * GHOST_ZETA * (float) Math.sqrt(GHOST_K);
+                boolean still = true;
+                for (int i = 0; i < 4; i++) {
+                    for (float left = dt; left > 0f; left -= 0.004f) {
+                        float h = Math.min(0.004f, left);
+                        vel[i] += (GHOST_K * (goal[i] - pos[i]) - c * vel[i]) * h;
+                        pos[i] += vel[i] * h;
+                    }
+                    if (Math.abs(goal[i] - pos[i]) > 0.5f || Math.abs(vel[i]) > 8f) still = false;
+                }
+                if (still || now - startNs > GHOST_MAX_NS) {
+                    finish();
+                    return;
+                }
+                place();
+                t.apply();
+                android.view.Choreographer.getInstance().postFrameCallback(this);
+            } catch (Throwable e) {
+                Log.w("genio: fallo del rectángulo: " + e);
+                finish();
+            }
+        }
+
+        private void finish() {
+            final View iv = iconView == null ? null : iconView.get();
+            final Icons ic = icons;
+            if (iv != null && ic != null) {
+                MAIN.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ic.setVisible(iv, true);
+                    }
+                });
+            }
+            // El icono se enseña en el hilo principal: el rectángulo se quita un poco después.
+            renderHandler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (sc.isValid()) {
+                            SurfaceControl.Transaction r = new SurfaceControl.Transaction();
+                            r.reparent(sc, null);
+                            r.apply();
+                            sc.release();
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }, GHOST_HANDOFF_MS);
+            Haptics.land();
+            Log.i(String.format(java.util.Locale.ROOT, "genio: rectángulo en el icono en %d ms",
+                    (System.nanoTime() - startNs) / 1_000_000L));
+        }
     }
 
     private static float progress(float v, float from, float to) {

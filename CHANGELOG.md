@@ -1,5 +1,24 @@
 # Changelog
 
+## 3.1.4
+
+**Faster on mid-range phones**
+- **Control center glass** kept System UI working on every frame (about 10 ms each, 90 times a second), even with the control center closed. That slowed down the whole phone, also app animations. Now it only works while the glass is on screen.
+- **Folder glass** had the same problem in the launcher.
+
+**New**
+- **Liquid glass page** (System → Glass): one place for the glass of the control center, volume and notifications. **Easy** mode has a few sliders and the styles, **Advanced** shows every setting. The preview has a flower photo or a grid behind it, so you can see the refraction.
+- **Quality and smoothness** (Glass page): glass resolution and frames per second, to make it lighter on modest phones.
+- **iOS 27 notifications** (Curtain → iOS 27 notifications): pop-up notifications start small next to the clock, drop down growing and settle with a spring. When they leave they arc back to the clock. The floating notification gets a liquid glass background.
+- **Light parallel animation** (Opening and closing apps): if you open another app while one is closing, the closing one flies to its icon as a plain rectangle in the icon's colour instead of a second genie. 0 off, 1 auto (only when the phone is lagging), 2 always.
+- **iOS 27** glass style.
+
+**Fixes**
+- **Glass quality**: colours keep their hue when saturated, smoother edge without steps, no banding, no thin seam at the rim.
+- **Notification glass** no longer turns whiter the longer it is on screen, and no longer shows the notification (or the control center) inside its own background. The animation waits for the background, with a time limit.
+- **Push icons**: icons are no longer pushed towards an empty spot when the app's icon is on another page, the app goes to the dynamic island or comes back in landscape. In those cases they go back at once, without the wave.
+- **Tapping another app while one closes** no longer reopens the app that was closing.
+
 ## 3.1.3
 
 **Fixes**

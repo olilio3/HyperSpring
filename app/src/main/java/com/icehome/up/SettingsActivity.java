@@ -899,6 +899,14 @@ public class SettingsActivity extends Activity {
                             + "Reinícialo (o reinicia el móvil) para cargar la nueva.",
                     "You updated HyperSpring, but " + stale + " is still running the previous version. "
                             + "Restart it (or reboot the phone) to load the new one."), null, null));
+        } else if (state("launcher_seen") == null && Launchers.noJava(this)) {
+            c.addView(notice(I18n.t("El launcher de HyperOS 4 está hecho en Flutter y no tiene código que HyperSpring pueda "
+                            + "enganchar: las funciones del launcher (genio, recientes, iconos…) no funcionan con él. El centro "
+                            + "de control y las de Sistema sí. Si la interfaz tampoco aparece activa en Acerca de, reinicia el móvil.",
+                    "The HyperOS 4 launcher is built with Flutter and has no code HyperSpring can hook: launcher features "
+                            + "(genie, recents, icons…) don't work with it. The control center and System features do. If "
+                            + "System UI isn't shown as active in About either, reboot the phone."),
+                    null, null));
         } else if (state("launcher_seen") == null && state("systemui_seen") == null) {
             c.addView(notice(I18n.t("Todavía no se ha detectado HyperSpring funcionando. Si acabas de instalarlo o actualizarlo, "
                             + "reinicia el launcher y la interfaz (abajo) o el móvil. Si sigue igual, revisa en LSPosed que el "
@@ -1418,17 +1426,200 @@ public class SettingsActivity extends Activity {
             t.addView(sectionRow(s));
         }
         c.addView(t);
-        c.addView(label(I18n.t("Estilos de cristal", "Glass styles")));
-        c.addView(presetCard(Presets.GLASS, Icons.DROP));
-        c.addView(label(I18n.t("Centro de control", "Control center")));
-        LinearLayout cc = card();
-        for (Section s : sections(com.icehome.up.cc.Tune.ITEMS)) {
-            if (s.name.equals("General")) continue;
-            cc.addView(sectionRow(s));
-        }
-        c.addView(cc);
+        // Para ver las notificaciones iOS 27 sin esperar a que llegue una de verdad.
+        TextView test = button(I18n.t("Probar notificación", "Test notification"), false, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                testNotification();
+            }
+        });
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-1, -2);
+        tl.topMargin = px(10);
+        c.addView(test, tl);
+        // Todo el cristal (estilos, ajustes y dónde se usa) está en su propia página.
+        c.addView(label(I18n.t("Cristal", "Glass")));
+        LinearLayout gl = card();
+        gl.addView(navRow(Icons.DROP, I18n.t("Cristal líquido", "Liquid glass"),
+                I18n.t("Estilos, vista previa y ajustes, para todo el sistema", "Styles, preview and settings, system-wide"), true,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        push(glassPage());
+                    }
+                }));
+        c.addView(gl);
         return page(I18n.t("Sistema", "System"), I18n.t("El telón al cambiar de pantalla, la captura y el cristal del centro de control.",
                 "The curtain between screens, the screenshot and the control center glass."), false, c);
+    }
+
+    // ---------------------------------------------------------------- cristal líquido
+    /** La vista previa de la página «Cristal líquido» (null fuera de ella): la mueven los deslizadores. */
+    private GlassPreview glassPreview;
+    private static boolean glassAdvanced;
+
+    /**
+     * Ajustes del modo fácil. No los lee ningún proceso: cada uno, al guardarse, se reparte en los
+     * ajustes de verdad del cristal (centro de control, notificación y carpetas), ver {@link #easyGlass}.
+     */
+    private static final Object[][] GLASS_EASY = {
+            {"glass_easy_clear", "Transparencia", 0f, 1f, 0.75f, 2, "Más alto: se ve más lo de detrás. Más bajo: cristal más lechoso y legible."},
+            {"glass_easy_blur", "Desenfoque", 0f, 1f, 0.2f, 2, "Cuánto se desenfoca lo que hay detrás del cristal."},
+            {"glass_easy_refr", "Refracción", 0f, 2f, 1f, 2, "Cuánto se dobla el fondo en el borde, con su arcoíris. 0 lo deja plano."},
+            {"glass_easy_rim", "Brillo del borde", 0f, 2.5f, 1f, 2, "La línea de luz que recorre el borde del cristal."},
+    };
+
+    /** Un ajuste fácil → pares clave/valor de los ajustes reales que mueve. null si no es fácil. */
+    private static String[] easyGlass(String key, float v) {
+        switch (key) {
+            case "glass_easy_clear":
+                return new String[]{"kashiplus_cc_white", f2(0.12f * (1 - v)), "kashiplus_cc_gloss", f2(10 + 50 * (1 - v)),
+                        "kashiplus_cc_tone", f2(1.05f + 0.2f * v)};
+            case "glass_easy_blur":
+                return new String[]{"kashiplus_cc_blur", f2(40 * v), "icehome_folder_blur", f2(30 * v)};
+            case "glass_easy_refr":
+                return new String[]{"kashiplus_cc_refr", f2(20 * v), "kashiplus_cc_refr_h", f2(Math.min(40, 14 * v)),
+                        "kashiplus_cc_chroma", f2(Math.min(3, v)), "icehome_folder_refr", f2(Math.min(60, 30 * v)),
+                        "icehome_folder_chroma", f2(Math.min(3, 1.2f * v))};
+            case "glass_easy_rim":
+                return new String[]{"kashiplus_cc_rim_gain", f2(v), "kashiplus_cc_rim", f2(0.69f * (0.6f + 0.4f * v))};
+            default:
+                return null;
+        }
+    }
+
+    private static String f2(float v) {
+        return String.format(java.util.Locale.ROOT, "%.2f", v);
+    }
+
+    /** La vista previa sigue a un deslizador (fácil o avanzado) mientras se mueve. */
+    private void previewGlass(String key, float v) {
+        if (glassPreview == null) return;
+        String[] m = easyGlass(key, v);
+        if (m == null) {
+            glassPreview.set(key, v);
+            return;
+        }
+        for (int i = 0; i < m.length; i += 2) glassPreview.set(m[i], Float.parseFloat(m[i + 1]));
+    }
+
+    /** Vuelve a poner en la vista previa lo guardado (al abrir la página o tras un estilo). */
+    private void syncPreview() {
+        if (glassPreview == null) return;
+        for (Object[] it : com.icehome.up.cc.Tune.ITEMS) {
+            if (!"#".equals(it[0])) glassPreview.set((String) it[0], stored(it));
+        }
+    }
+
+    private ScrollView glassPage() {
+        LinearLayout c = column();
+        c.addView(space(16));
+        LinearLayout pv = card();
+        pv.setPadding(px(10), px(10), px(10), px(10));
+        glassPreview = new GlassPreview(this);
+        glassPreview.setClipToOutline(true);
+        glassPreview.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, android.graphics.Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), px(14));
+            }
+        });
+        pv.addView(glassPreview, new LinearLayout.LayoutParams(-1, -2));
+        TextView ph = text(I18n.t("Arrastra la notificación para ver cómo dobla el borde.",
+                "Drag the notification to see how the edge bends."), 12.5f, text3);
+        ph.setPadding(px(6), px(8), px(6), px(2));
+        pv.addView(ph);
+        // Dos fondos: la foto (colores y detalle) y una red de líneas (se ve cómo dobla el borde).
+        final TextView sceneBtn = button(I18n.t("Fondo: flor", "Background: flower"), false, null);
+        sceneBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int s = 1 - glassPreview.scene;
+                glassPreview.setScene(s);
+                sceneBtn.setText(s == 0 ? I18n.t("Fondo: flor", "Background: flower") : I18n.t("Fondo: red", "Background: grid"));
+            }
+        });
+        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(-1, -2);
+        sl.topMargin = px(8);
+        pv.addView(sceneBtn, sl);
+        c.addView(pv);
+        syncPreview();
+        refreshers.add(new Runnable() {
+            @Override
+            public void run() {
+                syncPreview();
+            }
+        });
+
+        // Fácil / Avanzado: las dos partes se hacen una vez y solo se enseña una.
+        final LinearLayout easy = column(), adv = column();
+        easy.setPadding(0, 0, 0, 0);
+        adv.setPadding(0, 0, 0, 0);
+        final LinearLayout modes = new LinearLayout(this);
+        modes.setPadding(0, px(14), 0, 0);
+        final Runnable[] draw = new Runnable[1];
+        draw[0] = new Runnable() {
+            @Override
+            public void run() {
+                easy.setVisibility(glassAdvanced ? View.GONE : View.VISIBLE);
+                adv.setVisibility(glassAdvanced ? View.VISIBLE : View.GONE);
+                modes.removeAllViews();                     // los botones se rehacen con el otro marcado
+                for (int i = 0; i < 2; i++) {
+                    final boolean a = i == 1;
+                    TextView b = button(a ? I18n.t("Avanzado", "Advanced") : I18n.t("Fácil", "Easy"), a == glassAdvanced,
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    if (glassAdvanced == a) return;
+                                    glassAdvanced = a;
+                                    draw[0].run();
+                                }
+                            });
+                    LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, -2, 1f);
+                    if (i == 1) ml.leftMargin = px(10);
+                    modes.addView(b, ml);
+                }
+            }
+        };
+        c.addView(modes);
+
+        easy.addView(label(I18n.t("Estilos", "Styles")));
+        easy.addView(presetCard(Presets.GLASS, Icons.DROP));
+        easy.addView(label(I18n.t("Ajuste rápido", "Quick tuning")));
+        LinearLayout ek = card();
+        for (Object[] it : GLASS_EASY) ek.addView(settingRow(it));
+        easy.addView(ek);
+        easy.addView(label(I18n.section("Calidad y fluidez")));
+        LinearLayout qk = card();
+        qk.addView(settingRow(item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_quality")));
+        qk.addView(settingRow(item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_fps")));
+        easy.addView(qk);
+
+        for (Section s : sections(com.icehome.up.cc.Tune.ITEMS)) {
+            if (s.name.equals("General")) continue;
+            adv.addView(label(shortName(I18n.section(s.name))));
+            LinearLayout k = card();
+            for (Object[] it : s.items) k.addView(settingRow(it));
+            adv.addView(k);
+        }
+        c.addView(easy);
+        c.addView(adv);
+        draw[0].run();
+
+        // Dónde se usa: un mismo cristal para todo.
+        c.addView(label(I18n.t("Dónde se usa", "Where it is used")));
+        LinearLayout on = card();
+        on.addView(settingRow(item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on")));
+        on.addView(settingRow(item(com.icehome.up.telon.Tune.ITEMS, "telon_notif_glass")));
+        on.addView(settingRow(item(com.icehome.up.telon.Tune.ITEMS, "telon_notif_tint")));
+        on.addView(settingRow(item(Tune.ITEMS, "icehome_folder_glass_on")));
+        on.addView(settingRow(item(Tune.ITEMS, "icehome_dock_glass_on")));
+        c.addView(on);
+        TextView hint = text(I18n.t("El centro de control y la notificación cambian al momento. Las carpetas y el dock, al reiniciar el launcher.",
+                "The control center and the notification change at once. Folders and the dock, after restarting the launcher."), 13, text3);
+        hint.setPadding(px(10), px(12), px(10), 0);
+        c.addView(hint);
+        return page(I18n.t("Cristal líquido", "Liquid glass"), I18n.t("Un solo cristal para el centro de control, la notificación flotante y las carpetas.",
+                "One glass for the control center, the floating notification and folders."), true, c);
     }
 
     private ScrollView aboutTab() {
@@ -1714,7 +1905,9 @@ public class SettingsActivity extends Activity {
         r.addView(tc);
         boolean active = when >= bootTime();
         boolean old = active && !"cc_seen".equals(stateKey) && ver != null && !ver.equals(Version.NAME);
-        String label = !active ? (when > 0 ? I18n.t("Sin cargar", "Not loaded") : I18n.t("No detectado", "Not detected"))
+        String label = !active && "launcher_seen".equals(stateKey) && Launchers.noJava(this)
+                ? I18n.t("No compatible", "Not supported")
+                : !active ? (when > 0 ? I18n.t("Sin cargar", "Not loaded") : I18n.t("No detectado", "Not detected"))
                 : old ? I18n.t("Reiniciar", "Restart") : I18n.t("Activo", "Active");
         // Estado, no botón: un punto de color y el texto, como la píldora de Inicio. Antes era una
         // pastilla coral rellena y parecía que se podía tocar (igual que «Copiar registro»).
@@ -2380,6 +2573,7 @@ public class SettingsActivity extends Activity {
         String msg = l && s ? I18n.t("Activo · launcher e interfaz", "Active · launcher & System UI")
                 : l ? I18n.t("Activo solo en el launcher", "Active in launcher only")
                 : s ? I18n.t("Activo solo en la interfaz", "Active in System UI only")
+                : Launchers.noJava(this) ? I18n.t("Launcher de HyperOS 4 no compatible", "HyperOS 4 launcher not supported")
                 : I18n.t("Esperando a LSPosed", "Waiting for LSPosed");
         LinearLayout p = new LinearLayout(this);
         p.setGravity(Gravity.CENTER_VERTICAL);
@@ -2753,6 +2947,7 @@ public class SettingsActivity extends Activity {
 
     /** Pasa a la gráfica el valor de Velocidad o Rebote mientras se mueve su deslizador. */
     private void graph(String key, float v) {
+        previewGlass(key, v);
         if (springGraph == null) return;
         if ("icehome_anim_speed".equals(key)) graphSpeed = v;
         else if ("icehome_anim_bounce".equals(key)) graphBounce = v;
@@ -3415,6 +3610,24 @@ public class SettingsActivity extends Activity {
         return n;
     }
 
+    /** Una notificación emergente de prueba (canal de importancia alta: sale arriba de la pantalla). */
+    private void testNotification() {
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 7);
+            return;
+        }
+        android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
+        nm.createNotificationChannel(new android.app.NotificationChannel("test",
+                I18n.t("Pruebas", "Tests"), android.app.NotificationManager.IMPORTANCE_HIGH));
+        nm.notify(1, new android.app.Notification.Builder(this, "test")
+                .setSmallIcon(getApplicationInfo().icon)
+                .setContentTitle("HyperSpring")
+                .setContentText(I18n.t("Así llegan ahora las notificaciones.", "This is how notifications arrive now."))
+                .setAutoCancel(true)
+                .build());
+    }
+
     private TextView button(String s, boolean primary, View.OnClickListener l) {
         TextView b = text(s, 15, primary ? onAccent : text);
         b.setTypeface(Typeface.create(Typeface.DEFAULT, 600, false));
@@ -3740,8 +3953,17 @@ public class SettingsActivity extends Activity {
         android.content.SharedPreferences.Editor e = getSharedPreferences(PrefsProvider.PREFS, 0).edit();
         if (value == null) e.remove(key);
         else e.putString(key, value);
+        // Un ajuste fácil del cristal se reparte en los de verdad (al borrarlo, vuelven a su valor).
+        String[] m = key.startsWith("glass_easy_") ? easyGlass(key, value == null ? 0f : Float.parseFloat(value)) : null;
+        if (m != null) {
+            for (int i = 0; i < m.length; i += 2) {
+                if (value == null) e.remove(m[i]);
+                else e.putString(m[i], m[i + 1]);
+            }
+        }
         e.commit();
         send(Remote.TUNE);
+        if (m != null) for (Runnable r : refreshers) r.run();   // las filas avanzadas y la vista previa
     }
 
     private void send(String action) {

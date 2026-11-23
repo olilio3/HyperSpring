@@ -59,6 +59,7 @@ final class IconPush {
     private static final ArrayList<Moved> moved = new ArrayList<>();
     private static float applied, fall = 1f;
     private static boolean gaveUp, stepping;
+    private static volatile boolean snap;
     private static long lastStepNs;
     private static ValueAnimator reset;
     private static WeakReference<ViewTreeObserver> watched = new WeakReference<>(null);
@@ -74,6 +75,8 @@ final class IconPush {
         final float cx, cy, l, t, r, b;
         /** Lo sumado ahora a su translation. */
         float dx, dy;
+        /** La translation que dejamos nosotros la última vez (para saber si otro la ha pisado). */
+        float wx = Float.NaN, wy = Float.NaN;
         /** Empuje actual y su velocidad (muelle de la ola), el que se quiere, dirección y distancia. */
         float k, kv, target, ux, uy, d;
 
@@ -131,6 +134,17 @@ final class IconPush {
         MAIN.post(SCHEDULE);
     }
 
+    /** La ventana no va a un icono (isla dinámica, horizontal…): los empujados vuelven a su sitio. */
+    static void settle() {
+        if (wanted == 0f) return;
+        wanted = 0f;
+        snap = true;
+        lastFrameMs = SystemClock.uptimeMillis();
+        if (posted) return;
+        posted = true;
+        MAIN.post(SCHEDULE);
+    }
+
     // Se aplica en el siguiente fotograma del launcher (no en mitad de uno ya dibujado).
     private static final Choreographer.FrameCallback TICK = new Choreographer.FrameCallback() {
         @Override
@@ -160,6 +174,15 @@ final class IconPush {
     }
 
     private static void apply(float f) {
+        // Al cerrar se reutilizan los iconos de la apertura: si el destino ya no es uno de ellos
+        // (otra página, la app venía de una carpeta…), no se empuja hacia el vacío.
+        // Vuelven de golpe, sin ola: la app tapa aún la pantalla y no van hacia ningún icono.
+        if (snap || (f > 0.002f && !moved.isEmpty() && !onIcon(centerX, centerY))) {
+            snap = false;
+            restore();
+            gaveUp = f > 0.002f;
+            return;
+        }
         if (f <= 0.002f) {                     // de vuelta en el icono: todo en su sitio
             gaveUp = false;
             applied = 0f;
@@ -208,13 +231,28 @@ final class IconPush {
         if (springs) startStepping();
     }
 
+    private static boolean onIcon(float x, float y) {
+        for (Moved m : moved) if (m.view.get() != null && m.contains(x, y)) return true;
+        return false;
+    }
+
     /** Pone el empuje {@code m.k} en la vista, sumando solo la diferencia con lo que ya tenía nuestro. */
     private static void write(Moved m, View v) {
         float nx = m.ux * m.k, ny = m.uy * m.k;
-        v.setTranslationX(v.getTranslationX() - m.dx + nx);
-        v.setTranslationY(v.getTranslationY() - m.dy + ny);
+        m.wx = base(v.getTranslationX(), m.wx, m.dx) + nx;
+        m.wy = base(v.getTranslationY(), m.wy, m.dy) + ny;
+        v.setTranslationX(m.wx);
+        v.setTranslationY(m.wy);
         m.dx = nx;
         m.dy = ny;
+    }
+
+    /**
+     * La translation del icono sin lo nuestro. Si MIUI la ha puesto a otro valor (su animación del
+     * dock al abrir y cerrar rápido), lo nuestro ya no está: restar dx otra vez lo descolocaba (#32).
+     */
+    static float base(float now, float wrote, float d) {
+        return now == wrote ? now - d : now;
     }
 
     private static void startStepping() {
@@ -295,11 +333,18 @@ final class IconPush {
             }
         }
         if (!moved.isEmpty()) {
-            // Para el registro: el icono de la app no se mueve (si ninguno lo contiene, se movería todo).
-            String still = "ninguno";
+            // El icono de la app no se mueve. Si ninguno está en el destino (icono en otra página,
+            // en una carpeta, la app se va a la isla dinámica o venía en horizontal), no se empuja
+            // nada: se empujaría hacia un sitio vacío.
+            String still = null;
             for (Moved m : moved) {
                 View v = m.view.get();
                 if (v != null && m.contains(centerX, centerY)) still = v.getClass().getSimpleName();
+            }
+            if (still == null) {
+                moved.clear();
+                Log.i("empujar iconos: ningún icono en el destino (" + Math.round(centerX) + "," + Math.round(centerY) + "): sin empuje");
+                return false;
             }
             Log.i("empujar iconos: " + moved.size() + " iconos; se queda quieto: " + still);
             return true;
@@ -356,8 +401,8 @@ final class IconPush {
         for (Moved m : moved) {
             View v = m.view.get();
             if (v == null) continue;
-            v.setTranslationX(v.getTranslationX() - m.dx);
-            v.setTranslationY(v.getTranslationY() - m.dy);
+            v.setTranslationX(base(v.getTranslationX(), m.wx, m.dx));
+            v.setTranslationY(base(v.getTranslationY(), m.wy, m.dy));
         }
         moved.clear();
     }

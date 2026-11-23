@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Pasar la actualización descargada al instalador del sistema (que pide confirmación). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Solo el botón «Probar notificación» (notificaciones estilo iOS 27). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Módulos antiguos (para avisar) y apps que se modifican (para la tarjeta de compatibilidad). -->
     <queries>
         <package android:name="com.telon.fx" />

@@ -317,6 +317,13 @@ public class MainHook {
             } catch (Throwable t) {
                 XposedBridge.log(t);
             }
+            // Notificaciones iOS 27: el hook se instala siempre y mira su interruptor en cada
+            // notificación (se enciende y se apaga sin reiniciar la interfaz).
+            try {
+                com.icehome.up.telon.NotifPop.install(cl);
+            } catch (Throwable t) {
+                com.icehome.up.telon.Log.e("no se pudieron instalar las notificaciones iOS 27 (¿otra versión de HyperOS?)", t);
+            }
             onAttach(new WithContext() {
                 @Override
                 public void run(android.content.Context c) {
@@ -349,6 +356,13 @@ public class MainHook {
                 com.icehome.up.cc.CcGlass.installFramework();
             } catch (Throwable t) {
                 XposedBridge.log(t);
+            }
+            // Cristal en la notificación flotante: comparte la captura del fondo con el centro de
+            // control. Mira su interruptor en cada dibujo.
+            try {
+                com.icehome.up.cc.NotifGlass.install(cl);
+            } catch (Throwable t) {
+                com.icehome.up.telon.Log.e("no se pudo instalar el cristal de la notificación flotante", t);
             }
             watchPluginLoader();
         }
