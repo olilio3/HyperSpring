@@ -79,11 +79,6 @@ public final class Remote {
         Tune.reload(ctx);
         LauncherSafe.started(ctx);
         try {
-            if (ctx instanceof Application) UnlockZoom.install((Application) ctx);
-        } catch (Throwable t) {
-            Log.e("zoom al desbloquear: no se pudo instalar", t);
-        }
-        try {
             final Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
             AutoPause.install(app, false, new Runnable() {
                 @Override

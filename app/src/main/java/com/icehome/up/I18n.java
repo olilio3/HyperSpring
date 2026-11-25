@@ -78,6 +78,7 @@ final class I18n {
         s("Pausa automática", "Automatic pause");
         s("Carpetas", "Folders");
         s("Menú de atajos", "Shortcut menu");
+        s("Cajón de apps", "App drawer");
         s("Función", "Feature");
         s("Telón", "Curtain");
         s("Captura que encoge", "Squeezing screenshot");
@@ -95,8 +96,6 @@ final class I18n {
                 "The window comes out of its icon and goes back into it in a cup or genie shape. Applies after restarting the launcher.");
         i("icehome_stack_on", "Widget stack",
                 "Stacked widgets shuffle with a gesture and can be dragged freely. Applies after restarting the launcher.");
-        i("icehome_folder_morph_on", "Springy folders",
-                "Folders resize with a soft bounce when they open or close. Applies after restarting the launcher.");
         i("icehome_folder_glass_on", "Glass folders",
                 "Open folders get a blurred glass background instead of a flat colour. Applies after restarting the launcher.");
         i("icehome_curtain_on", "Bending recents",
@@ -135,12 +134,16 @@ final class I18n {
                 "How much recents cards bend depending on your finger's speed.");
         i("icehome_curtain_style", "Curtain style",
                 "On: the top stays fixed and the bottom bends, like a stage curtain. Off: the middle bends, like a drape.");
+        i("icehome_drawer_on", "HyperOS 4 style drawer",
+                "When the drawer opens, the home screen moves back and blurs little by little, and the categories become glass capsules. Applies after restarting the launcher.");
+        i("icehome_drawer_blur", "Drawer blur",
+                "How much the background blurs when the drawer opens; it grows with your finger. 0 uses Xiaomi's blur (if you turned it on in the drawer settings).");
         i("icehome_menu_on", "Springy shortcut menu",
-                "When you long-press an icon, its menu pops out with a bounce and a liquid-glass edge. Applies after restarting the launcher.");
+                "When you long-press an icon, its menu pops out with a bounce and liquid glass. Applies after restarting the launcher.");
         i("icehome_menu_bounce", "Bounce",
                 "How far the menu overshoots its size as it leaves the icon before settling. 0 keeps the HyperOS behaviour.");
         i("icehome_menu_glass", "Liquid glass",
-                "A glass edge that bends the wallpaper, with a highlight on top. Uses the folders' quality, thickness and refraction. Needs a static wallpaper.");
+                "Glass that shows the blurred wallpaper and bends it at the edge, with a highlight on top. Uses the folders' quality, thickness and refraction. Needs a static wallpaper.");
         i("icehome_folder_blur", "Blur",
                 "How much the content behind an open folder is blurred, in dp.");
         i("icehome_folder_quality", "Glass quality",
@@ -188,7 +191,6 @@ final class I18n {
         i("kashiplus_cc_quality", "Quality", "Resolution of the background seen through the glass: 0 low (faster), 1 medium, 2 high (sharper, uses more). Applies on the next capture.");
         i("kashiplus_cc_fps", "Glass FPS", "How many times per second the notification glass is redrawn while it moves. Lower uses less, but the glass lags slightly.");
         i("glass_easy_clear", "Transparency", "Higher: you see more of what is behind. Lower: milkier, more readable glass.");
-        i("glass_easy_blur", "Blur", "How much what is behind the glass is blurred.");
         i("glass_easy_refr", "Refraction", "How much the background bends at the edge, with its rainbow. 0 leaves it flat.");
         i("glass_easy_rim", "Edge shine", "The line of light running along the glass edge.");
         i("icehome_light_parallel", "Light parallel animation", "If you open another app while one is closing, the closing one flies to its icon as a rectangle of its colour instead of with the genie (two genies at once stutter on modest phones). 0 off, 1 auto (only if the phone stutters), 2 always.");
@@ -219,8 +221,6 @@ final class I18n {
                 "The row of icons at the bottom of the home screen becomes a floating liquid-glass bar. Uses the folders' glass and needs a static wallpaper. Beta: applies after restarting the launcher.");
         i("icehome_genie_auto", "Automatic resolution",
                 "If several animations in a row stutter, the resolution drops by 10 % on its own (down to 50 %). It goes back to yours when you touch any setting or restart the launcher.");
-        i("icehome_unlock_zoom", "Unlock zoom",
-                "When you unlock, the home screen comes in slightly larger and settles to its size, all in one piece. 0 turns it off.");
         i("icehome_auto_heat", "When the phone is hot",
                 "When the system reports that the phone is very hot, HyperSpring pauses itself (genie, curtain and recents) and comes back once it cools down. Like the pause tile, but automatic.");
         i("icehome_auto_game", "In games",
@@ -249,6 +249,14 @@ final class I18n {
                 "How far the refraction reaches inwards from the edge, in dp. Small buttons limit it automatically.");
         i("kashiplus_cc_chroma", "Colour dispersion",
                 "Rainbow-like colour fringing at the corners, like a prism. 0 turns it off.");
+        i("kashiplus_cc_bevel", "Flat bevel",
+                "Shape of the edge lens. 0 = the usual round curve; 1 = flat centre with all the bending right at the edge, like iOS 26. With 1, raise the refraction.");
+        i("kashiplus_cc_fresnel", "White edge line",
+                "A thin white line all around the edge: brightest on the side facing the light and a little softer on the opposite one. 0 turns it off.");
+        i("kashiplus_cc_shade", "Inner shadow",
+                "A soft shadow inside the bottom edge, so the glass looks thick. 0 turns it off.");
+        i("kashiplus_cc_depth", "Depth",
+                "The edge lens curves like a dome: what is behind opens outwards from the centre. 0 turns it off.");
         i("kashiplus_cc_edge", "Lens edge",
                 "Thickness of each tile's lit edge, in dp.");
         i("kashiplus_cc_edge_over", "Edge colour",
@@ -261,6 +269,8 @@ final class I18n {
                 "Brightness of that line. 0 turns it off.");
         i("kashiplus_cc_dim", "Dim the background",
                 "How much the screen behind the control center is darkened.");
+        i("kashiplus_cc_bg_blur", "Background blur",
+                "How much the screen behind the control center is blurred. 1 = like HyperOS, 0 = no blur.");
     }
 
     private I18n() {

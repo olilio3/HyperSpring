@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v3.1.4</b> · <a href="README.md">English</a>
+  <b>v3.2.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">
@@ -67,7 +67,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 | | |
 |---|---|
 | **Móvil** | **Solo Xiaomi, Redmi o POCO.** En otras marcas (realme, OPPO, Samsung, Honor…) no puede funcionar: HyperSpring engancha el launcher y la interfaz propios de Xiaomi. |
-| **Sistema** | HyperOS 2 o 3 (Android 13 o superior). El cristal y la refracción necesitan Android 13+. |
+| **Sistema** | HyperOS 2 o 3 (Android 13 o superior). El cristal y la refracción necesitan Android 13+. **HyperOS 4, sin probar:** la parte de la interfaz del sistema (telón, centro de control, notificaciones) debería funcionar; la del launcher solo con un launcher en Java como el de Kashi, porque el launcher de serie de HyperOS 4 no se puede enganchar desde LSPosed. |
 | **Root** | Magisk, KernelSU o APatch. Concede root a la app HyperSpring para que los botones de reiniciar funcionen al momento. |
 | **Framework** | **Vector 2.2** (JingMatrix) u otro LSPosed con libxposed API 101+. Desde la 3.0.0 no hay APK para los LSPosed antiguos (API 93): el último es la 2.13.1. |
 | **Ámbitos** | `com.miui.home` (Launcher del sistema) o, en los POCO, `com.mi.android.globallauncher` (POCO Launcher), y `com.android.systemui` (Interfaz del sistema). Si LSPosed lo muestra, marca también `miui.systemui.plugin`. |

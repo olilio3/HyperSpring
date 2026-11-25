@@ -71,7 +71,8 @@ final class GlassBar extends View {
             + "}\n"
             + "float2 gradSdRoundedRect(float2 coord, float2 hs, float r) {\n"
             + "  float2 cc = abs(coord) - (hs - float2(r));\n"
-            + "  if (cc.x >= 0.0 || cc.y >= 0.0) return sign(coord) * normalize(max(cc, 0.0));\n"
+            // + 0.0001: con cc.x = 0 y cc.y < 0, normalize(0) daba NaN (un punto o raya negra).
+            + "  if (cc.x >= 0.0 || cc.y >= 0.0) return sign(coord) * normalize(max(cc, 0.0) + 0.0001);\n"
             + "  float gx = step(cc.y, cc.x);\n"
             + "  return sign(coord) * float2(gx, 1.0 - gx);\n"
             + "}\n"

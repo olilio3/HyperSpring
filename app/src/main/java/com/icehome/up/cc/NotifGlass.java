@@ -64,6 +64,7 @@ public final class NotifGlass {
         // si cambia el tamaño o un ajuste; si solo cambia el fondo, se le pone el nuevo.
         android.graphics.RuntimeShader body, lens;
         Bitmap bound;
+        boolean bodyBaked;                                  // el cuerpo ya usa la captura con el color hecho
         float bw, bh, br;
         int sig;
         float tx = Float.NaN, ty = Float.NaN;
@@ -310,6 +311,23 @@ public final class NotifGlass {
             GlassLook.place(st.body, b, 0, 0, 1, 1);
             GlassLook.place(st.lens, b, 0, 0, 1, 1);
             st.bound = b;
+            st.bodyBaked = false;
+        }
+        // El cuerpo, con la captura que ya trae vivid() hecho (GlassShader.baked): se ve igual y
+        // la GPU se ahorra ese cálculo en toda la tarjeta. Hasta que esté, la normal.
+        if (!st.bodyBaked) {
+            final View inv = v;
+            Bitmap bk = GlassShader.baked(b, prm.sat, prm.tone, CcGlass.BIO_DARKER, prm.white, new Runnable() {
+                @Override
+                public void run() {
+                    inv.postInvalidate();
+                }
+            });
+            if (bk != null) {
+                st.body.setInputShader("wall", GlassShader.linear(bk));
+                st.body.setFloatUniform("baked", 1f);
+                st.bodyBaked = true;
+            }
         }
 
         // Punto de la tarjeta → captura. Android aplica a la fila primero su matriz de animación
@@ -353,7 +371,7 @@ public final class NotifGlass {
         c.drawRect(0, 0, w, h, st.glass);
         c.drawPath(PATH, st.veil);                          // el cuerpo y la luz ya se recortan solos
         st.glass.setShader(st.lens);
-        c.drawRect(0, 0, w, h, st.glass);
+        GlassShader.drawRing(c, w, h, r, GlassLook.lensReach(prm, w, h, dp), st.glass);   // más adentro no pinta nada
         c.restoreToCount(save);
 
         st.drawnAt = now;

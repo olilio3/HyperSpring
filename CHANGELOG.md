@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.2.0
+
+**New**
+- **HyperOS 4 style app drawer** (Launcher → App drawer): while the drawer opens, the home screen moves back and the background blurs little by little with your finger. The blur stays while the drawer is open. **Drawer blur** sets how strong it is (0 uses Xiaomi's). The categories become glass capsules (the selected one in blue), the search bar is a floating glass capsule that comes in with a small bounce, and icons fade out at the top and bottom edges instead of being cut.
+- **Clear glass** style: what is behind stays almost sharp, the edge bends it like a dome, and only a thin white line is drawn all around. No veil, no tinted edge, no dark inner line, no gloss and almost no rainbow, like HyperLight.
+- **Sliders bend like HyperLight**: the white fill of the volume and brightness sliders also goes through the lens, so it curves strongly at the sides of the tile.
+- **Drop-down menus** in the app for list settings (glass quality, frames per second, light parallel animation, Squeeze colour, Gemini colours).
+
+**Improvements**
+- **Control center glass** no longer captures the notification shade behind it.
+- **Glass like HyperLight**: the rainbow is 40 % along the whole edge and full only in the corners; the white line is thinner on small buttons; tall tiles (like volume) can bend much more (the lens now reaches half the short side, and the refraction sliders go up to 80 / 60).
+- **Folder glass**: the glow no longer stays on in a corner after a long press, and the background no longer jumps in scale when the menu appears.
+- **Long-press menu** is full glass, like folders.
+- **Widget stack**: dragging down follows your finger more, switches sooner and bounces out.
+- **Notification glass** uses less GPU.
+
+**Fixes**
+- **Export settings** could create an empty file (0 bytes) with some file managers. Now it retries another way, and if it still fails it deletes the empty file and tells you.
+- A black dot or line could appear in the glass.
+
+**Removed**
+- The zoom when entering the home screen after unlocking.
+
 ## 3.1.4
 
 **Faster on mid-range phones**

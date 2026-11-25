@@ -56,7 +56,7 @@ final class GlassFolder {
     static final float STRENGTH_DP = 0f;
     /** Canto: estira el color de hasta EDGE_OVER_DP por fuera (igual que CcGlass). */
     static final float EDGE_OVER_DP = 3f, EDGE_SAT = 0.4f;
-    static final float GLASS_SAT = 1.55f, GLASS_DARKER = 0.08f, GLASS_WHITE = 0.03f, GLASS_TONE = 1.1f, INNER_DARK = 0.02f;
+    static final float GLASS_SAT = 1.3f, GLASS_DARKER = 0.08f, GLASS_WHITE = 0.03f, GLASS_TONE = 1.0f, INNER_DARK = 0.02f;
     static final float DISPERSION = 0.06f;       // separación de colores (aberración cromática)
     static final float REFRACT_ALPHA = 0.9f;
     /**
@@ -108,6 +108,8 @@ final class GlassFolder {
     private static long wallCheckedMs;
     private static final long WALL_CHECK_MS = 2000;
     private static float wallOffsetX = 0.5f, wallOffsetY = 0.5f;
+    /** Tamaño de la ventana del launcher (pantalla completa), para cuando la carpeta va en otra. */
+    private static float screenW, screenH;
 
     private static Method mIconImageView, mBlurSupported;
     private static final Map<View, Glass> GLASS = new WeakHashMap<>();
@@ -494,12 +496,30 @@ final class GlassFolder {
         private float glowX, glowY, glow;
         float glowTarget;
         private android.animation.ValueAnimator glowAnim;
+        private final Runnable glowOff = new Runnable() {
+            @Override
+            public void run() {
+                press(glowX, glowY, false);
+            }
+        };
 
         /** El dedo se mueve, baja (on) o se levanta (off). Se enciende rápido y se apaga despacio. */
         void press(float x, float y, boolean on) {
             glowX = x;
             glowY = y;
             float target = on ? 1f : 0f;
+            if (on && glowTarget <= 0f) {
+                // Con pulsación larga sale el menú y el levantar el dedo le llega a su ventana, no
+                // a la carpeta: sin esto el brillo se quedaba encendido (un arco suelto en la esquina).
+                View h = hostRef.get();
+                if (h != null) {
+                    h.removeCallbacks(glowOff);
+                    h.postDelayed(glowOff, android.view.ViewConfiguration.getLongPressTimeout());
+                }
+            } else if (!on) {
+                View h = hostRef.get();
+                if (h != null) h.removeCallbacks(glowOff);    // ya se levantó el dedo: no hace falta
+            }
             if (target != glowTarget) {
                 glowTarget = target;
                 if (glowAnim != null) glowAnim.cancel();
@@ -745,6 +765,16 @@ final class GlassFolder {
                 if (host == null) return false;
                 View root = host.getRootView();
                 float sw = root.getWidth(), sh = root.getHeight();
+                // Al mantener pulsada la carpeta, HyperOS la pinta dentro de la ventanita del menú:
+                // su raíz es pequeña y el fondo salía con otra escala (el «salto»). El fondo cubre
+                // la pantalla entera: se usa el tamaño de la última raíz de pantalla completa.
+                if (sw >= screenW * 0.9f && sh >= screenH * 0.9f) {
+                    screenW = sw;
+                    screenH = sh;
+                } else if (screenW > 0f) {
+                    sw = screenW;
+                    sh = screenH;
+                }
                 if (sw <= 0f || sh <= 0f) return false;
                 float bw = bmp.getWidth(), bh = bmp.getHeight();
                 float s = Math.max(sw / bw, sh / bh);
@@ -759,6 +789,7 @@ final class GlassFolder {
                 // Solo esto cambia en cada fotograma; cada uniform que se pone rehace el búfer del shader.
                 rs.setFloatUniform("origin", (loc[0] + box.left * sc[0] + left) / s, (loc[1] + box.top * sc[1] + top) / s);
                 rs.setFloatUniform("scale", sc[0] / s, sc[1] / s);
+                rs.setFloatUniform("pxs", (sc[0] + sc[1]) * 0.5f);   // antialias en px de pantalla al escalar
                 boolean cfg = !shaderCfgSet || shaderCfg[3] != (blur ? 1f : 0f) || shaderCfg[4] != liquidH
                         || shaderCfg[5] != liquidAmt || shaderCfg[6] != liquidChroma || shaderCfg[7] != liquidLight;
                 if (cfg) {

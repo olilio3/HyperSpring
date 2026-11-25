@@ -815,10 +815,8 @@ public final class CcGlass {
     /**
      * Desenfoque del fondo: HyperOS 3 lo aplica muy fuerte y oscuro. Se escala el valor que el
      * plugin envía a SystemUI (radio y oscurecido del fondo), no su estado interno, así la
-     * apertura y los gestos siguen igual. Se suma al ajuste "intensidad del desenfoque" del mod.
+     * apertura y los gestos siguen igual. Lo regula el ajuste «Desenfoque del fondo» (Tune.bgBlur).
      */
-    static final float BACKGROUND_BLUR_SCALE = 1f;
-
     private static void hookBackgroundBlur(ClassLoader cl) {
         Class<?> c = find("miui.systemui.controlcenter.windowview.ControlCenterExpandController", cl);
         if (c == null) return;
@@ -827,7 +825,7 @@ public final class CcGlass {
             XposedBridge.hookMethod(m, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam p) {
-                    if (BACKGROUND_BLUR_SCALE != 1f) p.args[0] = (Float) p.args[0] * BACKGROUND_BLUR_SCALE;
+                    if (Tune.bgBlur != 1f) p.args[0] = (Float) p.args[0] * Tune.bgBlur;
                 }
             });
         }
@@ -1174,23 +1172,40 @@ public final class CcGlass {
     }
 
     /** IWindowManager.captureDisplay con la ventana del centro de control excluida (Android 14+). */
+    // Capas que Xiaomi deja fuera de la foto por nombre (la misma lista que usa HyperLight).
+    private static final String[] SHADE_LAYERS = {"NotificationShade#", "StatusBar#", "StatusBar1#",
+            "NavigationBar0#", "DynamicIslandWindow#", "VolumePanelDialogController#", "ShellDropTarget#",
+            "MiuiShellDropTarget#", "NotificationModalWindowManager#", "SecondaryHomeHandle0#"};
+
     private static Bitmap screenshot(int display, SurfaceControl exclude, float frameScale) throws Exception {
-        Class<?> sc = Class.forName("android.window.ScreenCapture");
-        Class<?> builderClass = Class.forName("android.window.ScreenCapture$CaptureArgs$Builder");
-        Object builder = builderClass.getDeclaredConstructor().newInstance();
-        builderClass.getMethod("setFrameScale", float.class).invoke(builder, frameScale);
-        if (exclude != null) {
-            builderClass.getMethod("setExcludeLayers", SurfaceControl[].class)
-                    .invoke(builder, (Object) new SurfaceControl[]{exclude});
-        }
-        Object args = builderClass.getMethod("build").invoke(builder);
-        Object listener = sc.getMethod("createSyncCaptureListener").invoke(null);
         Object wm = Class.forName("android.view.WindowManagerGlobal").getMethod("getWindowManagerService").invoke(null);
         Method cap = null;
         for (Method m : wm.getClass().getMethods()) {
             if (m.getName().equals("captureDisplay") && m.getParameterTypes().length == 3) cap = m;
         }
         if (cap == null) throw new NoSuchMethodException("captureDisplay");
+        // La clase de los argumentos la dice captureDisplay: ScreenCapture$CaptureArgs y, en
+        // Android 17, ScreenCaptureInternal$CaptureArgs. Así vale aunque existan las dos.
+        Class<?> argsClass = cap.getParameterTypes()[1];
+        Class<?> sc = argsClass.getDeclaringClass();
+        Class<?> builderClass = Class.forName(argsClass.getName() + "$Builder");
+        Object builder = builderClass.getDeclaredConstructor().newInstance();
+        builderClass.getMethod("setFrameScale", float.class).invoke(builder, frameScale);
+        if (exclude != null) {
+            builderClass.getMethod("setExcludeLayers", SurfaceControl[].class)
+                    .invoke(builder, (Object) new SurfaceControl[]{exclude});
+        }
+        // Extra de Xiaomi (como HyperLight): quita capas por nombre para que el panel de
+        // notificaciones y las barras nunca entren en el fondo del cristal. Sin él, se salta.
+        try {
+            builderClass.getMethod("setExcludeOrIncludeLayerNames", String[].class)
+                    .invoke(builder, (Object) SHADE_LAYERS);
+        } catch (NoSuchMethodException ignored) { }
+        try {
+            builderClass.getMethod("setCaptureMode", int.class).invoke(builder, 1);
+        } catch (NoSuchMethodException ignored) { }
+        Object args = builderClass.getMethod("build").invoke(builder);
+        Object listener = sc.getMethod("createSyncCaptureListener").invoke(null);
         cap.invoke(wm, display, args, listener);
         Object buffer = listener.getClass().getMethod("getBuffer").invoke(listener);
         if (buffer == null) return null;
@@ -1240,10 +1255,12 @@ public final class CcGlass {
                     try {
                         Object b = sliderViews(p.thisObject);
                         View host = sliderView(b, p.thisObject, "progressBg", "progress_bg");
-                        exclude(sliderView(b, p.thisObject, "progress", "progress"));   // relleno: blanco sólido
+                        View fill = sliderView(b, p.thisObject, "progress", "progress");
+                        exclude(fill);                                                  // relleno: blanco sólido
                         exclude(sliderView(b, p.thisObject, "icon", "icon"));           // icono del slider
                         if (host != null) {
                             apply(host, 0f, false);
+                            bendFill(fill, host);
                         } else {
                             // Para el siguiente informe: qué campos tiene el slider en esta versión.
                             once("slider", new NoSuchFieldError("fondo del slider; campos: " + fieldNames(p.thisObject)
@@ -1357,6 +1374,63 @@ public final class CcGlass {
 
     // ---------------------------------------------------------------- aplicar
     private static final Set<View> EXCLUDED = Collections.newSetFromMap(new WeakHashMap<View, Boolean>());
+
+    /** Rellenos de slider con lente, y la pieza de cada uno (débil: no retiene las vistas). */
+    private static final java.util.WeakHashMap<View, java.lang.ref.WeakReference<View>> BENT = new java.util.WeakHashMap<>();
+    /** Lo último que se le puso a cada relleno (tamaño, sitio, lente), para no rehacerlo igual. */
+    private static final java.util.WeakHashMap<View, String> BENT_KEY = new java.util.WeakHashMap<>();
+
+    /**
+     * Como HyperLight: el relleno del slider también pasa por la lente, así que su borde se curva
+     * mucho al llegar a los lados de la pieza (lo que se ve en el volumen). Solo se dobla el
+     * relleno; el fondo ya lo dobla el cristal. Se rehace cuando el relleno cambia de tamaño o de
+     * sitio (al subir o bajar el nivel).
+     */
+    static void bendFill(View fill, View host) {
+        if (fill == null || host == null || Build.VERSION.SDK_INT < 33) return;
+        if (!BENT.containsKey(fill)) {
+            fill.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                    java.lang.ref.WeakReference<View> h = BENT.get(v);
+                    if (h != null && h.get() != null) bend(v, h.get());
+                }
+            });
+        }
+        BENT.put(fill, new java.lang.ref.WeakReference<>(host));
+        bend(fill, host);
+    }
+
+    private static void bend(View fill, View host) {
+        try {
+            float w = host.getWidth(), h = host.getHeight();
+            if (w <= 0f || h <= 0f || fill.getWidth() <= 0) return;
+            float dp = host.getResources().getDisplayMetrics().density;
+            // El volumen de HyperLight no reduce la lente por tamaño: hasta la mitad del lado corto.
+            float rh = Math.min(Tune.refrH * dp, Math.min(w, h) / 2f), amt = Tune.refr * dp;
+            int[] a = new int[2], c = new int[2];
+            fill.getLocationInWindow(a);
+            host.getLocationInWindow(c);
+            float radius = Math.max(0f, radiusOf(host));
+            String key = w + "," + h + "," + (a[0] - c[0]) + "," + (a[1] - c[1]) + "," + rh + "," + amt + "," + radius + "," + Tune.depth;
+            if (key.equals(BENT_KEY.get(fill))) return;
+            BENT_KEY.put(fill, key);
+            if (rh <= 0f || amt <= 0f) {
+                fill.setRenderEffect(null);
+                return;
+            }
+            RuntimeShader s = new RuntimeShader(GlassShader.FILL_LENS);
+            s.setFloatUniform("size", w, h);
+            s.setFloatUniform("offset", a[0] - c[0], a[1] - c[1]);
+            s.setFloatUniform("radius", Math.min(radius, Math.min(w, h) / 2f));
+            s.setFloatUniform("refrH", rh);
+            s.setFloatUniform("refrAmt", amt);
+            s.setFloatUniform("depth", Tune.depth);
+            fill.setRenderEffect(android.graphics.RenderEffect.createRuntimeShaderEffect(s, "content"));
+        } catch (Throwable t) {
+            once("lente del relleno", t);
+        }
+    }
 
     /** Piezas que no deben ser cristal (relleno de los sliders): se quita y se restaura MIUI. */
     static void exclude(View v) {
@@ -1632,12 +1706,15 @@ public final class CcGlass {
                     rs.setFloatUniform("bandAlpha", BAND_ALPHA);
                     rs.setFloatUniform("tone", TONE);
                     rs.setFloatUniform("mag", 0f);
-                    rs.setFloatUniform("rimw", Tune.rim * dp);
+                    rs.setFloatUniform("rimw", Tune.rim * dp * GlassLook.rimScale(Math.min(w, h), dp));
                     rs.setFloatUniform("glow", GLOW_DP * dp);
-                    rs.setFloatUniform("innerDark", INNER_DARK);
+                    // Sin canto (estilo limpio, como HyperLight) tampoco la línea oscura de debajo.
+                    rs.setFloatUniform("innerDark", Tune.edge > 0f ? INNER_DARK : 0f);
                     rs.setFloatUniform("sat", SATURATION);
                     rs.setFloatUniform("rimGain", Tune.rimGain);
                     rs.setFloatUniform("light", LENS_LIGHT);
+                    rs.setFloatUniform("fresnel", Tune.fresnel);
+                    rs.setFloatUniform("shade", Tune.shade);
                     shader = rs;
                     lens.setShader(rs);
                     lens.setStyle(Paint.Style.FILL);
@@ -1754,12 +1831,17 @@ public final class CcGlass {
                     u.setFloatUniform("overshoot", Tune.edgeOver * dp);
                     u.setFloatUniform("edgeSat", Tune.edgeSat);
                     u.setFloatUniform("mag", Tune.magnify);
-                    // Refracción del borde (lente de Kyant0/AndroidLiquidGlass), sin pasar de un
-                    // tercio del lado corto para que en los botones pequeños no se coma el centro.
-                    float lensH = Math.min(Tune.refrH * dp, Math.min(w, h) / 3f);
+                    // Refracción del borde (lente de Kyant0/AndroidLiquidGlass), hasta la mitad del
+                    // lado corto: los tiles altos doblan mucho, como en HyperLight. Los botones
+                    // pequeños ya los frena lensScale.
+                    float side = Math.min(w, h);
+                    float want = Tune.refrH * dp * GlassLook.lensScale(side, dp, false);
+                    float lensH = Math.min(want, side / 2f);
                     u.setFloatUniform("refrH", lensH);
-                    u.setFloatUniform("refrAmt", Tune.refr * dp * (lensH / Math.max(1f, Tune.refrH * dp)));
+                    u.setFloatUniform("refrAmt", Tune.refr * dp * GlassLook.lensScale(side, dp, true) * (lensH / Math.max(1f, want)));
                     u.setFloatUniform("chroma", Tune.chroma);
+                    u.setFloatUniform("bevel", Tune.bevel);
+                    u.setFloatUniform("depth", Tune.depth);
                     u.setFloatUniform("rimGain", 0f);          // el canto de luz va encima (overlay)
                     u.setFloatUniform("light", 0f);
                     under = u;
@@ -1767,9 +1849,21 @@ public final class CcGlass {
                 } else {
                     u = (RuntimeShader) under;
                 }
-                if (underBackdrop != b) {
-                    u.setInputShader("wall", GlassShader.linear(b));
-                    underBackdrop = b;
+                // La captura con el color ya hecho en la CPU (ver GlassShader.baked). Hasta que esté,
+                // la de siempre y el shader lo calcula: se ve igual, solo cuesta más.
+                final View hv = host;
+                Bitmap bk = GlassShader.baked(b, kind == BUTTON ? Tune.satButton : Tune.sat,
+                        kind == BUTTON ? BUTTON_TONE : Tune.tone, BIO_DARKER, Tune.white, new Runnable() {
+                            @Override
+                            public void run() {
+                                hv.postInvalidate();
+                            }
+                        });
+                Bitmap use = bk != null ? bk : b;
+                if (underBackdrop != use) {
+                    u.setInputShader("wall", GlassShader.linear(use));
+                    u.setFloatUniform("baked", bk != null ? 1f : 0f);
+                    underBackdrop = use;
                 }
                 place(false);
                 last[0] = loc[0];
@@ -1778,6 +1872,7 @@ public final class CcGlass {
                 lastSy = sc[1];
                 u.setFloatUniform("origin", loc[0] * scaleB, loc[1] * scaleB);
                 u.setFloatUniform("scale", sc[0] * scaleB, sc[1] * scaleB);
+                u.setFloatUniform("pxs", (sc[0] + sc[1]) * 0.5f);
                 u.setFloatUniform("hasWall", 1f);
                 u.setFloatUniform("fill", 1f);
                 u.setFloatUniform("bandAlpha", 1f);
@@ -1818,13 +1913,16 @@ public final class CcGlass {
             if (shader != null && !shaderBroken) {
                 try {
                     RuntimeShader rs = (RuntimeShader) shader;
-                    if (c.isHardwareAccelerated() && backdropFits(host)) bindBackdrop(rs);
-                    else rs.setFloatUniform("hasWall", 0f);
+                    if (c.isHardwareAccelerated() && backdropFits(host)) {
+                        if (bindBackdrop(rs)) rs.setFloatUniform("pxs", (sc[0] + sc[1]) * 0.5f);
+                    } else rs.setFloatUniform("hasWall", 0f);
                     rs.setFloatUniform("active", act);
                     // Sobre un relleno sólido (pieza encendida) no se ve lo de detrás: solo el canto.
                     rs.setFloatUniform("bandAlpha", underDrawn || act >= 0.5f ? 0f : BAND_ALPHA * off);
                     lens.setShader(rs);
-                    c.drawRect(0, 0, w, h, lens);
+                    // Solo el anillo del borde: más adentro esta pasada no pinta nada (fill = 0).
+                    GlassShader.drawRing(c, w, h, Math.min(radius, Math.min(w, h) / 2f),
+                            Math.max(band, Math.max(Tune.rim * dp * 6.5f, GLOW_DP * dp * 6f)), lens);
                     lensDrawn = true;
                 } catch (Throwable t) {
                     shaderFailed("draw", t);

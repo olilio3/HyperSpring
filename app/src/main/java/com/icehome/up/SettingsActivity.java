@@ -1006,9 +1006,7 @@ public class SettingsActivity extends Activity {
                 {Icons.SPARKLE, item(Tune.ITEMS, "icehome_genie_on"), I18n.t("Abrir y cerrar apps", "Opening and closing apps")},
                 {Icons.LAYERS, item(Tune.ITEMS, "icehome_curtain_on"), I18n.t("Recientes que se doblan", "Bending recents")},
                 {Icons.WIDGETS, item(Tune.ITEMS, "icehome_stack_on"), I18n.t("Pila de widgets", "Widget stack")},
-                {Icons.FOLDER, item(Tune.ITEMS, "icehome_folder_morph_on"), I18n.t("Carpetas con muelle", "Springy folders")},
                 {Icons.DROP, item(Tune.ITEMS, "icehome_folder_glass_on"), I18n.t("Carpetas de cristal", "Glass folders")},
-                {Icons.LIST, item(Tune.ITEMS, "icehome_menu_on"), I18n.t("Menú de atajos", "Shortcut menu")},
                 {Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón", "Curtain")},
                 {Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Captura que encoge", "Squeezing screenshot")},
                 {Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Centro de control", "Control center")},
@@ -1375,9 +1373,7 @@ public class SettingsActivity extends Activity {
         f.addView(toggleRow(Icons.SPARKLE, item(Tune.ITEMS, "icehome_genie_on"), I18n.t("Abrir y cerrar apps", "Opening and closing apps")));
         f.addView(toggleRow(Icons.LAYERS, item(Tune.ITEMS, "icehome_curtain_on"), I18n.t("Recientes que se doblan al deslizarlas", "Recents that bend as you swipe")));
         f.addView(toggleRow(Icons.WIDGETS, item(Tune.ITEMS, "icehome_stack_on"), I18n.t("Pila de widgets con baraja", "Shuffling widget stack")));
-        f.addView(toggleRow(Icons.FOLDER, item(Tune.ITEMS, "icehome_folder_morph_on"), I18n.t("Carpetas con muelle", "Springy folders")));
         f.addView(toggleRow(Icons.DROP, item(Tune.ITEMS, "icehome_folder_glass_on"), I18n.t("Cristal en las carpetas", "Glass folders")));
-        f.addView(toggleRow(Icons.LIST, item(Tune.ITEMS, "icehome_menu_on"), I18n.t("Menú de atajos con muelle", "Springy shortcut menu")));
         f.addView(toggleRow(Icons.DROP, item(Tune.ITEMS, "icehome_dock_glass_on"), I18n.t("Dock de cristal", "Glass dock")));
         f.addView(toggleRow(Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón al cambiar de pantalla", "Curtain when switching screens")));
         f.addView(toggleRow(Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Pantalla que se encoge al hacer una captura", "Screen that squeezes on screenshot")));
@@ -1463,7 +1459,8 @@ public class SettingsActivity extends Activity {
      */
     private static final Object[][] GLASS_EASY = {
             {"glass_easy_clear", "Transparencia", 0f, 1f, 0.75f, 2, "Más alto: se ve más lo de detrás. Más bajo: cristal más lechoso y legible."},
-            {"glass_easy_blur", "Desenfoque", 0f, 1f, 0.2f, 2, "Cuánto se desenfoca lo que hay detrás del cristal."},
+            // El ajuste de verdad (no uno fácil): así muestra el mismo número, en dp, que el avanzado.
+            {"kashiplus_cc_blur", "Desenfoque", 0f, 40f, 8f, 0, "Cuánto se desenfoca lo que hay detrás del cristal, en dp."},
             {"glass_easy_refr", "Refracción", 0f, 2f, 1f, 2, "Cuánto se dobla el fondo en el borde, con su arcoíris. 0 lo deja plano."},
             {"glass_easy_rim", "Brillo del borde", 0f, 2.5f, 1f, 2, "La línea de luz que recorre el borde del cristal."},
     };
@@ -1474,8 +1471,6 @@ public class SettingsActivity extends Activity {
             case "glass_easy_clear":
                 return new String[]{"kashiplus_cc_white", f2(0.12f * (1 - v)), "kashiplus_cc_gloss", f2(10 + 50 * (1 - v)),
                         "kashiplus_cc_tone", f2(1.05f + 0.2f * v)};
-            case "glass_easy_blur":
-                return new String[]{"kashiplus_cc_blur", f2(40 * v), "icehome_folder_blur", f2(30 * v)};
             case "glass_easy_refr":
                 return new String[]{"kashiplus_cc_refr", f2(20 * v), "kashiplus_cc_refr_h", f2(Math.min(40, 14 * v)),
                         "kashiplus_cc_chroma", f2(Math.min(3, v)), "icehome_folder_refr", f2(Math.min(60, 30 * v)),
@@ -2961,6 +2956,8 @@ public class SettingsActivity extends Activity {
         final String key = (String) it[0];
         if ("icehome_genie_style".equals(key)) return styleRow(it);
         if ("icehome_genie_fps".equals(key)) return fpsRow(it);
+        View picker = listRow(it, key);
+        if (picker != null) return picker;
         final float min = (Float) it[2], max = (Float) it[3];
         LinearLayout r = rowBase();
         r.setOrientation(LinearLayout.VERTICAL);
@@ -3145,19 +3142,60 @@ public class SettingsActivity extends Activity {
         return pickerRow(it, names, hints);
     }
 
+    /** Ajustes que son una lista de opciones (desplegable) en vez de un número; null = deslizador. */
+    private View listRow(Object[] it, String key) {
+        switch (key) {
+            case "icehome_light_parallel":
+                return pickerRow(it, new String[]{I18n.t("No", "Off"), "Auto", I18n.t("Siempre", "Always")},
+                        new String[]{I18n.t("Siempre con el genio", "Always with the genie"),
+                                I18n.t("Solo si el móvil va a tirones", "Only if the phone stutters"),
+                                I18n.t("Rectángulo de color siempre", "Colour rectangle always")});
+            case "kashiplus_cc_quality":
+                return pickerRow(it, new String[]{I18n.t("Baja", "Low"), I18n.t("Media", "Medium"), I18n.t("Alta", "High")},
+                        new String[]{I18n.t("Más rápido", "Faster"), I18n.t("Equilibrada", "Balanced"),
+                                I18n.t("Más nítido, gasta más", "Sharper, uses more")});
+            case "telon_squeeze_color":
+                return pickerRow(it, new String[]{I18n.t("Negro", "Black"), "Monet", I18n.t("Marrón", "Brown")},
+                        new String[]{I18n.t("Como en los Pixel", "Like on Pixels"),
+                                I18n.t("Tono oscuro de tu fondo", "Dark tone of your wallpaper"),
+                                I18n.t("Marrón al estilo Monet", "Monet-style brown")});
+            case "telon_gemini_colors":
+                return pickerRow(it, new String[]{"Gemini", "Monet", I18n.t("Arcoíris", "Rainbow")},
+                        new String[]{I18n.t("Azul, violeta y rosa", "Blue, violet and pink"),
+                                I18n.t("Acentos de tu fondo", "Accents of your wallpaper"), I18n.t("Todos los colores", "All colours")});
+            case "kashiplus_cc_fps":
+                return pickerRow(it, new String[]{"30", "45", "60", "90", "120"},
+                        new String[]{I18n.t("Gasta muy poco", "Uses very little"), I18n.t("Gasta poco", "Uses little"),
+                                I18n.t("Equilibrado", "Balanced"), I18n.t("Más fluido", "Smoother"),
+                                I18n.t("Lo más fluido, gasta más", "Smoothest, uses more")},
+                        new int[]{30, 45, 60, 90, 120});
+            default:
+                return null;
+        }
+    }
+
     private View pickerRow(final Object[] it, final String[] names, final String[] hints) {
+        return pickerRow(it, names, hints, null);
+    }
+
+    /** {@code values} null: guarda la posición (0, 1, 2…); si no, el número de esa opción. */
+    private View pickerRow(final Object[] it, final String[] names, final String[] hints, final int[] values) {
         final String key = (String) it[0];
-        final int max = Math.round((Float) it[3]);
+        final int max = names.length - 1;
         final Runnable[] refresh = new Runnable[1];
         LinearLayout r = choiceRow(I18n.title(it), names, hints, new Chosen() {
             @Override
             public int now() {
-                return Math.max(0, Math.min(max, Math.round(stored(it))));
+                float v = stored(it);
+                if (values == null) return Math.max(0, Math.min(max, Math.round(v)));
+                int best = 0;                            // valor guardado a mano: la opción más cercana
+                for (int i = 1; i < values.length; i++) if (Math.abs(values[i] - v) < Math.abs(values[best] - v)) best = i;
+                return best;
             }
         }, new MenuPick() {
             @Override
             public void pick(int index) {
-                write(key, String.valueOf(index));
+                write(key, String.valueOf(values == null ? index : values[index]));
             }
         }, refresh);
         resetOnLongPress(r, it, refresh[0]);
@@ -3911,8 +3949,25 @@ public class SettingsActivity extends Activity {
         android.net.Uri uri = data.getData();
         try {
             if (request == REQ_EXPORT) {
-                try (java.io.OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
-                    out.write(Backup.export(this).getBytes("UTF-8"));
+                // El selector ya ha creado el archivo vacío. Primero el texto: si fallara, mejor
+                // antes de abrirlo.
+                byte[] json = Backup.export(this).getBytes("UTF-8");
+                java.io.OutputStream out = null;
+                try {
+                    out = getContentResolver().openOutputStream(uri, "wt");
+                } catch (Exception e) {
+                    // Algunos gestores (el de Xiaomi, Drive) no aceptan «wt» y el archivo se
+                    // quedaba en 0 bytes. El archivo es nuevo, así que «w» basta.
+                }
+                if (out == null) out = getContentResolver().openOutputStream(uri, "w");
+                if (out == null) throw new java.io.IOException(I18n.t("no se pudo abrir el archivo", "could not open the file"));
+                try (java.io.OutputStream o = out) {
+                    o.write(json);
+                    o.flush();
+                } catch (Exception e) {
+                    // No dejar un archivo vacío que parezca una copia buena.
+                    try { android.provider.DocumentsContract.deleteDocument(getContentResolver(), uri); } catch (Exception ignored) { }
+                    throw e;
                 }
                 toast(I18n.t("Ajustes exportados", "Settings exported"));
             } else if (request == REQ_IMPORT) {
@@ -3963,7 +4018,8 @@ public class SettingsActivity extends Activity {
         }
         e.commit();
         send(Remote.TUNE);
-        if (m != null) for (Runnable r : refreshers) r.run();   // las filas avanzadas y la vista previa
+        // Las filas avanzadas y la vista previa. El desenfoque sale en las dos vistas (fácil y avanzada).
+        if (m != null || key.equals("kashiplus_cc_blur")) for (Runnable r : refreshers) r.run();
     }
 
     private void send(String action) {

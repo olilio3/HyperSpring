@@ -49,7 +49,8 @@ final class Presets {
     static final String[] GLASS_KEYS = {
             "kashiplus_cc_blur", "kashiplus_cc_sat", "kashiplus_cc_sat_button", "kashiplus_cc_tone",
             "kashiplus_cc_white", "kashiplus_cc_gloss", "kashiplus_cc_magnify", "kashiplus_cc_refr",
-            "kashiplus_cc_refr_h", "kashiplus_cc_chroma", "kashiplus_cc_rim_gain",
+            "kashiplus_cc_refr_h", "kashiplus_cc_chroma", "kashiplus_cc_rim_gain", "kashiplus_cc_edge",
+            "kashiplus_cc_bevel", "kashiplus_cc_fresnel", "kashiplus_cc_shade", "kashiplus_cc_depth",
             "icehome_folder_blur", "icehome_folder_lens", "icehome_folder_refr", "icehome_folder_chroma",
             "icehome_folder_light",
     };
@@ -67,14 +68,14 @@ final class Presets {
             {"iOS 27", "iOS 27",
                     "Como el cristal de iOS 27: poco desenfoque, colores vivos y un borde que dobla mucho con una línea de luz marcada.",
                     "Like iOS 27 glass: light blur, vivid colours and a strongly bending edge with a bright light line.",
-                    new String[]{"kashiplus_cc_blur", "6", "kashiplus_cc_white", "0.02", "kashiplus_cc_tone", "1.15",
-                            "kashiplus_cc_sat", "1.6", "kashiplus_cc_refr", "26", "kashiplus_cc_refr_h", "16",
-                            "kashiplus_cc_chroma", "1.2", "kashiplus_cc_rim_gain", "1.4", "kashiplus_cc_gloss", "28",
+                    new String[]{"kashiplus_cc_blur", "6", "kashiplus_cc_white", "0.02", "kashiplus_cc_tone", "1.05",
+                            "kashiplus_cc_sat", "1.4", "kashiplus_cc_refr", "26", "kashiplus_cc_refr_h", "16",
+                            "kashiplus_cc_chroma", "0.8", "kashiplus_cc_rim_gain", "1.4", "kashiplus_cc_gloss", "28",
                             "icehome_folder_refr", "40"}, GLASS_KEYS},
             {"Transparente", "Clear",
                     "Casi sin desenfoque: se ve lo de detrás, con la lente del borde bien marcada.",
                     "Hardly any blur: you see what is behind, with a well-defined edge lens.",
-                    new String[]{"kashiplus_cc_blur", "3", "kashiplus_cc_white", "0", "kashiplus_cc_tone", "1.25",
+                    new String[]{"kashiplus_cc_blur", "3", "kashiplus_cc_white", "0", "kashiplus_cc_tone", "1.1",
                             "kashiplus_cc_gloss", "20", "icehome_folder_blur", "2"}, GLASS_KEYS},
             {"Ahumado", "Smoked",
                     "Cristal oscuro y sobrio, con menos color. El texto se lee muy bien.",
@@ -93,6 +94,19 @@ final class Presets {
                     "More refraction and lots of rainbow on the edges, like a prism.",
                     new String[]{"kashiplus_cc_chroma", "3", "kashiplus_cc_refr", "34", "kashiplus_cc_refr_h", "20",
                             "kashiplus_cc_rim_gain", "1.4", "icehome_folder_chroma", "3", "icehome_folder_refr", "45"}, GLASS_KEYS},
+            // Valores parecidos a los de HyperLight: poco desenfoque, saturación 1,3 sin más, un poco
+            // más oscuro, lente ancha que dobla el doble de lo que mide, en cúpula (profundidad),
+            // casi sin arcoíris y solo la línea blanca fina (sin el canto teñido, sin la línea oscura
+            // de debajo ni brillo glossy).
+            {"Cristal claro", "Clear glass",
+                    "Lo de detrás casi nítido, un borde ancho que lo dobla como una cúpula y una línea blanca fina por todo el contorno. Sin velo, sin brillo y casi sin arcoíris.",
+                    "What is behind almost sharp, a wide edge that bends it like a dome and a thin white line all around. No veil, no gloss and almost no rainbow.",
+                    new String[]{"kashiplus_cc_blur", "2", "kashiplus_cc_white", "0", "kashiplus_cc_tone", "0.95",
+                            "kashiplus_cc_sat", "1.3", "kashiplus_cc_sat_button", "1.25", "kashiplus_cc_gloss", "0",
+                            "kashiplus_cc_magnify", "0", "kashiplus_cc_refr", "60", "kashiplus_cc_refr_h", "30",
+                            "kashiplus_cc_chroma", "0.08", "kashiplus_cc_rim_gain", "0", "kashiplus_cc_depth", "1.3",
+                            "kashiplus_cc_fresnel", "1.2", "kashiplus_cc_edge", "0", "icehome_folder_blur", "3", "icehome_folder_chroma", "0.1",
+                            "icehome_folder_refr", "45"}, GLASS_KEYS},
     };
 
     /** Animaciones y cristal a la vez: lo que gestionan los modos de sistema. */
@@ -115,9 +129,9 @@ final class Presets {
                     new String[]{"icehome_genie_style", "1", "icehome_genie_strength", "0.6", "icehome_anim_speed", "1.1",
                             "icehome_anim_bounce", "0.12", "icehome_wallpaper_zoom", "1.2", "icehome_genie_physics", "0.5",
                             "icehome_menu_bounce", "0.7", "telon_strength", "0.5", "telon_blur", "0.3",
-                            "kashiplus_cc_blur", "5", "kashiplus_cc_white", "0", "kashiplus_cc_chroma", "1.6",
+                            "kashiplus_cc_blur", "5", "kashiplus_cc_white", "0", "kashiplus_cc_chroma", "0.8",
                             "kashiplus_cc_refr", "28", "icehome_folder_blur", "3",
-                            "icehome_folder_chroma", "1.8"}, MODE_KEYS},
+                            "icehome_folder_chroma", "1"}, MODE_KEYS},
             {"iOS 27", "iOS 27",
                     "Estilo Profundidad (la ventana como una hoja que se inclina), rebote suave y un cristal más esmerilado y tranquilo.",
                     "Depth style (the window as a tilting sheet), a soft bounce and a calmer, more frosted glass.",

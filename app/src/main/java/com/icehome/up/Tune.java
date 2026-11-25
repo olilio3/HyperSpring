@@ -19,11 +19,9 @@ public final class Tune {
             {"#", "Funciones"},
             {"icehome_genie_on", "Efecto genio al abrir y cerrar apps", 0f, 1f, 1f, -1, "La ventana sale del icono y vuelve a él con forma de copa o de genio. Se aplica al reiniciar el launcher."},
             {"icehome_stack_on", "Pila de widgets", 0f, 1f, 1f, -1, "Los widgets apilados se barajan con un gesto y se pueden arrastrar libremente. Se aplica al reiniciar el launcher."},
-            {"icehome_folder_morph_on", "Carpetas con muelle", 0f, 1f, 1f, -1, "Al abrir o cerrar una carpeta, cambia de tamaño con un rebote suave. Se aplica al reiniciar el launcher."},
             {"icehome_folder_glass_on", "Cristal en las carpetas", 0f, 1f, 1f, -1, "El fondo de las carpetas abiertas es cristal desenfocado en vez de un color plano. Se aplica al reiniciar el launcher."},
             {"icehome_curtain_on", "Recientes que se doblan", 0f, 1f, 1f, -1, "En la vista de recientes, las tarjetas se doblan hacia el lado contrario según la fuerza con la que las deslizas. Se aplica al reiniciar el launcher."},
             {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
-            {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y un borde de cristal líquido. Se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
             {"icehome_genie_style", "Estilo", 0f, 8f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento. 5 = Abanico: las dos esquinas del icono del lado más cercano al borde van directas a las de la pantalla y las otras dos salen después hacia el otro lado. 6 = Pergamino: la app sale enrollada, va al borde más cercano y se desenrolla hasta el otro, con luz y sombra en 3D. 7 = Carta: la ventana sale girando en 3D como una carta, deprisa al principio y frenando al llegar. 8 = HyperOS: la animación del sistema de verdad, dibujada por HyperOS; solo cambian la velocidad y el rebote de aquí (sin desenfoque de movimiento)."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
@@ -39,7 +37,6 @@ public final class Tune {
             {"icehome_push_wave", "Ola", 0f, 1f, 0.5f, 2, "Con Empujar iconos: los iconos no se mueven todos a la vez, sino uno tras otro según lo lejos que estén de la app, como una onda, y llegan con un pequeño rebote. 0 los mueve todos a la vez, pegados a la ventana."},
             {"icehome_press_on", "Iconos que se hunden", 0f, 1f, 1f, -1, "Al pulsar un icono se hace un poco más pequeño y vuelve con un rebote al soltarlo."},
             {"icehome_wallpaper_zoom", "Zoom del fondo", 0f, 1.5f, 1f, 2, "El fondo de pantalla se acerca al abrir una app y se aleja al volver. 0 deja el comportamiento de HyperOS."},
-            {"icehome_unlock_zoom", "Zoom al desbloquear", 0f, 1.5f, 0f, 2, "Al desbloquear, el escritorio entra un poco más grande y se asienta a su tamaño, todo de una pieza. 0 lo quita."},
             {"icehome_haptic", "Vibración al llegar", 0f, 1f, 0.3f, 2, "Un toque de vibración muy suave cuando la ventana entra en su icono. 0 la quita. Respeta el ajuste de vibración del sistema."},
             {"icehome_anim_speed", "Velocidad", 0.5f, 2f, 1f, 2, "Velocidad de las animaciones de abrir y cerrar. Más de 1 es más rápida."},
             {"icehome_anim_bounce", "Rebote", 0f, 0.4f, 0f, 2, "Cuánto se pasa la ventana de su sitio al llegar antes de asentarse. 0 llega sin rebote."},
@@ -51,8 +48,12 @@ public final class Tune {
             {"icehome_curtain_strength", "Doblez", 0f, 3f, 1f, 1, "Cuánto se doblan las tarjetas de recientes según la velocidad del dedo."},
             {"icehome_curtain_style", "Estilo telón", 0f, 1f, 0f, -1, "Activado: la parte de arriba queda fija y se dobla la de abajo, como un telón. Desactivado: se dobla el centro, como una cortina."},
             {"#", "Menú de atajos"},
+            {"icehome_menu_on", "Menú de atajos con muelle", 0f, 1f, 1f, -1, "Al mantener pulsado un icono, su menú sale con un rebote y con cristal líquido. Se aplica al reiniciar el launcher."},
+            {"#", "Cajón de apps"},
+            {"icehome_drawer_on", "Cajón estilo HyperOS 4", 0f, 1f, 1f, -1, "Al abrir el cajón, el escritorio se aleja hacia atrás y se desenfoca poco a poco, y las categorías van en cápsulas de cristal. Se aplica al reiniciar el launcher."},
+            {"icehome_drawer_blur", "Desenfoque del cajón", 0f, 2f, 1f, 2, "Cuánto se desenfoca el fondo al abrir el cajón; crece con el dedo. 0 usa el desenfoque de Xiaomi (si lo tienes activado en los ajustes del cajón)."},
             {"icehome_menu_bounce", "Rebote", 0f, 1f, 0.5f, 2, "Cuánto se pasa el menú de su tamaño al salir del icono antes de asentarse. 0 lo deja como en HyperOS."},
-            {"icehome_menu_glass", "Cristal líquido", 0f, 1f, 1f, -1, "Borde de cristal que dobla el fondo de pantalla, con brillo arriba. Usa la calidad, el grosor y la refracción de las carpetas. Necesita un fondo de pantalla estático."},
+            {"icehome_menu_glass", "Cristal líquido", 0f, 1f, 1f, -1, "Cristal que muestra el fondo de pantalla desenfocado y lo dobla en el borde, con brillo arriba. Usa la calidad, el grosor y la refracción de las carpetas. Necesita un fondo de pantalla estático."},
             {"#", "Carpetas"},
             {"icehome_folder_blur", "Desenfoque", 0f, 30f, 6f, 0, "Cuánto se desenfoca lo que hay detrás de una carpeta abierta, en dp."},
             {"icehome_folder_quality", "Calidad del cristal", 25f, 100f, 67f, 0, "Nitidez del fondo que ve el cristal, en %. Más alta se ve más fina pero usa más memoria; en móviles modestos, 50–67 %."},
@@ -90,7 +91,6 @@ public final class Tune {
         GlRenderer.wantedScale = f(c, "icehome_genie_quality") / 100f;
         Genie.autoQuality = f(c, "icehome_genie_auto") >= 0.5f;
         Genie.lightParallel = Math.round(f(c, "icehome_light_parallel"));
-        UnlockZoom.strength = f(c, "icehome_unlock_zoom");
         Springs.speed = f(c, "icehome_anim_speed");
         Springs.bounce = f(c, "icehome_anim_bounce");
         GlassFolder.quality = f(c, "icehome_folder_quality");
@@ -100,6 +100,7 @@ public final class Tune {
         GlassFolder.liquidLight = f(c, "icehome_folder_light");
         GlassFolder.touchGlow = f(c, "icehome_folder_glow");
         GlassDock.padDp = f(c, "icehome_dock_pad");
+        DrawerFx.blur = f(c, "icehome_drawer_blur");
         Map<String, String> m = cache;
         Exclude.genie = Exclude.parse(m == null ? null : m.get(Exclude.KEY));
         // Pausa (tile de ajustes rápidos): sin genio y sin recientes que se doblan, al momento.

@@ -89,7 +89,6 @@ public class MainHook {
         Log.i("funciones: genio " + onOff(Tune.on(c, "icehome_genie_on"))
                 + ", recientes " + onOff(Tune.on(c, "icehome_curtain_on"))
                 + ", pila " + onOff(Tune.on(c, "icehome_stack_on"))
-                + ", carpetas " + onOff(Tune.on(c, "icehome_folder_morph_on"))
                 + ", cristal carpetas " + onOff(Tune.on(c, "icehome_folder_glass_on"))
                 + ", menú de atajos " + onOff(Tune.on(c, "icehome_menu_on")));
         if (Tune.on(c, "icehome_genie_on")) {
@@ -152,17 +151,6 @@ public class MainHook {
                 XposedBridge.log(t);
             }
         }
-        if (Launchers.kashiFeatures(launcherPkg) && Tune.on(c, "icehome_folder_morph_on")) {
-            fxTotal++;
-            try {
-                FolderMorph.install(cl);
-                fxOk++;
-            } catch (Throwable t) {
-                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_folder_morph_on");
-                XposedBridge.log("IceHome: error instalando FolderMorph");
-                XposedBridge.log(t);
-            }
-        }
         if (Tune.on(c, "icehome_dock_glass_on")) {
             fxTotal++;
             try {
@@ -181,6 +169,16 @@ public class MainHook {
             } catch (Throwable t) {
                 fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_menu_on");
                 Log.e("no se pudo instalar el menú de atajos (¿otra versión del launcher?)", t);
+            }
+        }
+        if (Tune.on(c, "icehome_drawer_on")) {
+            fxTotal++;
+            try {
+                DrawerFx.install(cl);
+                fxOk++;
+            } catch (Throwable t) {
+                fxFailed.append(fxFailed.length() > 0 ? ", " : "").append("icehome_drawer_on");
+                Log.e("no se pudo instalar el cajón estilo HyperOS 4 (¿otra versión del launcher?)", t);
             }
         }
         // Para «Compatibilidad» en la app: cuántos efectos encendidos se engancharon y cuáles no.

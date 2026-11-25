@@ -27,8 +27,8 @@ import com.icehome.up.xp.XposedHelpers;
  *
  * <p><b>El cristal.</b> Es el mismo de las carpetas ({@link GlassFolder.Glass}), puesto como fondo
  * del menú: se dibuja debajo de las opciones y el contorno redondeado del propio menú lo recorta.
- * Va en modo "solo canto": el interior sigue siendo el desenfoque de HyperOS (que deja ver los
- * iconos de detrás) y el borde dobla el fondo de pantalla como una lente.
+ * Va entero, como las carpetas: el interior muestra el fondo de pantalla desenfocado con lupa
+ * y el borde lo dobla como una lente.
  */
 final class ShortcutMenuFx {
 
@@ -134,7 +134,8 @@ final class ShortcutMenuFx {
         Runnable radius = new Runnable() {
             @Override
             public void run() {
-                glassNow.configure(false, outlineRadius(menu));
+                // true: cristal entero (fondo con lupa y lente en el canto), no solo el canto.
+                glassNow.configure(true, outlineRadius(menu));
                 glassNow.invalidateSelf();
             }
         };

@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v3.1.4</b> · <a href="README.es.md">Español</a>
+  <b>v3.2.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 | | |
 |---|---|
 | **Phone** | **Xiaomi, Redmi or POCO only.** Other brands (realme, OPPO, Samsung, Honor…) can't work: HyperSpring hooks Xiaomi's own launcher and System UI. |
-| **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. |
+| **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. **HyperOS 4, untested:** the System UI part (curtain, control center, notifications) should work; the launcher part only with a Java launcher such as Kashi's, because the stock HyperOS 4 launcher can't be hooked from LSPosed. |
 | **Root** | Magisk, KernelSU or APatch. Grant root to the HyperSpring app so the restart buttons work instantly. |
 | **Framework** | **Vector 2.2** (JingMatrix) or another LSPosed with libxposed API 101+. Since 3.0.0 there is no APK for old LSPosed builds (API 93): the last one is 2.13.1. |
 | **Scopes** | `com.miui.home` (System launcher) or, on POCO phones, `com.mi.android.globallauncher` (POCO Launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
