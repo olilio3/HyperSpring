@@ -10,3 +10,4 @@ local-build/out-maven/
 *.jks
 *.keystore
 !local-build/**/debug.keystore
+.claude/worktrees/
