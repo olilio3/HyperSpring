@@ -13,9 +13,11 @@ VNAME=$(sed -n 's/.*NAME = "\(.*\)";/\1/p' "$VFILE")
 VCODE=$(sed -n 's/.*CODE = \([0-9]*\);/\1/p' "$VFILE")
 rm -rf "$OUT" && mkdir -p "$OUT"/{stub,classes,dex,res,apk}
 
-# DEBUG (temporal): vuelca toda la salida a build.log para poder leer el error del compilador
-# desde fuera del runner cuando el host de logs de CI no es accesible. Se quita después.
+# DEBUG (temporal): vuelca toda la salida a build.log y, si falla, la repite como
+# anotaciones ::error:: para poder leer el error del compilador desde fuera del runner
+# (el host de logs de CI no es accesible desde el sandbox). Se quita después.
 exec > >(tee -a "$OUT/build.log") 2>&1
+trap 'rc=$?; if [ "$rc" -ne 0 ]; then tail -n 80 "$OUT/build.log" 2>/dev/null | while IFS= read -r l; do echo "::error::${l}"; done; fi' EXIT
 
 # 1) Stubs de las dos API de Xposed (solo para compilar; NO van al APK)
 #    - xposed-stub: API clásica (93), para el motor antiguo.
