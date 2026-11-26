@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   actions: write
+  issues: write
 
 jobs:
   build:
@@ -73,3 +74,13 @@ jobs:
           name: HyperSpring-${{ github.sha }}
           path: local-build/out/HyperSpring.apk
           if-no-files-found: error
+
+      - name: Debug - pegar log de compilación en una incidencia
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LOG=local-build/out/build.log
+          [ -s "$LOG" ] || LOG=local-build/out/javac.log
+          BODY="$(tail -c 60000 "$LOG" 2>/dev/null)"
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "CI debug: build log (borrar)" --body "$BODY" --label debug || true
