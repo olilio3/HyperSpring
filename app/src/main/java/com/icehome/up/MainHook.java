@@ -439,11 +439,14 @@ public class MainHook {
                     final ClassLoader cl = (ClassLoader) p.thisObject;
                     shellCl = cl;
                     android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                    h.post(() -> {
-                        try {
-                            com.icehome.up.telon.TransitionProbe.install(cl);
-                        } catch (Throwable t) {
-                            XposedBridge.log(t);
+                    h.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                com.icehome.up.telon.TransitionProbe.install(cl);
+                            } catch (Throwable t) {
+                                XposedBridge.log(t);
+                            }
                         }
                     });
                 }
