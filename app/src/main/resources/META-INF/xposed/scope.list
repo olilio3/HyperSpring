@@ -3,3 +3,4 @@ com.mi.android.globallauncher
 com.android.systemui
 miui.systemui.plugin
 com.miui.screenshot
+com.android.wm.shell

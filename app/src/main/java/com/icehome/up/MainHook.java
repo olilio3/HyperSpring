@@ -26,6 +26,10 @@ public class MainHook {
     private static volatile boolean launcherDone;
     /** El paquete del launcher enganchado en este proceso (com.miui.home o POCO Launcher). */
     static volatile String launcherPkg = Launchers.HYPEROS;
+    /** Cargador de la WM Shell (donde vive com.android.wm.shell.transition.*) en HyperOS 4. */
+    private static volatile ClassLoader shellCl;
+    /** El vigilante de cargadores de la Shell ya está activo en este proceso. */
+    private static volatile boolean shellWatchDone;
 
     /**
      * Un paquete acaba de cargarse en este proceso.
@@ -43,6 +47,14 @@ public class MainHook {
             } catch (Throwable t) {
                 XposedBridge.log(t);
             }
+        }
+        // HyperOS 4: la WM Shell (com.android.wm.shell) puede vivir en su propio proceso. La
+        // espiamos para ver las transiciones de abrir/cerrar apps, porque el launcher de HyperOS 4
+        // ya las anima en código nativo y sus clases Java (com.miui.home.recents.*) ya no existen.
+        watchShell();
+        if ("com.android.wm.shell".equals(pkg)) {
+            installTransitionProbe(cl);
+            return;
         }
         if ("com.android.systemui".equals(pkg)) {
             systemUi(processName, cl);
@@ -86,6 +98,10 @@ public class MainHook {
     }
 
     private static void installLauncher(android.content.Context c, ClassLoader cl) {
+        // HyperOS 4: el launcher anima en nativo y sus clases Java (com.miui.home.recents.*) pueden
+        // no existir. Anotamos cuántas encontramos para saber si los ganchos del launcher tienen
+        // donde enganchar o hay que hacerlo desde System UI (transiciones de la WM Shell).
+        logLauncherClasses(cl);
         Log.i("funciones: genio " + onOff(Tune.on(c, "icehome_genie_on"))
                 + ", recientes " + onOff(Tune.on(c, "icehome_curtain_on"))
                 + ", pila " + onOff(Tune.on(c, "icehome_stack_on"))
@@ -352,6 +368,20 @@ public class MainHook {
             }
             watchPluginLoader();
         }
+        // Sonda de HyperOS 4 (solo registra, no cambia nada): apunta la WM Shell para ver qué
+        // transiciones de abrir/cerrar apps ve System UI. Es el primer paso para mover la animación
+        // del genie desde el launcher (que ya es nativo) a System UI.
+        final ClassLoader pcl = shellCl != null ? shellCl : cl;
+        onAttach(new WithContext() {
+            @Override
+            public void run(android.content.Context c) {
+                try {
+                    com.icehome.up.telon.TransitionProbe.install(pcl);
+                } catch (Throwable t) {
+                    com.icehome.up.telon.Log.e("probe: could not install", t);
+                }
+            }
+        });
     }
 
     private static synchronized void installCc(ClassLoader cl) {
@@ -390,5 +420,69 @@ public class MainHook {
         } catch (Throwable t) {
             XposedBridge.log(t);
         }
+    }
+
+    /** HyperOS 4: localiza el cargador de la WM Shell (com.android.wm.shell) para espiar las
+     *  transiciones de abrir/cerrar apps desde System UI, porque el launcher ya las anima en nativo.
+     *  El cargador puede aparecer en cualquier proceso donde viva la Shell. */
+    private static synchronized void watchShell() {
+        if (shellWatchDone) return;
+        shellWatchDone = true;
+        try {
+            XposedBridge.hookAllConstructors(dalvik.system.BaseDexClassLoader.class, new com.icehome.up.xp.XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam p) {
+                    Object path = p.args.length > 0 ? p.args[0] : null;
+                    if (!(path instanceof String)) return;
+                    String s = ((String) path).toLowerCase();
+                    if (!s.contains("shell")) return;
+                    final ClassLoader cl = (ClassLoader) p.thisObject;
+                    shellCl = cl;
+                    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                    h.post(() -> {
+                        try {
+                            com.icehome.up.telon.TransitionProbe.install(cl);
+                        } catch (Throwable t) {
+                            XposedBridge.log(t);
+                        }
+                    });
+                }
+            });
+            XposedBridge.log("IceHome: vigilante de la WM Shell activado");
+        } catch (Throwable t) {
+            XposedBridge.log(t);
+        }
+    }
+
+    /** Instala la sonda de transiciones (HyperOS 4) con el cargador que tenga las clases de la Shell. */
+    private static void installTransitionProbe(ClassLoader cl) {
+        try {
+            com.icehome.up.telon.TransitionProbe.install(shellCl != null ? shellCl : cl);
+        } catch (Throwable t) {
+            com.icehome.up.telon.Log.e("probe: could not install", t);
+        }
+    }
+
+    /** HyperOS 4: ¿siguen existiendo las clases Java del launcher de HyperOS 3? Lo anota en el
+     *  registro para saber si los ganchos del launcher tienen donde enganchar. */
+    private static void logLauncherClasses(ClassLoader cl) {
+        String[] names = {
+                "com.miui.home.launcher.Launcher",
+                "com.miui.home.launcher.BaseLauncher",
+                "com.miui.home.launcher.Application",
+                "com.miui.home.recents.anim.windowanim.LocalWindowAnimImplementor",
+                "com.miui.home.launcher.hotseats.HotSeats",
+                "com.android.systemui.shared.recents.system.RemoteAnimationTargetCompat",
+        };
+        StringBuilder sb = new StringBuilder("launcher class check:");
+        for (String n : names) {
+            try {
+                cl.loadClass(n);
+                sb.append(" OK=").append(n);
+            } catch (Throwable t) {
+                sb.append(" MISS=").append(n);
+            }
+        }
+        Log.i(sb.toString());
     }
 }

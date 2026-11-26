@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   build:
@@ -66,11 +67,9 @@ jobs:
       - name: Compilar
         run: bash local-build/build.sh
 
-      - name: Subir los APK
+      - name: Subir el APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperSpring-${{ github.sha }}
-          path: |
-            local-build/out/HyperSpring.apk
-            local-build/out/HyperSpring-legacy.apk
+          path: local-build/out/HyperSpring.apk
           if-no-files-found: error

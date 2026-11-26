@@ -4,6 +4,29 @@ Módulo LSPosed para HyperOS (antes HyperTweak). Añade animaciones al launcher 
 
 > **Sesión anterior (16-17/11/2026, versiones 2.9.2 a 2.12.1):** lee `docs/CONTEXTO_IA.md`. Resume lo hecho, cómo compilar sin SDK y lo que quedó pendiente.
 
+## HyperOS 4 (lo que cambió)
+
+HyperOS 4 (Android 17) reconstruyó el launcher del sistema (`com.miui.home`) como una app
+**Flutter + Rust sin código dex**: ya no hay clases Java de MIUI que enganchar. Por eso los
+ganchos del launcher (genio, recientes, carpetas, pila, icono que se hunde, zoom del fondo, menú
+de atajos) **no encuentran nada** en HyperOS 4 y quedan en silencio (cada uno en su `try/catch`).
+
+La animación de abrir/cerrar apps la hace ahora el propio launcher en código nativo, así que el
+genio hay que interceptarlo en **System UI**, en la canalización de transiciones de la **WM Shell**
+(`com.android.wm.shell.transition.Transitions` / `RemoteTransitionHandler`), que suele vivir en el
+proceso de System UI (o en `com.android.wm.shell` aparte). Por eso:
+
+- `MainHook` activa un vigilante (`watchShell`) que caza el cargador de la WM Shell y, cuando aparece,
+  instala `telon/TransitionProbe`, que **solo escribe al registro** qué transiciones ve System UI
+  (REQUEST / PLAYED BY / REMOTE). Es el paso previo para escribir el genio nuevo ahí.
+- El ámbito (`scope.list`, `strings.xml` y el `AndroidManifest`) incluye `com.android.wm.shell`.
+- `installLauncher` anota en el registro qué clases del launcher de HyperOS 3 siguen presentes
+  (`launcher class check:`), para saber si los ganchos del launcher tienen donde enganchar.
+
+**Flujo de trabajo con el móvil (HyperOS 4):** compilar, instalar, abrir/cerrar un par de apps y
+un juego reciente, y mandar el registro (`adb logcat -s HyperSpring` o Acerca de → Copiar registro).
+Con esas líneas se escribe el genio nuevo sobre la WM Shell. Sin esas líneas no se puede.
+
 ## Lo básico
 
 - **Paquete:** `com.icehome.up`. **No cambiarlo nunca**: así se actualiza encima de versiones anteriores y se conservan los ajustes.

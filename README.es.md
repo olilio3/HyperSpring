@@ -5,8 +5,8 @@
 <h1 align="center">HyperSpring</h1>
 
 <p align="center">
-  Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v3.1.3</b> · <a href="README.md">English</a>
+  Animaciones y cristal líquido para HyperOS 4 · módulo LSPosed<br>
+  <b>v4.0.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">

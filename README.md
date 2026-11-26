@@ -5,8 +5,8 @@
 <h1 align="center">HyperSpring</h1>
 
 <p align="center">
-  Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v3.1.3</b> · <a href="README.es.md">Español</a>
+  Animations and liquid glass for HyperOS 4 · LSPosed module<br>
+  <b>v4.0.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 > HyperSpring is a community project. It is not affiliated with or endorsed by Xiaomi. Formerly called **HyperTweak**.
 
 > [!WARNING]
-> **Only tested on a Redmi 14C with HyperOS 3 (Android 16).** I can't guarantee it works on other devices.
+> **Only tested on HyperOS 4.** I can't guarantee it works on other devices; if you try it, please open an issue with your phone and HyperOS version.
 > - **If something breaks:** please open an [issue](../../issues) with **About → Report a bug**: it copies the log and opens the issue with your phone and the HyperOS and launcher versions already filled in.
 > - **If a part fails on your device:** each feature is installed separately, so the error is written to the log and the rest keeps working.
 > - **If the launcher or System UI crashes repeatedly:** HyperSpring turns itself off in that part (see [Safe mode](#safe-mode)).
@@ -77,14 +77,14 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 | | |
 |---|---|
 | **Phone** | **Xiaomi, Redmi or POCO only.** Other brands (realme, OPPO, Samsung, Honor…) can't work: HyperSpring hooks Xiaomi's own launcher and System UI. |
-| **System** | HyperOS 2 or 3 (Android 13 or newer). The glass and refraction need Android 13+. |
+| **System** | **HyperOS 4 (Android 17)**. The glass and refraction need Android 13+. |
 | **Root** | Magisk, KernelSU or APatch. Grant root to the HyperSpring app so the restart buttons work instantly. |
 | **Framework** | **Vector 2.2** (JingMatrix) or another LSPosed with libxposed API 101+. Since 3.0.0 there is no APK for old LSPosed builds (API 93): the last one is 2.13.1. |
-| **Scopes** | `com.miui.home` (System launcher) or, on POCO phones, `com.mi.android.globallauncher` (POCO Launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. |
+| **Scopes** | `com.miui.home` (System launcher) or, on POCO phones, `com.mi.android.globallauncher` (POCO Launcher), `com.android.systemui` (System UI) and `com.miui.screenshot` (Screenshot, for the squeezing screenshot). If LSPosed lists it, also tick `miui.systemui.plugin`. **On HyperOS 4** also tick `com.android.wm.shell` (WM Shell): that is where the app open/close transition now lives, and HyperSpring spies on it from there. |
 
 ### Tested with
 
-- **Phone:** Redmi 14C (Helio G81 Ultra, Mali-G52 MC2) on HyperOS 3 (Android 16).
+- **Phone:** Redmi 14C (Helio G81 Ultra, Mali-G52 MC2) on HyperOS 4 (Android 17).
 - **Kashi's mods from Mods Center:** *HyperOS Launcher Mod 7.5* (launcher) and *iOS Control Center* (control center).
 
 **The Mods Center mods are not required.** HyperSpring also works with the stock HyperOS launcher and control center. The widget stack and the springy folders hook features of Kashi's launcher, so with the stock launcher those two do nothing.

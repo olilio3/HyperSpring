@@ -1,5 +1,23 @@
 # Changelog
 
+## 4.0.0 — HyperOS 4
+
+Branched to target **HyperOS 4 (Android 17)** specifically.
+
+- **HyperOS 4 launcher is now Flutter/Rust with no dex**, so the old launcher-side hooks
+  (`WindowAnim` genie, recents bending, folders, widget stack, icon press, wallpaper zoom,
+  shortcut menu) find no Java classes to attach to. They stay in place but no-op on HyperOS 4
+  (each guarded by `try/catch` and logged). The system reports them as not installed.
+- **App open/close animation moves to System UI.** HyperOS 4 plays it from native code, so the new
+  approach intercepts the **WM Shell transition pipeline** (`com.android.wm.shell.transition.*`)
+  instead of the launcher. Scopes now also include `com.android.wm.shell`.
+- **`TransitionProbe` (diagnostic only):** records every open/close transition System UI sees
+  (`REQUEST` / `PLAYED BY` / `REMOTE`) to the HyperSpring log, so the real HyperOS 4 hooks can be
+  written from device logs. Self-limiting (300 lines) and never touches an animation.
+- **Detection is louder:** `MainHook` logs the WM Shell class loader it finds and a `launcher class
+  check:` line listing which HyperOS 3 launcher classes are still present.
+- Version bumped to 4.0.0 (code 80); docs and requirements updated to HyperOS 4 / Android 17.
+
 ## 3.1.3
 
 **Fixes**
