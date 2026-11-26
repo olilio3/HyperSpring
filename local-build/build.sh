@@ -13,11 +13,6 @@ VNAME=$(sed -n 's/.*NAME = "\(.*\)";/\1/p' "$VFILE")
 VCODE=$(sed -n 's/.*CODE = \([0-9]*\);/\1/p' "$VFILE")
 rm -rf "$OUT" && mkdir -p "$OUT"/{stub,classes,dex,res,apk}
 
-# DEBUG (temporal): vuelca toda la salida a build.log para poder leer el error del
-# compilador desde fuera del runner (el host de logs de CI no es accesible desde el
-# sandbox) y pegarlo en un comentario del commit. Se quita después.
-exec > "$OUT/build.log" 2>&1
-
 # 1) Stubs de las dos API de Xposed (solo para compilar; NO van al APK)
 #    - xposed-stub: API clásica (93), para el motor antiguo.
 #    - libxposed-stub: libxposed (102), para el motor moderno. Usa Java 17 (sealed, record).

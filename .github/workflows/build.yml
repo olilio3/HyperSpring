@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   actions: write
 
 jobs:
@@ -73,11 +73,3 @@ jobs:
           name: HyperSpring-${{ github.sha }}
           path: local-build/out/HyperSpring.apk
           if-no-files-found: error
-
-      - name: Debug - pegar error en el commit
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BODY="$(tail -c 60000 local-build/out/build.log 2>/dev/null)"
-          gh api -X POST "repos/$GITHUB_REPOSITORY/commits/${{ github.sha }}/comments" -f "body=$BODY" || true
