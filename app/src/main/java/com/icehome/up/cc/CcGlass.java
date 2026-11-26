@@ -1161,7 +1161,7 @@ public final class CcGlass {
         });
     }
 
-    private static SurfaceControl surfaceOf(View v) {
+    static SurfaceControl surfaceOf(View v) {
         try {
             Object vri = View.class.getMethod("getViewRootImpl").invoke(v);
             if (vri == null) return null;
@@ -1177,7 +1177,7 @@ public final class CcGlass {
             "NavigationBar0#", "DynamicIslandWindow#", "VolumePanelDialogController#", "ShellDropTarget#",
             "MiuiShellDropTarget#", "NotificationModalWindowManager#", "SecondaryHomeHandle0#"};
 
-    private static Bitmap screenshot(int display, SurfaceControl exclude, float frameScale) throws Exception {
+    static Bitmap screenshot(int display, SurfaceControl exclude, float frameScale) throws Exception {
         Object wm = Class.forName("android.view.WindowManagerGlobal").getMethod("getWindowManagerService").invoke(null);
         Method cap = null;
         for (Method m : wm.getClass().getMethods()) {

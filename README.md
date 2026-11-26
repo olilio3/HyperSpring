@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v3.2.0</b> · <a href="README.es.md">Español</a>
+  <b>v3.3.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">

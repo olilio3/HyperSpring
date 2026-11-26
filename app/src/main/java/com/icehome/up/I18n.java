@@ -84,6 +84,7 @@ final class I18n {
         s("Captura que encoge", "Squeezing screenshot");
         s("Gemini", "Gemini");
         s("Notificaciones", "Notifications");
+        s("Reloj de bloqueo", "Lock screen clock");
         s("General", "General");
         s("Interior del cristal", "Inside the glass");
         s("Refracción del borde", "Edge refraction");
@@ -186,6 +187,12 @@ final class I18n {
         i("telon_notif_speed", "Speed", "1 = like iOS 27. Higher is faster.");
         i("telon_notif_blur", "Blur",
                 "The notification starts blurred and sharpens as it grows. 0 turns it off (lighter).");
+        i("telon_lockclock_on", "Glass clock",
+                "Your lock screen clock (any style from the HyperOS editor) becomes liquid glass, like iOS 26 and HyperOS 4: the digits bend the wallpaper at the edge and shine on the rim. AOD keeps the usual one.");
+        i("telon_lockclock_glass", "Rim light", "The thin light line on the edge (in the wallpaper's colour) and the faint shade on left edges. 0 removes it.");
+        i("telon_lockclock_edge", "Refraction width", "How many dp from the edge inwards bend the wallpaper. At most half a stroke: the centre stays unbent.");
+        i("telon_lockclock_refr", "Refraction", "How far the wallpaper is bent, in dp. More = surrounding colours bleed further into the digits.");
+        i("telon_lockclock_opacity", "Colour opacity", "How much of the clock colour (the one you pick in the lock screen editor) shows over the glass. 0 = fully clear glass; 1 = solid clock.");
         i("telon_notif_glass", "Liquid glass",
                 "The floating notification is glass, like iOS 27: you see what's behind it blurred, with a rim of light. Only the floating one; the shade stays as usual.");
         i("kashiplus_cc_quality", "Quality", "Resolution of the background seen through the glass: 0 low (faster), 1 medium, 2 high (sharper, uses more). Applies on the next capture.");

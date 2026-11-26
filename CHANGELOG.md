@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0
+
+**New**
+- **Liquid glass lock screen clock** (System → Lock screen), like iOS 26: the clock you already use (any style from the HyperOS lock screen editor) turns into glass. The digits bend the wallpaper strongly from their edge inwards and have a thin light line in the wallpaper's colour. The date, day and small texts stay as they are, so they are easy to read. It works with one-row, two-row and column clocks, and follows the clock when it moves or fades. AOD keeps the usual clock.
+- Settings with a live preview: **Rim light**, **Refraction width**, **Refraction** and **Colour opacity** (keeps the clock colour you picked in the editor; 0 = clear glass, 1 = solid clock).
+
 ## 3.2.0
 
 **New**

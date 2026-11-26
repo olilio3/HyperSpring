@@ -45,6 +45,12 @@ public final class Tune {
             {"telon_notif_blur", "Desenfoque", 0f, 1.5f, 1f, 2, "La notificación sale borrosa y se enfoca al crecer. 0 lo quita (gasta menos)."},
             {"telon_notif_glass", "Cristal líquido", 0f, 1f, 1f, -1, "La notificación flotante es de cristal, como en iOS 27: se ve lo de detrás desenfocado, con un canto de luz. Solo la flotante; en el panel se queda como siempre."},
             {"telon_notif_tint", "Velo del cristal", 0f, 1f, 0.35f, 2, "Capa clara (u oscura en modo oscuro) sobre el cristal para que el texto se lea. 0 deja el cristal más transparente."},
+            {"#", "Reloj de bloqueo"},
+            {"telon_lockclock_on", "Reloj de cristal", 0f, 1f, 0f, -1, "El reloj que tengas en la pantalla de bloqueo (cualquier estilo del editor de HyperOS) pasa a ser de cristal líquido, como en iOS 26 y HyperOS 4: las cifras doblan el fondo en el borde y brillan en el canto. En el AOD se queda el de siempre."},
+            {"telon_lockclock_glass", "Luz del canto", 0f, 1.5f, 1f, 2, "La línea de luz fina del borde (con el color del fondo) y la sombra finita de los cantos de la izquierda. 0 la quita."},
+            {"telon_lockclock_edge", "Ancho de la refracción", 0.3f, 12f, 8f, 1, "Cuántos dp desde el borde hacia dentro dobla el fondo. Como mucho, medio trazo: el centro queda sin desviar."},
+            {"telon_lockclock_refr", "Refracción", 0f, 80f, 30f, 0, "Cuánto desvía el fondo, en dp. Más = los colores de alrededor se cuelan más dentro de las cifras."},
+            {"telon_lockclock_opacity", "Opacidad del color", 0f, 1f, 0.15f, 2, "Cuánto se ve el color del reloj (el que elijas en el editor de la pantalla de bloqueo) sobre el cristal. 0 = cristal totalmente transparente; 1 = reloj sólido."},
     };
 
     /**
@@ -78,6 +84,12 @@ public final class Tune {
         NotifPop.blur = f(c, "telon_notif_blur");
         com.icehome.up.cc.NotifGlass.enabled = !paused && f(c, "telon_notif_glass") >= 0.5f;
         com.icehome.up.cc.NotifGlass.tint = f(c, "telon_notif_tint");
+        com.icehome.up.cc.LockClock.enabled = !paused && f(c, "telon_lockclock_on") >= 0.5f;
+        com.icehome.up.cc.LockClock.glass = f(c, "telon_lockclock_glass");
+        com.icehome.up.cc.LockClock.edge = f(c, "telon_lockclock_edge");
+        com.icehome.up.cc.LockClock.refr = f(c, "telon_lockclock_refr");
+        com.icehome.up.cc.LockClock.opacity = f(c, "telon_lockclock_opacity");
+        com.icehome.up.cc.LockClock.retune();
         squeeze(c);
         Squeeze.retune();
     }

@@ -1011,6 +1011,7 @@ public class SettingsActivity extends Activity {
                 {Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Captura que encoge", "Squeezing screenshot")},
                 {Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Centro de control", "Control center")},
                 {Icons.DROP, item(Tune.ITEMS, "icehome_dock_glass_on"), I18n.t("Dock de cristal", "Glass dock")},
+                {Icons.DROP, item(com.icehome.up.telon.Tune.ITEMS, "telon_lockclock_on"), I18n.t("Reloj de cristal", "Glass clock")},
         };
         featureTiles.clear();
         featureSpecs = f;
@@ -1378,6 +1379,7 @@ public class SettingsActivity extends Activity {
         f.addView(toggleRow(Icons.CURTAIN, item(com.icehome.up.telon.Tune.ITEMS, "telon_on"), I18n.t("Telón al cambiar de pantalla", "Curtain when switching screens")));
         f.addView(toggleRow(Icons.PHONE, item(com.icehome.up.telon.Tune.ITEMS, "telon_squeeze_on"), I18n.t("Pantalla que se encoge al hacer una captura", "Screen that squeezes on screenshot")));
         f.addView(toggleRow(Icons.SLIDERS, item(com.icehome.up.cc.Tune.ITEMS, "kashiplus_cc_on"), I18n.t("Cristal en el centro de control", "Glass control center")));
+        f.addView(toggleRow(Icons.DROP, item(com.icehome.up.telon.Tune.ITEMS, "telon_lockclock_on"), I18n.t("Reloj de cristal en la pantalla de bloqueo", "Glass clock on the lock screen")));
         return f;
     }
 
@@ -1417,11 +1419,22 @@ public class SettingsActivity extends Activity {
         c.addView(ap);
         c.addView(label(I18n.t("Transiciones", "Transitions")));
         LinearLayout t = card();
+        Section lock = null;
         for (Section s : sections(com.icehome.up.telon.Tune.ITEMS)) {
             if (s.name.startsWith("Función")) continue;
+            if (s.name.equals("Reloj de bloqueo")) {           // va en su propia tarjeta, más abajo
+                lock = s;
+                continue;
+            }
             t.addView(sectionRow(s));
         }
         c.addView(t);
+        if (lock != null) {
+            c.addView(label(I18n.t("Pantalla de bloqueo", "Lock screen")));
+            LinearLayout lk = card();
+            lk.addView(sectionRow(lock));
+            c.addView(lk);
+        }
         // Para ver las notificaciones iOS 27 sin esperar a que llegue una de verdad.
         TextView test = button(I18n.t("Probar notificación", "Test notification"), false, new View.OnClickListener() {
             @Override
@@ -1971,6 +1984,30 @@ public class SettingsActivity extends Activity {
             sub[0] = (TextView) ((ViewGroup) ((ViewGroup) exRow).getChildAt(1)).getChildAt(1);
             ex.addView(exRow);
             c.addView(ex);
+            c.addView(space(14));
+        }
+        // Reloj de cristal: la vista previa va encima de sus ajustes y los sigue al moverlos.
+        lockPreview = null;
+        if (s.items.contains(item(com.icehome.up.telon.Tune.ITEMS, "telon_lockclock_refr"))) {
+            LinearLayout pv = card();
+            pv.setPadding(px(10), px(10), px(10), px(10));
+            lockPreview = new LockClockPreview(this);
+            lockPreview.setClipToOutline(true);
+            lockPreview.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View v, android.graphics.Outline o) {
+                    o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), px(14));
+                }
+            });
+            for (String key : new String[]{"telon_lockclock_glass", "telon_lockclock_edge", "telon_lockclock_refr", "telon_lockclock_opacity"}) {
+                lockPreview.set(key, stored(item(com.icehome.up.telon.Tune.ITEMS, key)));
+            }
+            pv.addView(lockPreview, new LinearLayout.LayoutParams(-1, -2));
+            TextView ph = text(I18n.t("Ejemplo. En el móvil, el cristal toma la forma del reloj que tengas puesto en HyperOS.",
+                    "Example. On the phone, the glass takes the shape of the clock you use in HyperOS."), 12.5f, text3);
+            ph.setPadding(px(6), px(8), px(6), px(2));
+            pv.addView(ph);
+            c.addView(pv);
             c.addView(space(14));
         }
         // Captura: sin HyperSpring en la app de capturas, la vista previa de MIUI tapa el marco y
@@ -2936,6 +2973,9 @@ public class SettingsActivity extends Activity {
         return r;
     }
 
+    /** Vista previa del reloj de cristal de la página abierta (null si la página no la tiene). */
+    private LockClockPreview lockPreview;
+
     /** La gráfica del muelle de la página abierta (null si la página no la tiene). */
     private SpringGraph springGraph;
     private float graphSpeed = 1f, graphBounce = 0f;
@@ -2943,6 +2983,7 @@ public class SettingsActivity extends Activity {
     /** Pasa a la gráfica el valor de Velocidad o Rebote mientras se mueve su deslizador. */
     private void graph(String key, float v) {
         previewGlass(key, v);
+        if (lockPreview != null) lockPreview.set(key, v);
         if (springGraph == null) return;
         if ("icehome_anim_speed".equals(key)) graphSpeed = v;
         else if ("icehome_anim_bounce".equals(key)) graphBounce = v;

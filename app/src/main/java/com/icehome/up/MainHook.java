@@ -322,6 +322,12 @@ public class MainHook {
             } catch (Throwable t) {
                 com.icehome.up.telon.Log.e("no se pudieron instalar las notificaciones iOS 27 (¿otra versión de HyperOS?)", t);
             }
+            // Reloj de cristal en la pantalla de bloqueo: igual, mira su interruptor al dibujar.
+            try {
+                com.icehome.up.cc.LockClock.install(cl);
+            } catch (Throwable t) {
+                com.icehome.up.telon.Log.e("no se pudo instalar el reloj de cristal (¿otra versión de HyperOS?)", t);
+            }
             onAttach(new WithContext() {
                 @Override
                 public void run(android.content.Context c) {
