@@ -23,13 +23,13 @@ public final class Tune {
             {"icehome_curtain_on", "Recientes que se doblan", 0f, 1f, 1f, -1, "En la vista de recientes, las tarjetas se doblan hacia el lado contrario según la fuerza con la que las deslizas. Se aplica al reiniciar el launcher."},
             {"icehome_dock_glass_on", "Dock de cristal", 0f, 1f, 0f, -1, "La fila de iconos de abajo del escritorio pasa a ser una barra flotante de cristal líquido. Usa el cristal de las carpetas y necesita un fondo de pantalla estático. En pruebas: se aplica al reiniciar el launcher."},
             {"#", "Abrir y cerrar apps"},
-            {"icehome_genie_style", "Estilo", 0f, 8f, 0f, 0, "0 = genio clásico con cola. 1 = copa como Samsung: arriba sube primero y luego baja el resto. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento. 5 = Abanico: las dos esquinas del icono del lado más cercano al borde van directas a las de la pantalla y las otras dos salen después hacia el otro lado. 6 = Pergamino: la app sale enrollada, va al borde más cercano y se desenrolla hasta el otro, con luz y sombra en 3D. 7 = Carta: la ventana sale girando en 3D como una carta, deprisa al principio y frenando al llegar. 8 = HyperOS: la animación del sistema de verdad, dibujada por HyperOS; solo cambian la velocidad y el rebote de aquí (sin desenfoque de movimiento)."},
+            {"icehome_genie_style", "Estilo", 0f, 10f, 0f, 0, "0 = genio clásico con cola. 3 = Profundidad: sin genio; la ventana sale del icono como una hoja inclinada (arriba al fondo, más estrecha), se endereza al llenar la pantalla y al cerrar hace lo mismo al revés, con estela de movimiento. Se regula con Estrechamiento de arriba y Desenfoque de movimiento. 8 = HyperOS: la animación del sistema de verdad, dibujada por HyperOS; solo cambian la velocidad y el rebote de aquí (sin desenfoque de movimiento). 10 = iOS 27: la app sale del icono en pequeño, con su forma de pantalla, y crece hasta llenarla; el lado del icono va algo más estrecho (más con más Intensidad): si el icono está abajo, abajo; arriba, arriba; en el centro, recta. El desenfoque del fondo lo pone HyperOS con «texturas avanzadas». Los estilos quitados (1, 2, 4, 5, 6, 7 y 9) se leen como iOS 27."},
             {"icehome_genie_strength", "Intensidad", 0f, 4f, 2.2f, 1, "Cuánto se deforma la ventana. 0 es un rectángulo normal; 1,8–2,2 se parece a Samsung."},
             {"icehome_depth_taper", "Estrechamiento de arriba", 0f, 60f, 30f, 0, "Solo en Profundidad: cuánto más estrecha se ve la ventana arriba que abajo mientras sale del icono o vuelve a él, en %. 0 la deja recta."},
-            {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 1f, 1, "En todos los estilos: la estela que deja la ventana al moverse, como una foto con el obturador abierto. Más alto, más estela. 0 la quita. Gasta algo de GPU mientras la ventana se mueve deprisa."},
+            {"icehome_depth_blur", "Desenfoque de movimiento", 0f, 2f, 0.3f, 1, "La estela que deja la ventana al moverse, como una foto con el obturador abierto. Más alto, más estela. 0 la quita. iOS 27 no la lleva. Gasta algo de GPU mientras la ventana se mueve deprisa."},
             {"icehome_genie_quality", "Resolución", 50f, 100f, 75f, 0, "Nitidez de la animación. Más alta se ve más nítida pero gasta más GPU; en móviles modestos, 50–60 %."},
             {"icehome_genie_auto", "Resolución automática", 0f, 1f, 1f, -1, "Si varias animaciones seguidas van a tirones, baja sola la resolución un 10 % (hasta el 50 %). Vuelve a la tuya al tocar cualquier ajuste o reiniciar el launcher."},
-            {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto sigue a la pantalla hasta 90 (a 120 Hz o más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
+            {"icehome_genie_fps", "Fotogramas por segundo", 0f, 6f, 0f, 0, "Tope de fotogramas del genio y del telón. Auto dibuja a un ritmo justo para tu pantalla: 90 en las de 90 Hz, 60 en las de 120 Hz y 72 en las de 144 Hz (un refresco sí y otro no, siempre parejo; más daba tirones en muchos móviles). Más fotogramas se ve más fluido pero gasta más GPU; si va a tirones, prueba 60."},
             {"icehome_light_parallel", "Animación paralela ligera", 0f, 2f, 1f, 0, "Si abres otra app mientras una se cierra, la que se cierra vuela a su icono como un rectángulo de su color en vez de con el genio (dos genios a la vez dan tirones en móviles modestos). 0 no, 1 auto (solo si el móvil va a tirones), 2 siempre."},
             {"icehome_genie_physics", "Físicas al arrastrar", 0f, 2f, 1f, 1, "Al cerrar una app con el dedo, la ventana se balancea como una lámpara colgada. 0 la deja rígida."},
             {"icehome_genie_live", "Contenido en vivo", 0f, 1f, 1f, -1, "Durante la apertura, la app se actualiza mientras crece. Desactivado ahorra trabajo a la GPU y la imagen se queda quieta hasta el final."},
@@ -73,8 +73,7 @@ public final class Tune {
         cache = read(c);
         Genie.strength = f(c, "icehome_genie_strength");
         int style = Math.round(f(c, "icehome_genie_style"));
-        // El 2 era la copa «Ice» (quitada en la 2.13.0) y el 4 no existe: los dos pasan a la Copa.
-        Genie.style = style == 2 || style == 4 ? Genie.STYLE_SAMSUNG : style;
+        Genie.style = Genie.migrate(style);   // los estilos quitados pasan a iOS
         Genie.depthTaper = f(c, "icehome_depth_taper") / 100f;
         Genie.depthBlur = f(c, "icehome_depth_blur");
         Genie.live = f(c, "icehome_genie_live") >= 0.5f;
@@ -122,11 +121,31 @@ public final class Tune {
         try {
             android.view.Display d = c.getSystemService(android.hardware.display.DisplayManager.class)
                     .getDisplay(android.view.Display.DEFAULT_DISPLAY);
+            display = d;
             for (android.view.Display.Mode m : d.getSupportedModes()) max = Math.max(max, m.getRefreshRate());
         } catch (Throwable ignored) {
             // sin pantalla (no debería pasar en el launcher): se queda en 60
         }
         return max;
+    }
+
+    /** La pantalla, para saber su refresco de ahora (HyperOS lo cambia: 60, 90, 120…). */
+    private static volatile android.view.Display display;
+
+    /**
+     * Lo que dura un refresco de la pantalla ahora mismo, en ns. Los tiempos de "un fotograma"
+     * (listo, tirón…) se miden con esto: fijos en ms, a 120 Hz un tirón de dos fotogramas no
+     * llegaba a contar y a 60 Hz la capa se daba por lista antes de que el compositor la cogiera.
+     */
+    public static long vsyncNs() {
+        android.view.Display d = display;
+        float hz = 60f;
+        try {
+            if (d != null) hz = d.getRefreshRate();
+        } catch (Throwable ignored) {
+            // se queda en 60
+        }
+        return (long) (1e9 / Math.max(30f, Math.min(240f, hz)));
     }
 
     /** Opciones de «Fotogramas por segundo»; el ajuste guarda la posición (0 = Auto). */

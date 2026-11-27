@@ -102,7 +102,7 @@ final class I18n {
         i("icehome_curtain_on", "Bending recents",
                 "In recents, cards bend the other way depending on how hard you swipe them. Applies after restarting the launcher.");
         i("icehome_genie_style", "Style",
-                "0 = classic genie with a tail. 1 = Samsung-like cup: the top rises first, then the rest follows. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur. 5 = Fan: the two icon corners on the side nearest the edge go straight to the screen corners, and the other two follow towards the other side. 6 = Scroll: the app comes out rolled up, goes to the nearest edge and unrolls to the other one, with 3D light and shadow. 7 = Card: the window spins out in 3D like a card, fast at first and slowing down as it arrives. 8 = HyperOS: the real system animation, drawn by HyperOS; only the speed and bounce set here change (no motion blur).");
+                "0 = classic genie with a tail. 3 = Depth: no genie; the window comes out of the icon as a tilted sheet (top away, narrower), straightens as it fills the screen and does the same in reverse when closing, with a motion blur trail. Set it with Top narrowing and Motion blur. 8 = HyperOS: the real system animation, drawn by HyperOS; only the speed and bounce set here change (no motion blur). 10 = iOS 27: the app comes out of the icon in miniature, with its screen shape, and grows to fill the screen; the icon side is a little narrower (more with more Strength): bottom for icons at the bottom, top for icons at the top, straight in the middle. The background blur comes from HyperOS advanced textures. Removed styles (1, 2, 4, 5, 6, 7 and 9) are read as iOS 27.");
         i("icehome_push", "Push icons",
                 "When an app opens, the other icons move gently away from it, in step with the window; the farthest ones barely move. When it closes they come back the same way, in reverse. Works with any style. 0 turns it off.");
         i("icehome_push_wave", "Wave",
@@ -112,11 +112,11 @@ final class I18n {
         i("icehome_depth_taper", "Top narrowing",
                 "Depth only: how much narrower the window looks at the top than at the bottom while it leaves the icon or goes back to it, in %. 0 keeps it straight.");
         i("icehome_depth_blur", "Motion blur",
-                "All styles: the trail the window leaves as it moves, like a photo with the shutter open. Higher, more trail. 0 turns it off. Uses some GPU while the window moves fast.");
+                "The trail the window leaves as it moves, like a photo with the shutter open. Higher, more trail. 0 turns it off. iOS 27 doesn't use it. Uses some GPU while the window moves fast.");
         i("icehome_genie_quality", "Resolution",
                 "Sharpness of the animation. Higher looks sharper but uses more GPU; on modest phones, 50–60 %.");
         i("icehome_genie_fps", "Frames per second",
-                "Frame cap for the genie and the curtain. Auto follows the screen up to 90 (at 120 Hz or more it stuttered on many phones). More frames look smoother but use more GPU; if it stutters, try 60.");
+                "Frame cap for the genie and the curtain. Auto picks an even pace for your screen: 90 on 90 Hz screens, 60 on 120 Hz and 72 on 144 Hz (every other refresh, always steady; more stuttered on many phones). More frames look smoother but use more GPU; if it stutters, try 60.");
         i("icehome_genie_physics", "Drag physics",
                 "When you close an app with your finger, the window swings like a hanging lamp. 0 keeps it rigid.");
         i("icehome_genie_live", "Live content",

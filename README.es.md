@@ -6,7 +6,7 @@
 
 <p align="center">
   Animaciones y cristal líquido para HyperOS · módulo LSPosed<br>
-  <b>v3.3.0</b> · <a href="README.md">English</a>
+  <b>v3.4.0</b> · <a href="README.md">English</a>
 </p>
 
 <p align="center">
@@ -86,7 +86,7 @@ HyperSpring añade al launcher y a la interfaz del sistema de HyperOS animacione
 ## Qué hace
 
 ### Escritorio (`com.miui.home` o POCO Launcher)
-- **Efecto genio al abrir y cerrar apps.** La ventana sale del icono y vuelve a él con forma de copa. La parte de arriba se adelanta y la de abajo la sigue, adaptándose a la altura del icono. Hay tres estilos: genio clásico, copa tipo Samsung y Profundidad (una hoja inclinada, sin genio). Se dibuja con OpenGL en un hilo propio para que vaya fluido en gama media.
+- **Efecto genio al abrir y cerrar apps.** La ventana sale del icono y vuelve a él. Hay cuatro estilos: genio clásico, Profundidad (una hoja inclinada, sin genio), iOS 27 (la app crece desde el icono con un genio suave, como en iOS) y HyperOS (la animación del sistema con tu velocidad y rebote). Se dibuja con OpenGL en un hilo propio para que vaya fluido en gama media.
 - **Arrastrar para cerrar como una lámpara.** La ventana cuelga del dedo y se balancea.
 - **Recientes que se doblan** según la fuerza con la que deslizas las tarjetas.
 - **Iconos que se hunden** al pulsarlos y **zoom del fondo** al abrir apps.

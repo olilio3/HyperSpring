@@ -126,12 +126,12 @@ public final class LockClock {
             @Override
             public void run() {
                 Bitmap small = null;
-                final float pxPerSample = 1.5f * dm.density;   // fondo casi nítido, como el cristal de iOS
+                final float pxPerSample = 1f * dm.density;     // fondo nítido, como el cristal de iOS
                 try {
                     if (android.os.Build.VERSION.SDK_INT >= 34 && own != null) {
                         float frame = 0.5f;   // media resolución: el fondo se ve nítido a través
                         Bitmap shot = CcGlass.screenshot(display, own, frame);
-                        if (shot != null) small = GlassShader.shrinkBlur(shot, 1f / frame, pxPerSample, 2.5f * dm.density);
+                        if (shot != null) small = GlassShader.shrinkBlur(shot, 1f / frame, pxPerSample, 1.5f * dm.density);
                     }
                 } catch (Throwable t) {
                     com.icehome.up.telon.Log.e("reloj de cristal: captura", t);
@@ -140,7 +140,7 @@ public final class LockClock {
                 if (small == null || dark(small)) {
                     try {
                         Bitmap w = lockWallpaper(ctx, dm.widthPixels, dm.heightPixels);
-                        if (w != null) small = GlassShader.shrinkBlur(w, 1f, pxPerSample, 2.5f * dm.density);
+                        if (w != null) small = GlassShader.shrinkBlur(w, 1f, pxPerSample, 1.5f * dm.density);
                     } catch (Throwable t) {
                         com.icehome.up.telon.Log.e("reloj de cristal: fondo de bloqueo", t);
                     }
@@ -207,7 +207,7 @@ public final class LockClock {
         // Pieza del reloj de serie que se sigue (posición y transparencia) y dónde estaba al hacer el cristal.
         private java.lang.ref.WeakReference<View> anchor;
         private int anchorX, anchorY;
-        private int bakeGen;
+        private volatile int bakeGen;
         private boolean bakePending;
 
         private static java.lang.reflect.Field toAod;
@@ -495,9 +495,14 @@ public final class LockClock {
             worker().post(new Runnable() {
                 @Override
                 public void run() {
+                    // Al encender, HyperOS anima el reloj y se piden muchos cristales seguidos: los
+                    // que ya tienen uno más nuevo detrás no se hacen (si no, se apilaban segundos).
+                    if (gen != bakeGen) return;
                     try {
                         final int[] at = new int[2];
+                        long t0 = android.os.SystemClock.uptimeMillis();
                         final Bitmap out = render(mask, bd, bs, sx, sy, density, g, at);
+                        com.icehome.up.telon.Log.i("reloj de cristal: hecho en " + (android.os.SystemClock.uptimeMillis() - t0) + " ms");
                         mainHandler().post(new Runnable() {
                             @Override
                             public void run() {
@@ -667,8 +672,9 @@ public final class LockClock {
         // Cifra = trozo opaco con al menos el 45 % del trazo más grueso (la fecha es mucho más fina).
         boolean[] glassComp = new boolean[comps + 1];
         for (int c = 1; c <= comps; c++) glassComp[c] = solid[c] && thick[c] >= maxD * 0.45f;
-        // El borde suavizado (cobertura ≤ 0,5) toma el trozo de al lado (dos pasadas = 2 px).
-        for (int pass = 0; pass < 2; pass++) {
+        // El borde suavizado (cobertura ≤ 0,5) toma el trozo de al lado (4 pasadas = 4 px). Con 2,
+        // en cifras grandes quedaban píxeles sueltos sin trozo: salían como puntitos del color de serie.
+        for (int pass = 0; pass < 4; pass++) {
             int[] nl = lab.clone();
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
@@ -688,6 +694,14 @@ public final class LockClock {
             boxF(ds, tmp, w, h, 1, true);
             boxF(tmp, ds, w, h, 1, false);
         }
+        // Para la dirección del canto, otra más suave (≈ gaussiana de ~1 dp): la distancia de
+        // chaflán va a saltos de píxel y la refracción salía en escalones en las curvas.
+        float[] dn = ds.clone();
+        int nr = Math.max(1, Math.round(density));
+        for (int pass = 0; pass < 2; pass++) {
+            boxF(dn, tmp, w, h, nr, true);
+            boxF(tmp, dn, w, h, nr, false);
+        }
 
         int bw = bd.getWidth(), bh = bd.getHeight();
         int[] bp = new int[bw * bh];
@@ -706,8 +720,8 @@ public final class LockClock {
                 float al = a[i];
                 if (al <= 0.003f || !glassComp[lab[i]]) continue;   // fecha y demás: tal cual
                 // Normal hacia fuera = contra el gradiente de la distancia.
-                float gx = ds[x < w - 1 ? i + 1 : i] - ds[x > 0 ? i - 1 : i];
-                float gy = ds[y < h - 1 ? i + w : i] - ds[y > 0 ? i - w : i];
+                float gx = dn[x < w - 1 ? i + 1 : i] - dn[x > 0 ? i - 1 : i];
+                float gy = dn[y < h - 1 ? i + w : i] - dn[y > 0 ? i - w : i];
                 float gl = (float) Math.sqrt(gx * gx + gy * gy);
                 float nx = gl > 1e-4f ? -gx / gl : 0f, ny = gl > 1e-4f ? -gy / gl : 0f;
                 float dist = Math.max(0f, d[i] > 0f ? Math.max(ds[i], 0.5f) - 0.5f : al - 0.5f);

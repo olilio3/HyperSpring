@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.4.0
+
+**New**
+- **iOS 27 style** for opening and closing apps: the app grows out of its icon with a soft genie (the side near the icon stays a little narrower and catches up), a fast spring with a tiny bounce and a soft shadow around the window, like iOS. Icons at the top and bottom of the screen bend more; icons in the middle bend only slightly. **Strength** sets how much. Interrupting the animation halfway changes direction smoothly. For the blurred background, turn on HyperOS advanced textures.
+
+**Improvements**
+- **Faster on 120 Hz and 144 Hz screens**: Auto frames per second now draws at an even rate for your screen (60 at 120 Hz, 72 at 144 Hz, 90 at 90 Hz) instead of up to 90, which stuttered on many phones. Frame timing (ready, stutter) now follows the real refresh rate.
+- **Motion blur** is softer by default (0.3).
+- **Lock screen glass clock**: sharper background through the glass, smoother refraction on curves, no more small dots of the original colour on big digits, and it no longer queues up work when the screen turns on.
+
+**Removed**
+- The **Cup, Fan, Scroll and Card** styles. If you used one of them, iOS 27 is used instead.
+
 ## 3.3.0
 
 **New**

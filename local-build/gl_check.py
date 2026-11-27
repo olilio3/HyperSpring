@@ -28,7 +28,7 @@ def jstr(name):
     for lit, ident in re.findall(r'"((?:[^"\\]|\\.)*)"|\b([A-Z_]{4,})\b', re.sub(r'//[^\n]*', '', m.group(1))):
         out += bytes(lit, 'utf8').decode('unicode_escape') if ident == '' else JS[ident]
     return out
-for n in ('SPLASH_AT', 'VERTEX', 'FRAGMENT_BODY', 'FRAGMENT_WINDOW', 'FRAGMENT_SPLASH'):
+for n in ('PERSP', 'SPLASH_AT', 'VERTEX', 'FRAGMENT_BODY', 'FRAGMENT_WINDOW', 'FRAGMENT_SPLASH'):
     JS[n] = jstr(n)
 
 def comp(kind, code, what):
@@ -40,10 +40,10 @@ def comp(kind, code, what):
         print(what, 'ERROR:', log.value.decode()); sys.exit(1)
     return sh
 
-for name, frag in (('ventana', 'FRAGMENT_WINDOW'), ('inicio', 'FRAGMENT_SPLASH')):
+for name, frag, extra in (('ventana', 'FRAGMENT_WINDOW', ''), ('inicio', 'FRAGMENT_SPLASH', '')):
     p = gl.glCreateProgram()
     gl.glAttachShader(p, comp(0x8B31, JS['VERTEX'], 'VERTEX'))
-    gl.glAttachShader(p, comp(0x8B30, JS[frag] + JS['FRAGMENT_BODY'], frag))
+    gl.glAttachShader(p, comp(0x8B30, JS[frag] + extra + JS['FRAGMENT_BODY'], name))
     gl.glLinkProgram(p)
     ok = C.c_int(); gl.glGetProgramiv(p, 0x8B82, C.byref(ok))
     print('genio,', name + ':', 'OK' if ok.value else 'ERROR')

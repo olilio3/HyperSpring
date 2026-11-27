@@ -66,8 +66,14 @@ public final class Telon {
     private static final float K = 380f, ZETA = 0.55f;
     /** Tramo final (fracción de la animación) en el que el doblez se lleva a cero. */
     private static final float SETTLE_FROM = 0.72f;
-    /** Tras dibujar, un refresco para que el compositor ya tenga nuestra imagen. */
-    private static final long READY_NS = 10_000_000L;
+    /**
+     * Tras dibujar, 1,25 refrescos para que el compositor ya tenga nuestra imagen (con 10 ms fijos, a
+     * 60 Hz se daba por lista antes de que la cogiera).
+     */
+    private static long readyNs() {
+        long v = com.icehome.up.Tune.vsyncNs();
+        return v + v / 4;
+    }
     private static final long WATCHDOG_MS = 300;
 
     private static Field fLeash, fTransaction, fAnim, fTransformation, fRadius, fDimAlpha, fDimLayer;
@@ -310,7 +316,7 @@ public final class Telon {
             t.setAlpha(layer, 1f);
             t.setVisibility(layer, true);
             Hidden.setRelativeLayer(t, layer, leash, 1);
-            if (s.belowDrawn && !s.belowHidden && System.nanoTime() - s.belowDrawnNs > READY_NS
+            if (s.belowDrawn && !s.belowHidden && System.nanoTime() - s.belowDrawnNs > readyNs()
                     && s.belowLeash != null && s.belowLeash.isValid()) {
                 t.setAlpha(s.belowLeash, 0f);
                 s.belowHidden = true;
@@ -534,7 +540,7 @@ public final class Telon {
         }
 
         boolean ready() {
-            return drawn > 0 && System.nanoTime() - firstSwapNs > READY_NS;
+            return drawn > 0 && System.nanoTime() - firstSwapNs > readyNs();
         }
 
         final Runnable beginTask = new Runnable() {

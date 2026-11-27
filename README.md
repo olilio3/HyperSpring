@@ -6,7 +6,7 @@
 
 <p align="center">
   Animations and liquid glass for HyperOS · LSPosed module<br>
-  <b>v3.3.0</b> · <a href="README.es.md">Español</a>
+  <b>v3.4.0</b> · <a href="README.es.md">Español</a>
 </p>
 
 <p align="center">
@@ -95,9 +95,8 @@ It doesn't modify any APK: everything runs through LSPosed. Sliders apply live f
 
 ### Launcher (`com.miui.home` or POCO Launcher)
 - **Genie effect when opening and closing apps.**
-  - The window comes out of its icon and goes back into it as a cup.
-  - The top leads and the bottom follows, adapting to where the icon sits on screen.
-  - Three styles: classic genie, Samsung-like cup and Depth (a tilted sheet, no genie).
+  - The window comes out of its icon and goes back into it.
+  - Four styles: classic genie, Depth (a tilted sheet, no genie), iOS 27 (the app grows out of the icon with a soft genie, like iOS) and HyperOS (the system animation with your speed and bounce).
   - Drawn with OpenGL on its own thread so it stays smooth on mid-range phones.
 - **Drag to close like a lamp:** the window hangs from your finger and swings.
 - **Bending recents:** cards bend depending on how hard you swipe.

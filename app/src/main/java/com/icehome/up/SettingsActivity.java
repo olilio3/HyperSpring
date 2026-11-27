@@ -2038,8 +2038,8 @@ public class SettingsActivity extends Activity {
                 Runnable vis = new Runnable() {
                     @Override
                     public void run() {
-                        int style = Math.round(stored(item(Tune.ITEMS, "icehome_genie_style")));
-                        boolean genie = style == Genie.STYLE_CLASSIC || style == Genie.STYLE_SAMSUNG || style == 2 || style == 4;
+                        int style = Genie.migrate(Math.round(stored(item(Tune.ITEMS, "icehome_genie_style"))));
+                        boolean genie = style == Genie.STYLE_CLASSIC || style == Genie.STYLE_IOS;   // la intensidad
                         boolean show = taper ? style == Genie.STYLE_DEPTH : glOnly ? style != Genie.STYLE_HYPEROS : genie;
                         row.setVisibility(show ? View.VISIBLE : View.GONE);
                     }
@@ -3102,19 +3102,15 @@ public class SettingsActivity extends Activity {
     // ---------------------------------------------------------------- menú desplegable
 
     private String[] styleNames() {
-        return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Copa", "Cup"),
-                I18n.t("Profundidad", "Depth"), I18n.t("Abanico", "Fan"), I18n.t("Pergamino", "Scroll"),
-                I18n.t("Carta", "Card"), "HyperOS"};
+        return new String[]{I18n.t("Genio clásico", "Classic genie"), I18n.t("Profundidad", "Depth"),
+                "iOS 27", "HyperOS"};
     }
 
     private String[] styleHints() {
         return new String[]{
                 I18n.t("Sale del icono con cola, como en un Mac", "Comes out of the icon with a tail, like on a Mac"),
-                I18n.t("Arriba sube primero, como Samsung", "The top rises first, like Samsung"),
                 I18n.t("Sale del icono inclinada y se endereza, con estela", "Leaves the icon tilted and straightens, with a trail"),
-                I18n.t("Se abre desde el lado más cercano al borde", "Opens from the side nearest the edge"),
-                I18n.t("Se desenrolla de un borde al otro, en 3D", "Unrolls from one edge to the other, in 3D"),
-                I18n.t("Sale girando en 3D y frena al llegar", "Spins out in 3D and slows down as it arrives"),
+                I18n.t("La app sale del icono en pequeño y crece", "The app comes out of the icon in miniature and grows"),
                 I18n.t("La del sistema, con tu velocidad y rebote", "The system one, with your speed and bounce")};
     }
 
@@ -3140,12 +3136,12 @@ public class SettingsActivity extends Activity {
      * números, el nombre de la opción en una pastilla. Al tocarla se despliega un menú encima,
      * como en HyperOS 4 o iOS.
      */
-    /** Valor guardado de cada estilo del selector (el 2, la copa «Ice», ya no existe). */
     /** Ajustes que solo valen cuando dibujamos nosotros: en el estilo HyperOS (nativo) se ocultan. */
     private static final java.util.List<String> GL_ONLY = java.util.Arrays.asList("icehome_depth_blur",
             "icehome_genie_quality", "icehome_genie_auto", "icehome_genie_fps", "icehome_genie_physics", "icehome_genie_live");
 
-    private static final int[] STYLE_VALUES = {0, 1, 3, Genie.STYLE_FAN, Genie.STYLE_SCROLL, Genie.STYLE_CARD, Genie.STYLE_HYPEROS};
+    /** Valor guardado de cada estilo del selector. */
+    private static final int[] STYLE_VALUES = {Genie.STYLE_CLASSIC, Genie.STYLE_DEPTH, Genie.STYLE_IOS, Genie.STYLE_HYPEROS};
 
     /** Selector de estilo del genio: cada opción guarda su número de siempre, no su posición. */
     private View styleRow(final Object[] it) {
@@ -3154,8 +3150,7 @@ public class SettingsActivity extends Activity {
         LinearLayout r = choiceRow(I18n.title(it), styleNames(), styleHints(), new Chosen() {
             @Override
             public int now() {
-                int v = Math.round(stored(it));
-                if (v == 2) v = 1;                       // Ice guardado: se muestra (y funciona) como Copa
+                int v = Genie.migrate(Math.round(stored(it)));   // un estilo quitado se ve (y va) como iOS
                 for (int i = 0; i < STYLE_VALUES.length; i++) if (STYLE_VALUES[i] == v) return i;
                 return 0;
             }
@@ -3175,7 +3170,7 @@ public class SettingsActivity extends Activity {
         int[] v = Tune.FPS_CHOICES;
         String[] names = new String[v.length], hints = new String[v.length];
         names[0] = "Auto";
-        hints[0] = I18n.t("Lo que da la pantalla, hasta 90", "What the screen does, up to 90");
+        hints[0] = I18n.t("90 a 90 Hz, 60 a 120 Hz, 72 a 144 Hz", "90 at 90 Hz, 60 at 120 Hz, 72 at 144 Hz");
         for (int i = 1; i < v.length; i++) {
             names[i] = String.valueOf(v[i]);
             hints[i] = v[i] <= 60 ? I18n.t("Gasta menos GPU", "Uses less GPU") : I18n.t("Más fluido si la pantalla llega", "Smoother if the screen goes that high");
