@@ -1412,7 +1412,7 @@ public final class CcGlass {
             fill.getLocationInWindow(a);
             host.getLocationInWindow(c);
             float radius = Math.max(0f, radiusOf(host));
-            String key = w + "," + h + "," + (a[0] - c[0]) + "," + (a[1] - c[1]) + "," + rh + "," + amt + "," + radius + "," + Tune.depth;
+            String key = w + "," + h + "," + fill.getWidth() + "," + fill.getHeight() + "," + (a[0] - c[0]) + "," + (a[1] - c[1]) + "," + rh + "," + amt + "," + radius + "," + Tune.depth;
             if (key.equals(BENT_KEY.get(fill))) return;
             BENT_KEY.put(fill, key);
             if (rh <= 0f || amt <= 0f) {
@@ -1422,6 +1422,7 @@ public final class CcGlass {
             RuntimeShader s = new RuntimeShader(GlassShader.FILL_LENS);
             s.setFloatUniform("size", w, h);
             s.setFloatUniform("offset", a[0] - c[0], a[1] - c[1]);
+            s.setFloatUniform("fillSize", fill.getWidth(), fill.getHeight());
             s.setFloatUniform("radius", Math.min(radius, Math.min(w, h) / 2f));
             s.setFloatUniform("refrH", rh);
             s.setFloatUniform("refrAmt", amt);

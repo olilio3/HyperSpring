@@ -254,6 +254,7 @@ public final class GlassShader {
             "uniform shader content;\n"
             + "uniform float2 size;\n"       // tamaño de la pieza entera (px)
             + "uniform float2 offset;\n"     // dónde empieza el relleno dentro de la pieza (px)
+            + "uniform float2 fillSize;\n"   // tamaño del propio relleno (px)
             + "uniform float radius;\n"
             + "uniform float refrH;\n"
             + "uniform float refrAmt;\n"
@@ -273,14 +274,22 @@ public final class GlassShader {
             + "  float2 h = size * 0.5;\n"
             + "  float2 p = coord + offset - h;\n"
             + "  float sd = sdRR(p, h, radius);\n"
-            + "  if (-sd >= refrH) return content.eval(coord);\n"
+            // Recorta el relleno a la forma de la pieza: con temas que lo dibujan cuadrado (#55).
+            + "  float mask = clamp(0.5 - sd, 0.0, 1.0);\n"
+            + "  if (mask <= 0.0) return half4(0.0);\n"
+            + "  if (-sd >= refrH) return content.eval(coord) * mask;\n"
             + "  float t = -min(sd, 0.0) / refrH;\n"
             + "  float fade = 1.0 - t * t * (3.0 - 2.0 * t);\n"
             + "  float x = 1.0 - t;\n"
             + "  float d = (1.0 - sqrt(1.0 - x * x)) * refrAmt * fade;\n"
             + "  float2 g = gradRR(p, h, radius);\n"
             + "  if (dot(p, p) > 1e-4) g = normalize(g + depth * fade * normalize(p));\n"
-            + "  return content.eval(coord + d * g);\n"
+            // Por los lados que tocan el borde de la pieza no se sale del relleno (fuera es
+            // transparente y dejaba un hueco). Por el lado del nivel sí: así se curva como HyperLight.
+            + "  float2 lo = mix(float2(-1e4), float2(0.5), step(offset, float2(1.0)));\n"
+            + "  float2 hi = mix(float2(1e4), fillSize - float2(0.5), step(size - float2(1.0), offset + fillSize));\n"
+            + "  float2 q = clamp(coord + d * g, lo, hi);\n"
+            + "  return content.eval(q) * mask;\n"
             + "}\n";
 
     private static BitmapShader empty;

@@ -56,28 +56,38 @@ public final class NotifPop {
         Class<?> anims = XposedHelpers.findClass(STACK + "MiuiNotificationAnimations", cl);
         appearCurve = staticField(anims, "HEADS_UP_APPEAR_INTERPOLATOR");
         disappearCurve = staticField(anims, "HEADS_UP_DISAPPEAR_INTERPOLATOR");
-        XposedHelpers.findAndHookMethod(STACK + "StackStateAnimator$1", cl, "getCustomInterpolator",
-                Property.class, View.class, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam p) {
-                        if (p.args[0] != View.TRANSLATION_Y) return;
-                        Object r = p.getResult();
-                        boolean in = r != null && r == appearCurve, out = r != null && r == disappearCurve;
-                        if (!in && !out) return;
-                        if (!enabled) {
-                            // Animación normal de HyperOS: solo se esconde mientras el cristal captura lo de detrás.
-                            if (in) com.icehome.up.cc.NotifGlass.hideForCapture((View) p.args[1]);
-                            return;
-                        }
-                        try {
-                            start((View) p.args[1], in);
-                            p.setResult(in ? AT_END : HOLD);
-                        } catch (Throwable t) {
-                            Log.e("notificaciones iOS 27", t);
-                        }
-                    }
-                });
-        Log.i("notificaciones iOS 27: instaladas");
+        // HyperOS 3 la declara (Property, View); HyperOS 4 (Android 17) le dio la vuelta: (View, Property).
+        final String cls = STACK + "StackStateAnimator$1";
+        boolean os4 = false;
+        try {
+            XposedHelpers.findClass(cls, cl).getDeclaredMethod("getCustomInterpolator", Property.class, View.class);
+        } catch (NoSuchMethodException e) {
+            os4 = true;
+        }
+        final int prop = os4 ? 1 : 0, row = os4 ? 0 : 1;
+        XC_MethodHook hook = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam p) {
+                if (p.args[prop] != View.TRANSLATION_Y) return;
+                Object r = p.getResult();
+                boolean in = r != null && r == appearCurve, out = r != null && r == disappearCurve;
+                if (!in && !out) return;
+                if (!enabled) {
+                    // Animación normal de HyperOS: solo se esconde mientras el cristal captura lo de detrás.
+                    if (in) com.icehome.up.cc.NotifGlass.hideForCapture((View) p.args[row]);
+                    return;
+                }
+                try {
+                    start((View) p.args[row], in);
+                    p.setResult(in ? AT_END : HOLD);
+                } catch (Throwable t) {
+                    Log.e("notificaciones iOS 27", t);
+                }
+            }
+        };
+        if (os4) XposedHelpers.findAndHookMethod(cls, cl, "getCustomInterpolator", View.class, Property.class, hook);
+        else XposedHelpers.findAndHookMethod(cls, cl, "getCustomInterpolator", Property.class, View.class, hook);
+        Log.i("notificaciones iOS 27: instaladas" + (os4 ? " (HyperOS 4)" : ""));
     }
 
     /** La fila se está animando ahora (para el cristal de la emergente). */

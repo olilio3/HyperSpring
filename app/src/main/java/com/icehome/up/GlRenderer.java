@@ -274,6 +274,11 @@ final class GlRenderer {
             + "    vec2 qm = (vec2(u, s) - 0.5) * vec2(wE, h) / max(min(wE, h), 1.0) + 0.5;\n"
             + "    vec4 ik = vec4(0.0);\n"
             + "    if (qm.x >= 0.0 && qm.x <= 1.0 && qm.y >= 0.0 && qm.y <= 1.0) ik = texture2D(iconTex, qm);\n"
+            // Temas con iconos de cristal (semitransparentes, #56): el genio salía translúcido.
+            // En el icono se ve como el del tema; según se aleja de él pasa a opaco. La forma
+            // (esquinas, borde suave) se conserva: solo sube la opacidad de lo que ya se ve.
+            + "    vec4 op = ik.a > 0.004 ? vec4(ik.rgb / ik.a, 1.0) * min(1.0, ik.a * 4.0) : vec4(0.0);\n"
+            + "    ik = mix(ik, op, 1.0 - iconMix);\n"
             + "    col = mix(col, ik, iconMix);\n"
             + "  }\n"
             // (iOS: en el borde con antialias, la sombra por debajo, para que no quede una raya clara.)
